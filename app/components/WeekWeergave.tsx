@@ -13,9 +13,15 @@ interface Props {
   labels: Label[]
   onDagKlik: (d: Date) => void
   onAfspraakKlik: (a: Afspraak) => void
+  onNieuwAfspraak: (dag: Date, beginTijd: string) => void
 }
 
-export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKlik, onAfspraakKlik }: Props) {
+function minutenNaarTijd(min: number): string {
+  const m = Math.max(0, Math.min(min, 23 * 60 + 30))
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+}
+
+export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKlik, onAfspraakKlik, onNieuwAfspraak }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [nu, setNu] = useState(() => new Date())
 
@@ -28,8 +34,17 @@ export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKli
     if (scrollRef.current) scrollRef.current.scrollTop = 7 * UURHOOGTE
   }, [huidigeDatum])
 
-  const weekDagen  = getWeekDagen(huidigeDatum)
-  const nuMinuten  = nu.getHours() * 60 + nu.getMinutes()
+  const weekDagen = getWeekDagen(huidigeDatum)
+  const nuMinuten = nu.getHours() * 60 + nu.getMinutes()
+
+  function handleDubbelklik(e: React.MouseEvent<HTMLDivElement>, dag: Date) {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const scrollTop = scrollRef.current?.scrollTop ?? 0
+    const y = e.clientY - rect.top + scrollTop
+    const rawMinuten = (y / UURHOOGTE) * 60
+    const afgerond = Math.floor(rawMinuten / 30) * 30
+    onNieuwAfspraak(dag, minutenNaarTijd(afgerond))
+  }
 
   return (
     <div className="h-full flex flex-col">
@@ -80,7 +95,11 @@ export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKli
             const toonTijdlijn = isVandaag(dag)
 
             return (
-              <div key={di} className="flex-1 relative border-l border-gray-100 min-w-0">
+              <div
+                key={di}
+                className="flex-1 relative border-l border-gray-100 min-w-0"
+                onDoubleClick={e => handleDubbelklik(e, dag)}
+              >
                 {Array.from({ length: 24 }, (_, i) => (
                   <div key={i} className="absolute w-full border-t border-gray-100" style={{ top: i * UURHOOGTE }} />
                 ))}
@@ -93,23 +112,36 @@ export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKli
                 )}
 
                 {dagAfspraken.map(afspraak => {
-                  const label  = labels.find(l => l.id === afspraak.labelIds[0])
-                  const kleur  = label?.kleur ?? '#8E8E93'
+                  const label    = labels.find(l => l.id === afspraak.labelIds[0])
+                  const kleur    = label?.kleur ?? '#8E8E93'
                   const beginMin = tijdNaarMinuten(afspraak.beginTijd)
                   const eindMin  = tijdNaarMinuten(afspraak.eindTijd)
-                  const top    = (beginMin / 60) * UURHOOGTE
-                  const height = Math.max(((eindMin - beginMin) / 60) * UURHOOGTE, 20)
+                  const top      = (beginMin / 60) * UURHOOGTE
+                  const height   = Math.max(((eindMin - beginMin) / 60) * UURHOOGTE, 20)
 
                   return (
                     <button
                       key={afspraak.id}
                       onClick={() => onAfspraakKlik(afspraak)}
-                      className="absolute inset-x-0.5 rounded overflow-hidden text-left hover:brightness-95 transition-all px-1 py-0.5"
+                      onDoubleClick={e => e.stopPropagation()}
+                      className="absolute inset-x-0.5 rounded overflow-hidden text-left hover:brightness-95 transition-all px-1 pt-0.5 pb-0.5"
                       style={{ top, height, backgroundColor: labelAchtergrond(kleur, 0.18), borderLeft: `2px solid ${kleur}` }}
                     >
-                      <p className="text-[10px] font-semibold truncate leading-tight" style={{ color: kleur }}>
-                        {afspraak.titel}
-                      </p>
+                      <div className="flex items-baseline gap-1 min-w-0">
+                        <p className="text-[11px] font-semibold truncate leading-tight flex-1" style={{ color: kleur }}>
+                          {afspraak.titel}
+                        </p>
+                        {height >= 30 && (
+                          <p className="text-[9px] shrink-0 tabular-nums leading-tight" style={{ color: kleur, opacity: 0.75 }}>
+                            {afspraak.beginTijd}
+                          </p>
+                        )}
+                      </div>
+                      {height >= 44 && afspraak.locatie && (
+                        <p className="text-[9px] truncate leading-tight mt-0.5" style={{ color: kleur, opacity: 0.65 }}>
+                          {afspraak.locatie}
+                        </p>
+                      )}
                     </button>
                   )
                 })}

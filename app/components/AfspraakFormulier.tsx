@@ -13,26 +13,29 @@ interface Props {
   afspraak?: Afspraak | null
   labels: Label[]
   initiaalDatum: Date
+  initiaalTijd?: string
   onOpslaan: (afspraak: Afspraak, herhaling: HerhalingConfig) => void
   onVerwijder: (id: string, alleHerhalingen?: boolean) => void
   onSluit: () => void
 }
 
-function leeg(datum: string): Afspraak {
-  return { id: '', titel: '', datum, beginTijd: '09:00', eindTijd: '10:00', heeldag: false, labelIds: [] }
+function leeg(datum: string, beginTijd = '09:00'): Afspraak {
+  const [h, m] = beginTijd.split(':').map(Number)
+  const eindMin = h * 60 + m + 60
+  const eindTijd = `${String(Math.floor(eindMin / 60) % 24).padStart(2, '0')}:${String(eindMin % 60).padStart(2, '0')}`
+  return { id: '', titel: '', datum, beginTijd, eindTijd, heeldag: false, labelIds: [] }
 }
 
-export default function AfspraakFormulier({ open, afspraak, labels, initiaalDatum, onOpslaan, onVerwijder, onSluit }: Props) {
-  const [form, setForm]           = useState<Afspraak>(() => leeg(toISODatum(initiaalDatum)))
+export default function AfspraakFormulier({ open, afspraak, labels, initiaalDatum, initiaalTijd, onOpslaan, onVerwijder, onSluit }: Props) {
+  const [form, setForm]           = useState<Afspraak>(() => leeg(toISODatum(initiaalDatum), initiaalTijd))
   const [herhaling, setHerhaling] = useState<HerhalingConfig>(HERHALING_LEEG)
 
   useEffect(() => {
     if (open) {
-      setForm(afspraak ? { ...afspraak } : leeg(toISODatum(initiaalDatum)))
-      // Herhaling alleen instelbaar bij nieuwe events; bestaande events tonen huidige waarden
+      setForm(afspraak ? { ...afspraak } : leeg(toISODatum(initiaalDatum), initiaalTijd))
       setHerhaling(HERHALING_LEEG)
     }
-  }, [open, afspraak, initiaalDatum])
+  }, [open, afspraak, initiaalDatum, initiaalTijd])
 
   if (!open) return null
 

@@ -48,9 +48,10 @@ export default function AgendaApp() {
   // Modal state
   const [formulierOpen, setFormulierOpen]         = useState(false)
   const [bewerkAfspraak, setBewerkAfspraak]       = useState<Afspraak | null>(null)
-  const [labelBeheerOpen, setLabelBeheerOpen]   = useState(false)
-  const [profielMenuOpen, setProfielMenuOpen]   = useState(false)
+  const [labelBeheerOpen, setLabelBeheerOpen]     = useState(false)
+  const [profielMenuOpen, setProfielMenuOpen]     = useState(false)
   const [vooringevuldDatum, setVooringevuldDatum] = useState<Date | null>(null)
+  const [vooringevuldTijd, setVooringevuldTijd]   = useState<string | undefined>(undefined)
 
   // ── Auth & data init ────────────────────────────────────────────────────────
 
@@ -258,8 +259,9 @@ export default function AgendaApp() {
 
   // ── Afspraak CRUD ────────────────────────────────────────────────────────────
 
-  function openNieuwAfspraak(datum?: Date) {
+  function openNieuwAfspraak(datum?: Date, beginTijd?: string) {
     setVooringevuldDatum(datum ?? huidigeDatum)
+    setVooringevuldTijd(beginTijd)
     setBewerkAfspraak(null)
     setFormulierOpen(true)
   }
@@ -408,6 +410,7 @@ export default function AgendaApp() {
             labels={labels}
             onDagKlik={selecteerDag}
             onAfspraakKlik={openBewerkAfspraak}
+            onNieuwAfspraak={openNieuwAfspraak}
           />
         )}
         {weergave === 'dag' && (
@@ -417,6 +420,7 @@ export default function AgendaApp() {
             labels={labels}
             onDagKlik={selecteerDag}
             onAfspraakKlik={openBewerkAfspraak}
+            onNieuwAfspraak={openNieuwAfspraak}
           />
         )}
         {weergave === 'agenda' && (
@@ -440,6 +444,7 @@ export default function AgendaApp() {
         afspraak={bewerkAfspraak}
         labels={labels}
         initiaalDatum={vooringevuldDatum ?? huidigeDatum}
+        initiaalTijd={vooringevuldTijd}
         onOpslaan={handleOpslaanAfspraak}
         onVerwijder={handleVerwijderAfspraak}
         onSluit={() => setFormulierOpen(false)}
