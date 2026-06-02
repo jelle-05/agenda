@@ -18,7 +18,7 @@ const supabaseAdmin = createClient(
 )
 
 export async function GET(req: NextRequest) {
-  if (req.headers.get('x-cron-secret') !== process.env.CRON_SECRET) {
+  if (!process.env.CRON_SECRET || req.headers.get('x-cron-secret') !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -32,10 +32,23 @@ export async function GET(req: NextRequest) {
     String(amNu.getDate()).padStart(2, '0'),
   ].join('-')
 
+  // Morgen ophalen voor cross-midnight reminders (bijv. "1 dag van tevoren")
+  const morgenDt = new Date(amNu)
+  morgenDt.setDate(morgenDt.getDate() + 1)
+  const morgen = [
+    morgenDt.getFullYear(),
+    String(morgenDt.getMonth() + 1).padStart(2, '0'),
+    String(morgenDt.getDate()).padStart(2, '0'),
+  ].join('-')
+
+  if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL) {
+    console.warn('[reminders] RESEND_API_KEY of RESEND_FROM_EMAIL niet ingesteld — e-mailreminders worden overgeslagen')
+  }
+
   const { data: afspraken, error } = await supabaseAdmin
     .from('afspraken')
     .select('id, user_id, titel, datum, begin_tijd, eind_tijd, locatie, herinnering_minuten')
-    .eq('datum', vandaag)
+    .in('datum', [vandaag, morgen])
     .eq('heeldag', false)
     .gte('herinnering_minuten', 0)
 
@@ -49,10 +62,12 @@ export async function GET(req: NextRequest) {
     if (!afspraak.begin_tijd) continue
     const [uur, min] = afspraak.begin_tijd.split(':').map(Number)
     const afspraakMin = uur * 60 + min
-    const herinneringMin = afspraakMin - (afspraak.herinnering_minuten ?? 0)
+    // Dag-offset voor cross-midnight reminders: morgen-events tellen 1440 min op
+    const dagOffset = afspraak.datum === morgen ? 1440 : 0
+    const herinneringMin = afspraakMin + dagOffset - (afspraak.herinnering_minuten ?? 0)
 
-    // Schiet af binnen een venster van 1 minuut
-    if (herinneringMin < nuMinuten || herinneringMin > nuMinuten + 1) continue
+    // Venster van 3 minuten (vangt kleine vertragingen van cron-job.org op)
+    if (herinneringMin < nuMinuten - 1 || herinneringMin > nuMinuten + 2) continue
 
     const rm = afspraak.herinnering_minuten ?? 0
     const tijdTekst = rm === 0 ? 'Nu gepland'
@@ -95,8 +110,8 @@ export async function GET(req: NextRequest) {
     const email = userResult?.user?.email
     if (!email) continue
 
-    // Datum formatteren in het Nederlands
-    const [dy, dm, dd] = vandaag.split('-').map(Number)
+    // Datum formatteren in het Nederlands (gebruik afspraak.datum, niet vandaag)
+    const [dy, dm, dd] = afspraak.datum.split('-').map(Number)
     const datumObj  = new Date(dy, dm - 1, dd)
     const datumTekst = datumObj.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })
     const datumLabel = datumTekst.charAt(0).toUpperCase() + datumTekst.slice(1)
@@ -131,19 +146,18 @@ export async function GET(req: NextRequest) {
     ].filter(r => r !== null).join('\n')
 
     const resend = new Resend(process.env.RESEND_API_KEY)
-    try {
-      await resend.emails.send({
-        from:    process.env.RESEND_FROM_EMAIL!,
-        to:      email,
-        replyTo: process.env.RESEND_FROM_EMAIL,
-        subject: `Reminder: ${afspraak.titel}`,
-        headers: {
-          'X-Priority': '1',
-          'Importance': 'high',
-          'Priority':   'urgent',
-        },
-        text: plainText,
-        html: `<!DOCTYPE html>
+    const { error: resendFout } = await resend.emails.send({
+      from:    process.env.RESEND_FROM_EMAIL!,
+      to:      email,
+      replyTo: process.env.RESEND_FROM_EMAIL,
+      subject: `Reminder: ${afspraak.titel}`,
+      headers: {
+        'X-Priority': '1',
+        'Importance': 'high',
+        'Priority':   'urgent',
+      },
+      text: plainText,
+      html: `<!DOCTYPE html>
 <html lang="nl">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:transparent">
@@ -170,10 +184,11 @@ export async function GET(req: NextRequest) {
   </div>
 </body>
 </html>`,
-      })
+    })
+    if (resendFout) {
+      console.error('[reminders] E-mailherinnering mislukt:', resendFout)
+    } else {
       emailVerstuurd++
-    } catch (err) {
-      console.error('E-mailherinnering mislukt:', err)
     }
   }
 

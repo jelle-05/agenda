@@ -1,6 +1,8 @@
 'use client'
 
-import { LogOut, X } from 'lucide-react'
+import { useState } from 'react'
+import { LogOut, Mail, X } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 interface Props {
   open: boolean
@@ -10,11 +12,33 @@ interface Props {
 }
 
 export default function ProfielMenu({ open, email, onUitloggen, onSluit }: Props) {
+  const [emailTestStatus, setEmailTestStatus] = useState<'idle' | 'laden' | 'ok' | 'fout'>('idle')
+  const [emailTestFout, setEmailTestFout] = useState('')
+
   if (!open) return null
 
   const prefix = email.split('@')[0] ?? ''
   const naam   = prefix.charAt(0).toUpperCase() + prefix.slice(1)
   const initiaal = naam[0] ?? '?'
+
+  async function stuurTestEmail() {
+    setEmailTestStatus('laden')
+    setEmailTestFout('')
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) { setEmailTestStatus('fout'); setEmailTestFout('Niet ingelogd'); return }
+      const res = await fetch('/api/email/test', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      const json = await res.json()
+      if (!res.ok) { setEmailTestStatus('fout'); setEmailTestFout(json.error ?? 'Onbekende fout'); return }
+      setEmailTestStatus('ok')
+    } catch {
+      setEmailTestStatus('fout')
+      setEmailTestFout('Netwerkfout')
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-start sm:justify-end p-0 sm:p-2 sm:pt-14">
@@ -37,6 +61,24 @@ export default function ProfielMenu({ open, email, onUitloggen, onSluit }: Props
           </div>
           <p className="text-[17px] font-semibold text-gray-900">{naam}</p>
           <p className="text-[13px] text-gray-400">{email}</p>
+        </div>
+
+        {/* Test e-mail */}
+        <div className="px-4 pt-4 pb-0">
+          <button
+            onClick={stuurTestEmail}
+            disabled={emailTestStatus === 'laden'}
+            className="w-full flex items-center justify-center gap-2 bg-gray-50 hover:bg-gray-100 disabled:opacity-50 text-gray-700 rounded-xl py-3 text-[15px] font-medium transition-colors"
+          >
+            <Mail size={16} />
+            {emailTestStatus === 'laden' ? 'Versturen…' : 'Test e-mailreminder sturen'}
+          </button>
+          {emailTestStatus === 'ok' && (
+            <p className="text-[12px] text-green-600 text-center mt-2">Verstuurd naar {email}</p>
+          )}
+          {emailTestStatus === 'fout' && (
+            <p className="text-[12px] text-red-500 text-center mt-2">{emailTestFout}</p>
+          )}
         </div>
 
         {/* Uitloggen */}
