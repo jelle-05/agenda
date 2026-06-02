@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 
 export const runtime = 'nodejs'
 
-const MAX_GEBRUIKERS = 2
+const MAX_GEBRUIKERS = 10
 
 export async function GET() {
   try {
