@@ -109,6 +109,35 @@ export default function AgendaApp() {
     void userId
   }
 
+  // Herlaad alle data vanuit Supabase en update state + cache
+  async function herlaadData() {
+    try {
+      const [supLabels, supAfspraken] = await Promise.all([
+        laadLabelsVanSupabase(),
+        laadAfsprakenVanSupabase(),
+      ])
+      setAfspraken(supAfspraken)
+      setLabels(supLabels)
+      slaAlleAfsprakenOp(supAfspraken)
+      slaAlleLabelsOp(supLabels)
+    } catch {
+      // Netwerk niet beschikbaar
+    }
+  }
+
+  // Real-time sync: luister naar wijzigingen in de database
+  useEffect(() => {
+    if (!gebruiker) return
+
+    const kanaal = supabase
+      .channel(`agenda-${gebruiker.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'afspraken' }, herlaadData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'labels' }, herlaadData)
+      .subscribe()
+
+    return () => { supabase.removeChannel(kanaal) }
+  }, [gebruiker]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Volledige initialisatie voor eerste login (upload lokale data als Supabase leeg is)
   async function initialiseerData(userId: string) {
     try {
