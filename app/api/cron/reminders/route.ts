@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
 
   const { data: afspraken, error } = await supabaseAdmin
     .from('afspraken')
-    .select('id, user_id, titel, begin_tijd, herinnering_minuten')
+    .select('id, user_id, titel, datum, begin_tijd, eind_tijd, locatie, herinnering_minuten')
     .eq('datum', vandaag)
     .eq('heeldag', false)
     .gte('herinnering_minuten', 0)
@@ -95,27 +95,81 @@ export async function GET(req: NextRequest) {
     const email = userResult?.user?.email
     if (!email) continue
 
+    // Datum formatteren in het Nederlands
+    const [dy, dm, dd] = vandaag.split('-').map(Number)
+    const datumObj  = new Date(dy, dm - 1, dd)
+    const datumTekst = datumObj.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })
+    const datumLabel = datumTekst.charAt(0).toUpperCase() + datumTekst.slice(1)
+
+    const eindTijdLabel = afspraak.eind_tijd ? afspraak.eind_tijd.slice(0, 5) : null
+    const tijdLabel     = eindTijdLabel ? `${tijdstip} – ${eindTijdLabel}` : tijdstip
+    const locatie       = afspraak.locatie ?? null
+
+    const starttekst = rm === 0
+      ? 'Dit event begint nu.'
+      : rm < 60
+        ? `Dit event begint over ${rm} minuten.`
+        : `Dit event begint over ${rm / 60} uur.`
+
+    const rij = (label: string, waarde: string) => `
+      <tr>
+        <td style="padding:7px 16px 7px 0;font-size:13px;color:#999;white-space:nowrap;vertical-align:top">${label}</td>
+        <td style="padding:7px 0;font-size:14px;color:#1a1a1a">${waarde}</td>
+      </tr>`
+
+    const plainText = [
+      `Reminder: ${afspraak.titel}`,
+      '',
+      `Datum     ${datumLabel}`,
+      `Tijd      ${tijdLabel}`,
+      locatie ? `Locatie   ${locatie}` : '',
+      '',
+      starttekst,
+      '',
+      '—',
+      'Agenda',
+    ].filter(r => r !== null).join('\n')
+
     const resend = new Resend(process.env.RESEND_API_KEY)
     try {
       await resend.emails.send({
         from:    process.env.RESEND_FROM_EMAIL!,
         to:      email,
         replyTo: process.env.RESEND_FROM_EMAIL,
-        subject: `${afspraak.titel} — ${tijdstip}`,
+        subject: `Reminder: ${afspraak.titel}`,
         headers: {
-          'X-Priority':  '1',
-          'Importance':  'high',
-          'Priority':    'urgent',
+          'X-Priority': '1',
+          'Importance': 'high',
+          'Priority':   'urgent',
         },
-        text: `${afspraak.titel}\nVandaag om ${tijdstip}\n${tijdTekst}`,
-        html: `
-          <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:480px;margin:0 auto;padding:24px">
-            <p style="font-size:13px;color:#8E8E93;margin:0 0 4px">Agenda herinnering</p>
-            <h2 style="font-size:20px;font-weight:600;color:#1c1c1e;margin:0 0 8px">${afspraak.titel}</h2>
-            <p style="font-size:15px;color:#3C3C43;margin:0 0 4px">Vandaag om <strong>${tijdstip}</strong></p>
-            <p style="font-size:15px;color:#1c1c1e;margin:0">${tijdTekst}</p>
-          </div>
-        `,
+        text: plainText,
+        html: `<!DOCTYPE html>
+<html lang="nl">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:transparent">
+  <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;padding:48px 24px;color:#1a1a1a">
+
+    <p style="margin:0 0 36px;font-size:11px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#aaa">Reminder</p>
+
+    <h1 style="margin:0 0 24px;font-size:22px;font-weight:600;line-height:1.25;color:#1a1a1a">${afspraak.titel}</h1>
+
+    <hr style="border:none;border-top:1px solid #e8e8e8;margin:0 0 24px">
+
+    <table style="width:100%;border-collapse:collapse">
+      ${rij('Datum', datumLabel)}
+      ${rij('Tijd', tijdLabel)}
+      ${locatie ? rij('Locatie', locatie) : ''}
+    </table>
+
+    <hr style="border:none;border-top:1px solid #e8e8e8;margin:24px 0">
+
+    <p style="margin:0 0 48px;font-size:14px;color:#555;line-height:1.5">${starttekst}</p>
+
+    <p style="margin:0;font-size:11px;color:#ccc">Agenda</p>
+
+  </div>
+</body>
+</html>`,
       })
       emailVerstuurd++
     } catch (err) {
