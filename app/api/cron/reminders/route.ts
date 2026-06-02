@@ -98,15 +98,22 @@ export async function GET(req: NextRequest) {
     const resend = new Resend(process.env.RESEND_API_KEY)
     try {
       await resend.emails.send({
-        from:    process.env.RESEND_FROM_EMAIL,
+        from:    process.env.RESEND_FROM_EMAIL!,
         to:      email,
-        subject: `Herinnering: ${afspraak.titel} om ${tijdstip}`,
+        replyTo: process.env.RESEND_FROM_EMAIL,
+        subject: `${afspraak.titel} — ${tijdstip}`,
+        headers: {
+          'X-Priority':  '1',
+          'Importance':  'high',
+          'Priority':    'urgent',
+        },
+        text: `${afspraak.titel}\nVandaag om ${tijdstip}\n${tijdTekst}`,
         html: `
           <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:480px;margin:0 auto;padding:24px">
             <p style="font-size:13px;color:#8E8E93;margin:0 0 4px">Agenda herinnering</p>
             <h2 style="font-size:20px;font-weight:600;color:#1c1c1e;margin:0 0 8px">${afspraak.titel}</h2>
-            <p style="font-size:15px;color:#3C3C43;margin:0 0 4px">🕐 Vandaag om <strong>${tijdstip}</strong></p>
-            <p style="font-size:15px;color:#007AFF;margin:0">${tijdTekst}</p>
+            <p style="font-size:15px;color:#3C3C43;margin:0 0 4px">Vandaag om <strong>${tijdstip}</strong></p>
+            <p style="font-size:15px;color:#1c1c1e;margin:0">${tijdTekst}</p>
           </div>
         `,
       })
