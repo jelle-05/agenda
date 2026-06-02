@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   if (!token) return NextResponse.json({ error: 'Niet ingelogd' }, { status: 401 })
 
   const supabase = clientMetToken(token)
-  const { data: { user }, error: authErr } = await supabase.auth.getUser()
+  const { data: { user }, error: authErr } = await supabase.auth.getUser(token)
   if (authErr || !user) return NextResponse.json({ error: 'Ongeldig token' }, { status: 401 })
 
   const { subscription } = await req.json()
