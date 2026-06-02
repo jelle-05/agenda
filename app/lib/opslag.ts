@@ -1,16 +1,11 @@
 import type { Afspraak, Label } from '@/types'
-import { mockAfspraken, mockLabels } from './mockData'
 
 const SLEUTEL_AFSPRAKEN = 'agenda_afspraken'
 const SLEUTEL_LABELS    = 'agenda_labels'
 
 export function laadAfspraken(): Afspraak[] {
   const data = localStorage.getItem(SLEUTEL_AFSPRAKEN)
-  if (!data) {
-    const seeded = [...mockAfspraken]
-    localStorage.setItem(SLEUTEL_AFSPRAKEN, JSON.stringify(seeded))
-    return seeded
-  }
+  if (!data) return []
   return JSON.parse(data) as Afspraak[]
 }
 
@@ -37,11 +32,7 @@ export function slaAlleLabelsOp(alle: Label[]): void {
 
 export function laadLabels(): Label[] {
   const data = localStorage.getItem(SLEUTEL_LABELS)
-  if (!data) {
-    const seeded = [...mockLabels]
-    localStorage.setItem(SLEUTEL_LABELS, JSON.stringify(seeded))
-    return seeded
-  }
+  if (!data) return []
   return JSON.parse(data) as Label[]
 }
 
