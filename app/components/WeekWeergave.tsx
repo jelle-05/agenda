@@ -123,21 +123,14 @@ export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKli
                       key={afspraak.id}
                       onClick={() => onAfspraakKlik(afspraak)}
                       onDoubleClick={e => e.stopPropagation()}
-                      className="absolute inset-x-0.5 rounded overflow-hidden text-left hover:brightness-95 transition-all px-1 pt-0.5 pb-0.5 flex flex-col justify-start items-stretch"
-                      style={{ top, height, backgroundColor: labelAchtergrond(kleur, 0.18), borderLeft: `2px solid ${kleur}` }}
+                      className="absolute inset-x-0.5 rounded overflow-hidden text-left hover:brightness-95 transition-all flex flex-col justify-start items-stretch"
+                      style={{ top, height, backgroundColor: labelAchtergrond(kleur, 0.18), borderLeft: `2px solid ${kleur}`, padding: 7 }}
                     >
-                      <div className="flex items-baseline gap-1 min-w-0">
-                        <p className="text-[11px] font-semibold truncate leading-tight flex-1" style={{ color: kleur }}>
-                          {afspraak.titel}
-                        </p>
-                        {height >= 30 && (
-                          <p className="text-[9px] shrink-0 tabular-nums leading-tight" style={{ color: kleur, opacity: 0.75 }}>
-                            {afspraak.beginTijd}
-                          </p>
-                        )}
-                      </div>
+                      <p className="text-[12px] font-semibold truncate leading-tight" style={{ color: kleur }}>
+                        {afspraak.titel}
+                      </p>
                       {height >= 44 && afspraak.locatie && (
-                        <p className="text-[9px] truncate leading-tight mt-0.5" style={{ color: kleur, opacity: 0.65 }}>
+                        <p className="text-[11px] truncate leading-tight mt-0.5" style={{ color: kleur, opacity: 0.65 }}>
                           {afspraak.locatie}
                         </p>
                       )}

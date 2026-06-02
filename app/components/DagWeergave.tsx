@@ -140,17 +140,12 @@ export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik
                   key={afspraak.id}
                   onClick={() => onAfspraakKlik(afspraak)}
                   onDoubleClick={e => e.stopPropagation()}
-                  className="absolute left-1 right-2 rounded-md px-2 pt-1 pb-1 overflow-hidden text-left hover:brightness-95 transition-all flex flex-col justify-start items-stretch"
-                  style={{ top, height, backgroundColor: labelAchtergrond(kleur, 0.18), borderLeft: `3px solid ${kleur}` }}
+                  className="absolute left-1 right-2 rounded-md overflow-hidden text-left hover:brightness-95 transition-all flex flex-col justify-start items-stretch"
+                  style={{ top, height, backgroundColor: labelAchtergrond(kleur, 0.18), borderLeft: `3px solid ${kleur}`, padding: 7 }}
                 >
-                  <div className="flex items-baseline gap-1.5 min-w-0">
-                    <p className="text-[13px] font-semibold leading-tight truncate flex-1" style={{ color: kleur }}>
-                      {afspraak.titel}
-                    </p>
-                    <p className="text-[11px] shrink-0 tabular-nums leading-tight" style={{ color: kleur, opacity: 0.75 }}>
-                      {afspraak.beginTijd}–{afspraak.eindTijd}
-                    </p>
-                  </div>
+                  <p className="text-[12px] font-semibold leading-tight truncate" style={{ color: kleur }}>
+                    {afspraak.titel}
+                  </p>
                   {afspraak.locatie && height >= 36 && (
                     <p className="text-[11px] truncate leading-tight mt-0.5" style={{ color: kleur, opacity: 0.65 }}>
                       {afspraak.locatie}
