@@ -23,6 +23,12 @@ export default function LoginPagina({ onIngelogd }: Props) {
 
     try {
       if (modus === 'registreer') {
+        // Controleer of de accountlimiet bereikt is
+        const capaciteit = await fetch('/api/auth/check-capacity').then(r => r.json()).catch(() => ({ vol: false }))
+        if (capaciteit.vol) {
+          throw new Error('Deze app is gesloten voor nieuwe accounts.')
+        }
+
         const { error } = await supabase.auth.signUp({ email, password: wachtwoord })
         if (error) throw error
         setBevestigd(true)

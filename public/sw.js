@@ -1,31 +1,35 @@
-const CACHE = 'agenda-v1'
+const CACHE = 'agenda-v2'
 
 self.addEventListener('install', () => self.skipWaiting())
-self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()))
 
-// Sla alleen statische assets op in cache
+self.addEventListener('activate', (e) => {
+  // Verwijder oude caches (agenda-v1 etc.) en claim clients direct
+  e.waitUntil(
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
+  )
+})
+
+// Onderschep ALLEEN /_next/static/ (content-gehashte, onveranderlijke assets)
+// HTML-pagina's en API-calls gaan altijd via het netwerk — dit voorkomt laadproblemen
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url)
-  // Alleen GET requests; sla API-aanroepen en Supabase over
   if (e.request.method !== 'GET') return
-  if (url.hostname.includes('supabase')) return
-  if (url.pathname.startsWith('/_next/data')) return
+  if (!url.pathname.startsWith('/_next/static/')) return
 
   e.respondWith(
     caches.open(CACHE).then(async (cache) => {
       const cached = await cache.match(e.request)
-      const networkFetch = fetch(e.request).then((resp) => {
-        if (resp.ok && url.pathname.startsWith('/_next/static')) {
-          cache.put(e.request, resp.clone())
-        }
-        return resp
-      }).catch(() => cached)
-      return cached || networkFetch
+      if (cached) return cached
+      const resp = await fetch(e.request)
+      if (resp.ok) cache.put(e.request, resp.clone())
+      return resp
     })
   )
 })
 
-// Push notificatie ontvangen (van server)
+// Push notificatie ontvangen
 self.addEventListener('push', (e) => {
   if (!e.data) return
   let data
@@ -42,7 +46,7 @@ self.addEventListener('push', (e) => {
   )
 })
 
-// Klik op notificatie → app openen/focussen
+// Klik op notificatie → app openen
 self.addEventListener('notificationclick', (e) => {
   e.notification.close()
   e.waitUntil(
