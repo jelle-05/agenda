@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronLeft, ChevronRight, Search, Plus, Tag } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search, Plus, Tag, LogOut } from 'lucide-react'
 import type { WeergaveType } from '@/types'
 
 const WEERGAVEN: { key: WeergaveType; label: string }[] = [
@@ -18,9 +18,16 @@ interface Props {
   onVolgende: () => void
   onNieuw: () => void
   onLabels: () => void
+  onUitloggen?: () => void
+  gebruikerEmail?: string
 }
 
-export default function TopBar({ weergave, onWeergaveChange, titel, onVorige, onVolgende, onNieuw, onLabels }: Props) {
+export default function TopBar({
+  weergave, onWeergaveChange, titel, onVorige, onVolgende,
+  onNieuw, onLabels, onUitloggen, gebruikerEmail,
+}: Props) {
+  const initiaal = gebruikerEmail?.[0]?.toUpperCase() ?? '?'
+
   return (
     <header className="flex items-center justify-between px-3 h-12 border-b border-gray-200 bg-white shrink-0 gap-2">
       {/* Navigatie */}
@@ -54,7 +61,7 @@ export default function TopBar({ weergave, onWeergaveChange, titel, onVorige, on
 
       {/* Acties */}
       <div className="flex items-center gap-1 shrink-0">
-        <button onClick={onLabels} className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-500" title="Labels beheren">
+        <button onClick={onLabels} className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-500" title="Labels">
           <Tag size={18} />
         </button>
         <button className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-500" title="Zoeken">
@@ -63,6 +70,17 @@ export default function TopBar({ weergave, onWeergaveChange, titel, onVorige, on
         <button onClick={onNieuw} className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-500" title="Nieuwe afspraak">
           <Plus size={18} />
         </button>
+
+        {/* Gebruiker avatar + uitloggen */}
+        {onUitloggen && (
+          <button
+            onClick={onUitloggen}
+            title={`Uitloggen (${gebruikerEmail})`}
+            className="ml-1 w-7 h-7 rounded-full bg-[#007AFF] flex items-center justify-center text-white text-[11px] font-bold hover:bg-blue-600 transition-colors shrink-0"
+          >
+            {initiaal}
+          </button>
+        )}
       </div>
     </header>
   )

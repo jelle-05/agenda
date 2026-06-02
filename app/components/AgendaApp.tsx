@@ -1,14 +1,22 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import type { User } from '@supabase/supabase-js'
 import type { WeergaveType, Afspraak, Label } from '@/types'
+import { supabase } from '@/lib/supabase'
 import {
   laadAfspraken, slaAfspraakOp, verwijderAfspraak, slaAlleAfsprakenOp,
-  laadLabels, slaLabelOp, verwijderLabel,
+  laadLabels, slaLabelOp, verwijderLabel, slaAlleLabelsOp,
 } from '@/lib/opslag'
+import {
+  laadAfsprakenVanSupabase, slaAfspraakOpInSupabase, verwijderAfspraakUitSupabase,
+  laadLabelsVanSupabase, slaLabelOpInSupabase, verwijderLabelUitSupabase,
+  uploadNaarSupabase,
+} from '@/lib/supabaseOpslag'
 import { NL_MAANDEN, NL_MAANDEN_KORT, formatWeekTitel } from '@/lib/datum'
 import TopBar from './TopBar'
 import BottomBar from './BottomBar'
+import LoginPagina from './LoginPagina'
 import MaandWeergave from './MaandWeergave'
 import WeekWeergave from './WeekWeergave'
 import DagWeergave from './DagWeergave'
@@ -17,25 +25,82 @@ import AfspraakFormulier from './AfspraakFormulier'
 import LabelBeheer from './LabelBeheer'
 
 export default function AgendaApp() {
+  // Auth
+  const [gebruiker, setGebruiker] = useState<User | null>(null)
+  const [klaar, setKlaar]         = useState(false)     // auth + data both loaded
+
+  // Calendar state
   const [weergave, setWeergave]         = useState<WeergaveType>('maand')
   const [huidigeDatum, setHuidigeDatum] = useState(() => new Date())
   const [afspraken, setAfspraken]       = useState<Afspraak[]>([])
   const [labels, setLabels]             = useState<Label[]>([])
-  const [geladen, setGeladen]           = useState(false)
 
-  // Modal states
-  const [formulierOpen, setFormulierOpen]     = useState(false)
-  const [bewerkAfspraak, setBewerkAfspraak]   = useState<Afspraak | null>(null)
-  const [labelBeheerOpen, setLabelBeheerOpen] = useState(false)
+  // Modal state
+  const [formulierOpen, setFormulierOpen]         = useState(false)
+  const [bewerkAfspraak, setBewerkAfspraak]       = useState<Afspraak | null>(null)
+  const [labelBeheerOpen, setLabelBeheerOpen]     = useState(false)
   const [vooringevuldDatum, setVooringevuldDatum] = useState<Date | null>(null)
 
-  useEffect(() => {
-    setAfspraken(laadAfspraken())
-    setLabels(laadLabels())
-    setGeladen(true)
-  }, [])
+  // ── Auth & data init ────────────────────────────────────────────────────────
 
-  // Navigatie
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      const user = session?.user ?? null
+      setGebruiker(user)
+      if (user) await initialiseerData(user.id)
+      setKlaar(true)
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const user = session?.user ?? null
+      setGebruiker(user)
+      if (user) {
+        setKlaar(false)
+        await initialiseerData(user.id)
+        setKlaar(true)
+      } else {
+        setAfspraken([])
+        setLabels([])
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function initialiseerData(userId: string) {
+    try {
+      const [supLabels, supAfspraken] = await Promise.all([
+        laadLabelsVanSupabase(),
+        laadAfsprakenVanSupabase(),
+      ])
+
+      if (supLabels.length === 0 && supAfspraken.length === 0) {
+        // Nieuwe gebruiker: lokale data uploaden naar Supabase
+        const lokaleAfspraken = laadAfspraken()
+        const lokaleLabels    = laadLabels()
+        await uploadNaarSupabase(lokaleAfspraken, lokaleLabels, userId)
+        setAfspraken(lokaleAfspraken)
+        setLabels(lokaleLabels)
+      } else {
+        // Bestaande gebruiker: Supabase is de bron
+        setAfspraken(supAfspraken)
+        setLabels(supLabels)
+        slaAlleAfsprakenOp(supAfspraken)
+        slaAlleLabelsOp(supLabels)
+      }
+    } catch (err) {
+      console.error('Supabase laden mislukt, gebruik lokale data:', err)
+      setAfspraken(laadAfspraken())
+      setLabels(laadLabels())
+    }
+  }
+
+  async function uitloggen() {
+    await supabase.auth.signOut()
+  }
+
+  // ── Navigatie ───────────────────────────────────────────────────────────────
+
   function navigeerVorige() {
     const d = new Date(huidigeDatum)
     if (weergave === 'maand' || weergave === 'agenda') d.setMonth(d.getMonth() - 1)
@@ -59,7 +124,8 @@ export default function AgendaApp() {
     setWeergave('dag')
   }
 
-  // Afspraak CRUD
+  // ── Afspraak CRUD ────────────────────────────────────────────────────────────
+
   function openNieuwAfspraak(datum?: Date) {
     setVooringevuldDatum(datum ?? huidigeDatum)
     setBewerkAfspraak(null)
@@ -72,29 +138,48 @@ export default function AgendaApp() {
     setFormulierOpen(true)
   }
 
-  function handleOpslaanAfspraak(afspraak: Afspraak) {
+  async function handleOpslaanAfspraak(afspraak: Afspraak) {
     setAfspraken(prev => slaAfspraakOp(afspraak, prev))
     setFormulierOpen(false)
+    if (gebruiker) {
+      try { await slaAfspraakOpInSupabase(afspraak, gebruiker.id) }
+      catch (err) { console.error('Supabase afspraak sync mislukt:', err) }
+    }
   }
 
-  function handleVerwijderAfspraak(id: string) {
+  async function handleVerwijderAfspraak(id: string) {
     setAfspraken(prev => verwijderAfspraak(id, prev))
     setFormulierOpen(false)
+    if (gebruiker) {
+      try { await verwijderAfspraakUitSupabase(id) }
+      catch (err) { console.error('Supabase verwijder sync mislukt:', err) }
+    }
   }
 
-  // Label CRUD
-  function handleOpslaanLabel(label: Label) {
+  // ── Label CRUD ───────────────────────────────────────────────────────────────
+
+  async function handleOpslaanLabel(label: Label) {
     setLabels(prev => slaLabelOp(label, prev))
+    if (gebruiker) {
+      try { await slaLabelOpInSupabase(label, gebruiker.id) }
+      catch (err) { console.error('Supabase label sync mislukt:', err) }
+    }
   }
 
-  function handleVerwijderLabel(id: string) {
+  async function handleVerwijderLabel(id: string) {
     setLabels(prev => verwijderLabel(id, prev))
     setAfspraken(prev => {
       const updated = prev.map(a => ({ ...a, labelIds: a.labelIds.filter(l => l !== id) }))
       slaAlleAfsprakenOp(updated)
       return updated
     })
+    if (gebruiker) {
+      try { await verwijderLabelUitSupabase(id) }
+      catch (err) { console.error('Supabase label verwijder sync mislukt:', err) }
+    }
   }
+
+  // ── Topbar titel ─────────────────────────────────────────────────────────────
 
   function getTitel(): string {
     if (weergave === 'maand' || weergave === 'agenda')
@@ -104,8 +189,18 @@ export default function AgendaApp() {
     return `${d.getDate()} ${NL_MAANDEN_KORT[d.getMonth()]} ${d.getFullYear()}`
   }
 
-  if (!geladen) {
-    return <div className="h-full flex items-center justify-center text-gray-400 text-sm">Laden…</div>
+  // ── Render ───────────────────────────────────────────────────────────────────
+
+  if (!klaar) {
+    return (
+      <div className="h-full flex items-center justify-center bg-white">
+        <div className="w-10 h-10 border-2 border-gray-200 border-t-[#007AFF] rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (!gebruiker) {
+    return <LoginPagina onIngelogd={() => {}} />
   }
 
   return (
@@ -118,6 +213,8 @@ export default function AgendaApp() {
         onVolgende={navigeerVolgende}
         onNieuw={() => openNieuwAfspraak()}
         onLabels={() => setLabelBeheerOpen(true)}
+        onUitloggen={uitloggen}
+        gebruikerEmail={gebruiker.email ?? ''}
       />
 
       <main className="flex-1 overflow-hidden">

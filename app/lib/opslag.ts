@@ -31,6 +31,10 @@ export function slaAlleAfsprakenOp(alle: Afspraak[]): void {
   localStorage.setItem(SLEUTEL_AFSPRAKEN, JSON.stringify(alle))
 }
 
+export function slaAlleLabelsOp(alle: Label[]): void {
+  localStorage.setItem(SLEUTEL_LABELS, JSON.stringify(alle))
+}
+
 export function laadLabels(): Label[] {
   const data = localStorage.getItem(SLEUTEL_LABELS)
   if (!data) {
