@@ -36,11 +36,10 @@ Kleine wijzigingen met direct zichtbaar resultaat. Weinig backend-werk.
 
 ---
 
-### Swipe tussen weken/dagen op mobiel
+### ~~Swipe tussen weken/dagen op mobiel~~ ✅ Geïmplementeerd (juni 2026)
 **Wat:** Op mobiel kun je naar links/rechts swipen om naar de volgende of vorige week/dag te navigeren.
-**Waarom:** Intuïtief navigeren op touch-schermen, net als de native iOS Agenda.
-**Complexiteit:** Laag–Middel
-**Bestanden:** `WeekWeergave.tsx`, `DagWeergave.tsx`
+**Geïmplementeerd:** `useSwipe` hook met pointer events (touch-only, drempel 60 px, ratio 1.5×). Actief in week- en dagweergave via `<main>` in `AgendaApp`. Vuurt niet bij start op button/input/select/textarea/a. Vertical scroll blijft ongestoord.
+**Bestanden:** `lib/useSwipe.ts` (nieuw), `AgendaApp.tsx`
 
 ---
 

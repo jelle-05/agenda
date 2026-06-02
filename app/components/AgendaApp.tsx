@@ -29,6 +29,7 @@ import { subscribeerOpPush } from '@/lib/pushUtils'
 import { genereerHerhalingen } from '@/lib/herhaling'
 import type { HerhalingConfig } from '@/types'
 import { slaVeelAfsprakenOpInSupabase } from '@/lib/supabaseOpslag'
+import { useSwipe } from '@/lib/useSwipe'
 
 export default function AgendaApp() {
   // Auth
@@ -52,6 +53,14 @@ export default function AgendaApp() {
   const [profielMenuOpen, setProfielMenuOpen]     = useState(false)
   const [vooringevuldDatum, setVooringevuldDatum] = useState<Date | null>(null)
   const [vooringevuldTijd, setVooringevuldTijd]   = useState<string | undefined>(undefined)
+
+  // ── Swipe-navigatie (mobiel) ─────────────────────────────────────────────────
+
+  const swipeHandlers = useSwipe(
+    navigeerVolgende,
+    navigeerVorige,
+    weergave === 'week' || weergave === 'dag',
+  )
 
   // ── Auth & data init ────────────────────────────────────────────────────────
 
@@ -435,7 +444,7 @@ export default function AgendaApp() {
         </div>
       )}
 
-      <main className="flex-1 overflow-hidden">
+      <main className="flex-1 overflow-hidden" {...swipeHandlers}>
         {weergave === 'maand' && (
           <MaandWeergave
             huidigeDatum={huidigeDatum}
