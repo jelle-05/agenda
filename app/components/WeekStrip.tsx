@@ -26,11 +26,12 @@ export default function WeekStrip({ peildatum, geselecteerd, onDagKlik }: Props)
               {NL_DAGEN_KORT[getDagIndex(dag)]}
             </span>
             <span
+              key={gekozen ? 'g' : 'n'}
               className={[
                 'w-8 h-8 flex items-center justify-center text-[15px] mt-0.5 rounded-full font-medium',
-                vandaag                       ? 'bg-[#FF3B30] text-white'  : '',
-                gekozen && !vandaag           ? 'bg-[#007AFF] text-white'  : '',
-                !vandaag && !gekozen          ? 'text-gray-800'            : '',
+                vandaag                       ? 'bg-[#FF3B30] text-white dot-actief' : '',
+                gekozen && !vandaag           ? 'bg-[#007AFF] text-white dot-actief' : '',
+                !vandaag && !gekozen          ? 'text-gray-800'                      : '',
               ].join(' ')}
             >
               {dag.getDate()}

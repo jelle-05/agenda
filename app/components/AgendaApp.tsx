@@ -37,7 +37,7 @@ export default function AgendaApp() {
   const [klaar, setKlaar]         = useState(false)     // auth + data both loaded
 
   // Calendar state
-  const [weergave, setWeergave]         = useState<WeergaveType>('week')
+  const [weergave, setWeergave]         = useState<WeergaveType>('dag')
   const [huidigeDatum, setHuidigeDatum] = useState(() => new Date())
   const [afspraken, setAfspraken]       = useState<Afspraak[]>([])
   const [labels, setLabels]             = useState<Label[]>([])
