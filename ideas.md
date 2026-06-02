@@ -20,11 +20,11 @@ Kleine wijzigingen met direct zichtbaar resultaat. Weinig backend-werk.
 
 ---
 
-### Herhalend event bewerken
-**Wat:** Bij het opslaan van een bestaand herhalend event kiezen: "Alleen dit event" of "Alle herhalingen".
-**Waarom:** Nu kun je herhalende events wel verwijderen per instantie of in bulk, maar niet bewerken. Een werkafspraak verschuift soms één keer.
-**Complexiteit:** Middel
-**Bestanden:** `AfspraakFormulier.tsx`, `AgendaApp.tsx`, `supabaseOpslag.ts`
+### ~~Herhalend event bewerken~~ ✅ Geïmplementeerd (juni 2026)
+**Wat:** Bij het opslaan van een bestaand herhalend event kiezen: "Alleen dit event" of "De hele reeks".
+**Geïmplementeerd:** Scope-kiezer in `AfspraakFormulier.tsx`; bij "De hele reeks" worden alle occurrences bijgewerkt (behalve de datum). Geen DB-schemawijziging nodig.
+**Nog open:** "Deze en toekomstige gebeurtenissen" (vereist verwijderen + heraan maken van toekomstige events — complexer).
+**Bestanden:** `AfspraakFormulier.tsx`, `AgendaApp.tsx`
 
 ---
 

@@ -286,7 +286,35 @@ export default function AgendaApp() {
     setFormulierOpen(true)
   }
 
-  async function handleOpslaanAfspraak(afspraak: Afspraak, herhaling: HerhalingConfig) {
+  async function handleOpslaanAfspraak(afspraak: Afspraak, herhaling: HerhalingConfig, scope?: 'enkel' | 'alles') {
+    if (scope === 'alles' && afspraak.herhalingGroepId) {
+      const groepId = afspraak.herhalingGroepId
+      const gedeeldeVelden = {
+        titel: afspraak.titel,
+        beginTijd: afspraak.beginTijd,
+        eindTijd: afspraak.eindTijd,
+        heeldag: afspraak.heeldag,
+        labelIds: afspraak.labelIds,
+        notitie: afspraak.notitie,
+        locatie: afspraak.locatie,
+        herinneringMinuten: afspraak.herinneringMinuten,
+      }
+      const bijgewerkt = afspraken
+        .filter(ev => ev.herhalingGroepId === groepId)
+        .map(ev => ({ ...ev, ...gedeeldeVelden }))
+      setAfspraken(prev => {
+        const next = prev.map(ev => ev.herhalingGroepId === groepId ? { ...ev, ...gedeeldeVelden } : ev)
+        slaAlleAfsprakenOp(next)
+        return next
+      })
+      setFormulierOpen(false)
+      if (gebruiker && bijgewerkt.length > 0) {
+        try { await slaVeelAfsprakenOpInSupabase(bijgewerkt, gebruiker.id) }
+        catch (err) { console.error('Supabase reeks sync mislukt:', err) }
+      }
+      return
+    }
+
     const events = genereerHerhalingen(afspraak, herhaling)
     setAfspraken(prev => {
       let next = prev

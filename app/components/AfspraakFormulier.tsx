@@ -8,13 +8,15 @@ import { labelAchtergrond } from '@/lib/kleuren'
 
 const NL_KORT = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo']
 
+type BewerkScope = 'enkel' | 'alles'
+
 interface Props {
   open: boolean
   afspraak?: Afspraak | null
   labels: Label[]
   initiaalDatum: Date
   initiaalTijd?: string
-  onOpslaan: (afspraak: Afspraak, herhaling: HerhalingConfig) => void
+  onOpslaan: (afspraak: Afspraak, herhaling: HerhalingConfig, scope?: BewerkScope) => void
   onVerwijder: (id: string, alleHerhalingen?: boolean) => void
   onSluit: () => void
 }
@@ -29,11 +31,13 @@ function leeg(datum: string, beginTijd = '09:00'): Afspraak {
 export default function AfspraakFormulier({ open, afspraak, labels, initiaalDatum, initiaalTijd, onOpslaan, onVerwijder, onSluit }: Props) {
   const [form, setForm]           = useState<Afspraak>(() => leeg(toISODatum(initiaalDatum), initiaalTijd))
   const [herhaling, setHerhaling] = useState<HerhalingConfig>(HERHALING_LEEG)
+  const [bewerkScope, setBewerkScope] = useState<BewerkScope>('enkel')
 
   useEffect(() => {
     if (open) {
       setForm(afspraak ? { ...afspraak } : leeg(toISODatum(initiaalDatum), initiaalTijd))
       setHerhaling(HERHALING_LEEG)
+      setBewerkScope('enkel')
     }
   }, [open, afspraak, initiaalDatum, initiaalTijd])
 
@@ -46,7 +50,8 @@ export default function AfspraakFormulier({ open, afspraak, labels, initiaalDatu
     if (!form.titel.trim()) return
     onOpslaan(
       { ...form, id: form.id || crypto.randomUUID(), titel: form.titel.trim() },
-      herhaling
+      herhaling,
+      (!isNieuw && isHerhalend) ? bewerkScope : undefined,
     )
   }
 
@@ -127,15 +132,17 @@ export default function AfspraakFormulier({ open, afspraak, labels, initiaalDatu
               </button>
             </div>
 
-            <div className="flex items-center justify-between px-4 py-3">
-              <span className="text-[15px] text-gray-800">Datum</span>
-              <input
-                type="date"
-                value={form.datum}
-                onChange={e => setForm(f => ({ ...f, datum: e.target.value }))}
-                className="text-[15px] text-[#007AFF] outline-none bg-transparent"
-              />
-            </div>
+            {!(isHerhalend && !isNieuw && bewerkScope === 'alles') && (
+              <div className="flex items-center justify-between px-4 py-3">
+                <span className="text-[15px] text-gray-800">Datum</span>
+                <input
+                  type="date"
+                  value={form.datum}
+                  onChange={e => setForm(f => ({ ...f, datum: e.target.value }))}
+                  className="text-[15px] text-[#007AFF] outline-none bg-transparent"
+                />
+              </div>
+            )}
 
             {!form.heeldag && (
               <>
@@ -219,10 +226,31 @@ export default function AfspraakFormulier({ open, afspraak, labels, initiaalDatu
             </div>
           )}
 
-          {/* Badge als bestaand event herhalend is */}
-          {isHerhalend && (
-            <div className="bg-blue-50 rounded-xl px-4 py-2.5">
-              <p className="text-[13px] text-[#007AFF]">↻ Herhalend event</p>
+          {/* Scope-kiezer voor bestaand herhalend event */}
+          {!isNieuw && isHerhalend && (
+            <div className="bg-gray-50 rounded-xl overflow-hidden divide-y divide-gray-200">
+              <div className="px-4 py-3">
+                <p className="text-[11px] text-gray-400 uppercase tracking-wide font-semibold mb-2.5">Bewerk</p>
+                <div className="flex bg-gray-200 rounded-lg p-0.5">
+                  {(['enkel', 'alles'] as const).map(s => (
+                    <button
+                      key={s}
+                      onClick={() => setBewerkScope(s)}
+                      className={[
+                        'flex-1 py-1.5 rounded-md text-[13px] font-medium transition-all',
+                        bewerkScope === s ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500',
+                      ].join(' ')}
+                    >
+                      {s === 'enkel' ? 'Alleen dit event' : 'De hele reeks'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {bewerkScope === 'alles' && (
+                <div className="px-4 py-2">
+                  <p className="text-[12px] text-gray-400">De datum van elke herhaling blijft ongewijzigd.</p>
+                </div>
+              )}
             </div>
           )}
 
