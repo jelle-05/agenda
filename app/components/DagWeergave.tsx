@@ -43,8 +43,7 @@ export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik
 
   function handleDubbelklik(e: React.MouseEvent<HTMLDivElement>) {
     const rect = e.currentTarget.getBoundingClientRect()
-    const scrollTop = scrollRef.current?.scrollTop ?? 0
-    const y = e.clientY - rect.top + scrollTop
+    const y = e.clientY - rect.top
     const rawMinuten = (y / UURHOOGTE) * 60
     const afgerond = Math.floor(rawMinuten / 30) * 30
     onNieuwAfspraak(huidigeDatum, minutenNaarTijd(afgerond))
@@ -141,7 +140,7 @@ export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik
                   key={afspraak.id}
                   onClick={() => onAfspraakKlik(afspraak)}
                   onDoubleClick={e => e.stopPropagation()}
-                  className="absolute left-1 right-2 rounded-md px-2 pt-1 pb-1 overflow-hidden text-left hover:brightness-95 transition-all"
+                  className="absolute left-1 right-2 rounded-md px-2 pt-1 pb-1 overflow-hidden text-left hover:brightness-95 transition-all flex flex-col justify-start items-stretch"
                   style={{ top, height, backgroundColor: labelAchtergrond(kleur, 0.18), borderLeft: `3px solid ${kleur}` }}
                 >
                   <div className="flex items-baseline gap-1.5 min-w-0">
