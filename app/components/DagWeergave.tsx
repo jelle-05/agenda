@@ -54,13 +54,13 @@ export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik
       <WeekStrip peildatum={huidigeDatum} geselecteerd={huidigeDatum} onDagKlik={onDagKlik} />
 
       {/* Dagtitel */}
-      <div className="px-4 py-2 text-sm text-gray-500 border-b border-gray-100 shrink-0">
+      <div className="px-4 py-2 text-sm text-gray-500 border-b border-gray-100 sm:border-[#dfdfdf] shrink-0">
         {formatDagTitel(huidigeDatum)}
       </div>
 
       {/* Hele dag */}
       {heeldagAfspraken.length > 0 && (
-        <div className="flex items-center gap-2 px-4 py-1.5 border-b border-gray-200 shrink-0 bg-gray-50/50 flex-wrap">
+        <div className="flex items-center gap-2 px-4 py-1.5 border-b border-gray-200 sm:border-[#dfdfdf] shrink-0 bg-gray-50/50 flex-wrap">
           <span className="text-[10px] text-gray-400 shrink-0">hele dag</span>
           {heeldagAfspraken.map(a => {
             const label = labels.find(l => l.id === a.labelIds[0])
@@ -81,7 +81,7 @@ export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik
 
       {/* Lege staat */}
       {dagAfspraken.length === 0 && heeldagAfspraken.length === 0 && (
-        <div className="px-4 py-3 border-b border-gray-100">
+        <div className="px-4 py-3 border-b border-gray-100 sm:border-[#dfdfdf]">
           <p className="text-sm text-gray-300 text-center">Geen afspraken</p>
         </div>
       )}
@@ -104,12 +104,12 @@ export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik
 
           {/* Events kolom */}
           <div
-            className="flex-1 relative border-l border-gray-100"
+            className="flex-1 relative border-l border-gray-100 sm:border-[#dfdfdf]"
             onDoubleClick={handleDubbelklik}
           >
             {/* Uurlijnen */}
             {Array.from({ length: 24 }, (_, i) => (
-              <div key={i} className="absolute w-full border-t border-gray-100" style={{ top: i * UURHOOGTE }} />
+              <div key={i} className="absolute w-full border-t border-gray-100 sm:border-[#dfdfdf]" style={{ top: i * UURHOOGTE }} />
             ))}
             {Array.from({ length: 24 }, (_, i) => (
               <div key={`half-${i}`} className="absolute w-full border-t border-gray-50" style={{ top: i * UURHOOGTE + UURHOOGTE / 2 }} />

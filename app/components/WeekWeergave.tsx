@@ -48,7 +48,7 @@ export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKli
   return (
     <div className="h-full flex flex-col">
       {/* Kolomhoofden */}
-      <div className="flex border-b border-gray-200 shrink-0 bg-white">
+      <div className="flex border-b border-gray-200 sm:border-[#dfdfdf] shrink-0 bg-white">
         <div className="w-14 shrink-0" />
         {weekDagen.map((dag, i) => {
           const vandaag = isVandaag(dag)
@@ -96,11 +96,11 @@ export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKli
             return (
               <div
                 key={di}
-                className="flex-1 relative border-l border-gray-100 min-w-0"
+                className="flex-1 relative border-l border-gray-100 sm:border-[#dfdfdf] min-w-0"
                 onDoubleClick={e => handleDubbelklik(e, dag)}
               >
                 {Array.from({ length: 24 }, (_, i) => (
-                  <div key={i} className="absolute w-full border-t border-gray-100" style={{ top: i * UURHOOGTE }} />
+                  <div key={i} className="absolute w-full border-t border-gray-100 sm:border-[#dfdfdf]" style={{ top: i * UURHOOGTE }} />
                 ))}
 
                 {toonTijdlijn && (
