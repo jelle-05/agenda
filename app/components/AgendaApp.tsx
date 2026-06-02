@@ -24,6 +24,8 @@ import DagWeergave from './DagWeergave'
 import AgendaLijst from './AgendaLijst'
 import AfspraakFormulier from './AfspraakFormulier'
 import LabelBeheer from './LabelBeheer'
+import InstellingenPanel from './InstellingenPanel'
+import { subscribeerOpPush } from '@/lib/pushUtils'
 
 export default function AgendaApp() {
   // Auth
@@ -43,7 +45,8 @@ export default function AgendaApp() {
   // Modal state
   const [formulierOpen, setFormulierOpen]         = useState(false)
   const [bewerkAfspraak, setBewerkAfspraak]       = useState<Afspraak | null>(null)
-  const [labelBeheerOpen, setLabelBeheerOpen]     = useState(false)
+  const [labelBeheerOpen, setLabelBeheerOpen]         = useState(false)
+  const [instellingenOpen, setInstellingenOpen]       = useState(false)
   const [vooringevuldDatum, setVooringevuldDatum] = useState<Date | null>(null)
 
   // ── Auth & data init ────────────────────────────────────────────────────────
@@ -116,9 +119,20 @@ export default function AgendaApp() {
     const perm = await Notification.requestPermission()
     setToonNotifBanner(false)
     if (perm === 'granted') {
-      new Notification('Agenda meldingen aan', { body: 'Je ontvangt herinneringen voor je afspraken.', icon: '/icon-192.png' })
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) await subscribeerOpPush(session.access_token)
     }
   }
+
+  // Abonneer bij opstarten als toestemming al gegeven is
+  useEffect(() => {
+    if (!gebruiker) return
+    if (typeof window === 'undefined' || !('Notification' in window)) return
+    if (Notification.permission !== 'granted') return
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.access_token) subscribeerOpPush(session.access_token)
+    })
+  }, [gebruiker])
 
   // Controleer elke 30 seconden op herinneringen die af moeten gaan
   useEffect(() => {
@@ -269,6 +283,7 @@ export default function AgendaApp() {
         onVolgende={navigeerVolgende}
         onNieuw={() => openNieuwAfspraak()}
         onLabels={() => setLabelBeheerOpen(true)}
+        onInstellingen={() => setInstellingenOpen(true)}
         onUitloggen={uitloggen}
         gebruikerEmail={gebruiker.email ?? ''}
       />
@@ -352,6 +367,11 @@ export default function AgendaApp() {
         onOpslaan={handleOpslaanLabel}
         onVerwijder={handleVerwijderLabel}
         onSluit={() => setLabelBeheerOpen(false)}
+      />
+
+      <InstellingenPanel
+        open={instellingenOpen}
+        onSluit={() => setInstellingenOpen(false)}
       />
     </div>
   )

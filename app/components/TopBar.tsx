@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronLeft, ChevronRight, Search, Plus, Tag, LogOut } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search, Plus, Tag, Settings, LogOut } from 'lucide-react'
 import type { WeergaveType } from '@/types'
 
 const WEERGAVEN: { key: WeergaveType; label: string }[] = [
@@ -18,13 +18,14 @@ interface Props {
   onVolgende: () => void
   onNieuw: () => void
   onLabels: () => void
+  onInstellingen: () => void
   onUitloggen?: () => void
   gebruikerEmail?: string
 }
 
 export default function TopBar({
   weergave, onWeergaveChange, titel, onVorige, onVolgende,
-  onNieuw, onLabels, onUitloggen, gebruikerEmail,
+  onNieuw, onLabels, onInstellingen, onUitloggen, gebruikerEmail,
 }: Props) {
   const initiaal = gebruikerEmail?.[0]?.toUpperCase() ?? '?'
 
@@ -63,6 +64,9 @@ export default function TopBar({
       <div className="flex items-center gap-1 shrink-0">
         <button onClick={onLabels} className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-500" title="Labels">
           <Tag size={18} />
+        </button>
+        <button onClick={onInstellingen} className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-500" title="Instellingen">
+          <Settings size={18} />
         </button>
         <button className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-500" title="Zoeken">
           <Search size={18} />
