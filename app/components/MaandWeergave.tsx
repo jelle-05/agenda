@@ -9,9 +9,11 @@ interface Props {
   afspraken: Afspraak[]
   labels: Label[]
   onDagKlik: (d: Date) => void
+  onAfspraakKlik: (a: Afspraak) => void
+  onNieuwAfspraak: (d: Date) => void
 }
 
-export default function MaandWeergave({ huidigeDatum, afspraken, labels, onDagKlik }: Props) {
+export default function MaandWeergave({ huidigeDatum, afspraken, labels, onDagKlik, onAfspraakKlik, onNieuwAfspraak }: Props) {
   const jaar = huidigeDatum.getFullYear()
   const maand = huidigeDatum.getMonth()
   const dagen = getMaandDagen(jaar, maand)
@@ -21,7 +23,7 @@ export default function MaandWeergave({ huidigeDatum, afspraken, labels, onDagKl
     <div className="h-full flex flex-col select-none">
       {/* Daghoofden */}
       <div className="grid grid-cols-7 border-b border-gray-200 shrink-0">
-        {NL_DAGEN_KORT.map((naam) => (
+        {NL_DAGEN_KORT.map(naam => (
           <div key={naam} className="text-center text-[11px] font-medium text-gray-400 uppercase py-2 tracking-wide">
             {naam}
           </div>
@@ -40,7 +42,7 @@ export default function MaandWeergave({ huidigeDatum, afspraken, labels, onDagKl
 
           const iso = toISODatum(dag)
           const dagAfspraken = afspraken
-            .filter((a) => a.datum === iso)
+            .filter(a => a.datum === iso)
             .sort((a, b) => {
               if (a.heeldag && !b.heeldag) return -1
               if (!a.heeldag && b.heeldag) return 1
@@ -50,62 +52,58 @@ export default function MaandWeergave({ huidigeDatum, afspraken, labels, onDagKl
           const isWeekend = getDagIndex(dag) >= 5
 
           return (
-            <button
+            <div
               key={iso}
-              onClick={() => onDagKlik(dag)}
               className={[
-                'border-b border-r border-gray-100 p-1 text-left overflow-hidden flex flex-col',
-                'hover:bg-blue-50/30 transition-colors',
+                'border-b border-r border-gray-100 p-1 overflow-hidden flex flex-col',
                 isWeekend ? 'bg-gray-50/40' : 'bg-white',
               ].join(' ')}
             >
-              {/* Dagnummer */}
+              {/* Dagnummer — klik navigeert naar dagweergave */}
               <div className="flex justify-center mb-0.5">
-                <span
+                <button
+                  onClick={() => onDagKlik(dag)}
                   className={[
-                    'w-7 h-7 flex items-center justify-center text-sm rounded-full font-medium',
-                    vandaag
-                      ? 'bg-[#FF3B30] text-white'
-                      : isWeekend
-                      ? 'text-gray-400'
-                      : 'text-gray-800',
+                    'w-7 h-7 flex items-center justify-center text-sm rounded-full font-medium hover:opacity-80 transition-opacity',
+                    vandaag ? 'bg-[#FF3B30] text-white' : isWeekend ? 'text-gray-400' : 'text-gray-800',
                   ].join(' ')}
                 >
                   {dag.getDate()}
-                </span>
+                </button>
               </div>
 
-              {/* Afspraken */}
+              {/* Afspraken — klik opent bewerk formulier */}
               <div className="flex flex-col gap-[2px] w-full min-w-0">
-                {dagAfspraken.slice(0, 3).map((afspraak) => {
-                  const label = labels.find((l) => l.id === afspraak.labelIds[0])
+                {dagAfspraken.slice(0, 3).map(afspraak => {
+                  const label = labels.find(l => l.id === afspraak.labelIds[0])
                   const kleur = label?.kleur ?? '#8E8E93'
                   return (
-                    <div
+                    <button
                       key={afspraak.id}
-                      className="flex items-center gap-1 rounded-[3px] px-1 py-[1px] w-full min-w-0"
+                      onClick={() => onAfspraakKlik(afspraak)}
+                      className="flex items-center gap-1 rounded-[3px] px-1 py-[1px] w-full min-w-0 hover:opacity-80 transition-opacity text-left"
                       style={{ backgroundColor: labelAchtergrond(kleur, 0.15) }}
                     >
-                      <span
-                        className="w-1.5 h-1.5 rounded-full shrink-0"
-                        style={{ backgroundColor: kleur }}
-                      />
-                      <span
-                        className="text-[10px] font-medium truncate leading-tight"
-                        style={{ color: kleur }}
-                      >
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: kleur }} />
+                      <span className="text-[10px] font-medium truncate leading-tight" style={{ color: kleur }}>
                         {afspraak.titel}
                       </span>
-                    </div>
+                    </button>
                   )
                 })}
                 {dagAfspraken.length > 3 && (
-                  <span className="text-[9px] text-gray-400 pl-1">
+                  <button
+                    onClick={() => onDagKlik(dag)}
+                    className="text-[9px] text-gray-400 pl-1 text-left hover:text-gray-600 transition-colors"
+                  >
                     +{dagAfspraken.length - 3} meer
-                  </span>
+                  </button>
                 )}
               </div>
-            </button>
+
+              {/* Lege ruimte — klik maakt nieuwe afspraak */}
+              <div className="flex-1 min-h-[4px]" onClick={() => onNieuwAfspraak(dag)} />
+            </div>
           )
         })}
       </div>

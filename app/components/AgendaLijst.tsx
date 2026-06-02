@@ -8,6 +8,7 @@ interface Props {
   huidigeDatum: Date
   afspraken: Afspraak[]
   labels: Label[]
+  onAfspraakKlik: (a: Afspraak) => void
 }
 
 function formatDatumHeader(datum: string): string {
@@ -17,14 +18,14 @@ function formatDatumHeader(datum: string): string {
   return `${naam.charAt(0).toUpperCase() + naam.slice(1)} ${d} ${NL_MAANDEN_KORT[m - 1]} ${y}`
 }
 
-export default function AgendaLijst({ huidigeDatum, afspraken, labels }: Props) {
-  const jaar = huidigeDatum.getFullYear()
+export default function AgendaLijst({ huidigeDatum, afspraken, labels, onAfspraakKlik }: Props) {
+  const jaar  = huidigeDatum.getFullYear()
   const maand = huidigeDatum.getMonth()
-  const maandStart = `${jaar}-${String(maand + 1).padStart(2, '0')}-01`
-  const maandEind = `${jaar}-${String(maand + 1).padStart(2, '0')}-31`
+  const start = `${jaar}-${String(maand + 1).padStart(2, '0')}-01`
+  const eind  = `${jaar}-${String(maand + 1).padStart(2, '0')}-31`
 
   const gefilterd = afspraken
-    .filter((a) => a.datum >= maandStart && a.datum <= maandEind)
+    .filter(a => a.datum >= start && a.datum <= eind)
     .sort((a, b) => a.datum.localeCompare(b.datum) || a.beginTijd.localeCompare(b.beginTijd))
 
   const gegroepeerd = gefilterd.reduce<Record<string, Afspraak[]>>((acc, a) => {
@@ -47,49 +48,34 @@ export default function AgendaLijst({ huidigeDatum, afspraken, labels }: Props) 
     <div className="h-full overflow-y-auto">
       {Object.entries(gegroepeerd).map(([datum, dagAfspraken]) => (
         <div key={datum}>
-          {/* Datumheader */}
-          <div
-            className={[
-              'px-4 py-2 text-xs font-semibold uppercase tracking-wide sticky top-0 bg-white border-b border-gray-100',
-              datum === vandaag ? 'text-[#FF3B30]' : 'text-gray-500',
-            ].join(' ')}
-          >
-            {formatDatumHeader(datum)}
-            {datum === vandaag && ' — Vandaag'}
+          <div className={[
+            'px-4 py-2 text-xs font-semibold uppercase tracking-wide sticky top-0 bg-white border-b border-gray-100',
+            datum === vandaag ? 'text-[#FF3B30]' : 'text-gray-500',
+          ].join(' ')}>
+            {formatDatumHeader(datum)}{datum === vandaag ? ' — Vandaag' : ''}
           </div>
 
-          {/* Afspraken voor deze dag */}
-          {dagAfspraken.map((afspraak) => {
-            const label = labels.find((l) => l.id === afspraak.labelIds[0])
+          {dagAfspraken.map(afspraak => {
+            const label = labels.find(l => l.id === afspraak.labelIds[0])
             const kleur = label?.kleur ?? '#8E8E93'
             return (
-              <div
+              <button
                 key={afspraak.id}
-                className="flex items-start gap-3 px-4 py-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
+                onClick={() => onAfspraakKlik(afspraak)}
+                className="flex items-start gap-3 w-full px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors text-left"
               >
-                {/* Kleurmarkering */}
-                <span
-                  className="w-1 self-stretch rounded-full shrink-0 mt-0.5"
-                  style={{ backgroundColor: kleur }}
-                />
-
-                {/* Tijd */}
+                <span className="w-1 self-stretch rounded-full shrink-0 mt-0.5" style={{ backgroundColor: kleur }} />
                 <div className="w-20 shrink-0">
-                  {afspraak.heeldag ? (
-                    <span className="text-xs text-gray-400">hele dag</span>
-                  ) : (
-                    <span className="text-xs text-gray-500 tabular-nums">
-                      {afspraak.beginTijd} – {afspraak.eindTijd}
-                    </span>
-                  )}
+                  {afspraak.heeldag
+                    ? <span className="text-xs text-gray-400">hele dag</span>
+                    : <span className="text-xs text-gray-500 tabular-nums">{afspraak.beginTijd} – {afspraak.eindTijd}</span>
+                  }
                 </div>
-
-                {/* Titel + labels */}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">{afspraak.titel}</p>
                   <div className="flex gap-1 mt-0.5 flex-wrap">
-                    {afspraak.labelIds.map((lid) => {
-                      const l = labels.find((x) => x.id === lid)
+                    {afspraak.labelIds.map(lid => {
+                      const l = labels.find(x => x.id === lid)
                       if (!l) return null
                       return (
                         <span
@@ -103,7 +89,7 @@ export default function AgendaLijst({ huidigeDatum, afspraken, labels }: Props) 
                     })}
                   </div>
                 </div>
-              </div>
+              </button>
             )
           })}
         </div>
