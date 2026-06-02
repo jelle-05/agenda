@@ -22,4 +22,11 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, var(--font-geist-sans), 'Segoe UI', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
+  /* Duw content onder de statusbalk; witte achtergrond vult de safe area */
+  padding-top: env(safe-area-inset-top);
+}
+
+/* Voeg ruimte toe onder de home indicator; bg-white van BottomBar vult die ruimte */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
 }
