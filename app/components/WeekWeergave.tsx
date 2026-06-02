@@ -75,6 +75,40 @@ export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKli
         })}
       </div>
 
+      {/* Hele-dag rij */}
+      {weekDagen.some(dag => afspraken.some(a => a.datum === toISODatum(dag) && a.heeldag)) && (
+        <div className="flex border-b border-gray-200 sm:border-[#dfdfdf] shrink-0 bg-white">
+          <div className="w-14 shrink-0 flex items-end justify-end pr-2 pb-1">
+            <span className="text-[9px] text-gray-300 uppercase tracking-wide leading-none">hele dag</span>
+          </div>
+          {weekDagen.map((dag, di) => {
+            const iso = toISODatum(dag)
+            const heeldagAfspraken = afspraken.filter(a => a.datum === iso && a.heeldag)
+            return (
+              <div key={di} className="flex-1 border-l border-gray-100 sm:border-[#dfdfdf] min-w-0 py-0.5 px-0.5 flex flex-col gap-[2px]">
+                {heeldagAfspraken.map(afspraak => {
+                  const label = labels.find(l => l.id === afspraak.labelIds[0])
+                  const kleur = label?.kleur ?? '#8E8E93'
+                  return (
+                    <button
+                      key={afspraak.id}
+                      onClick={() => onAfspraakKlik(afspraak)}
+                      className="flex items-center gap-1 rounded-[3px] px-1 py-[1px] w-full min-w-0 hover:opacity-80 transition-opacity text-left"
+                      style={{ backgroundColor: labelAchtergrond(kleur, 0.15) }}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: kleur }} />
+                      <span className="text-[10px] font-medium truncate leading-tight" style={{ color: kleur }}>
+                        {afspraak.titel}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
       {/* Tijdsgrid */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden">
         <div className="flex" style={{ height: `${24 * UURHOOGTE}px`, minHeight: `${24 * UURHOOGTE}px` }}>

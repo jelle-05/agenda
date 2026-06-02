@@ -382,6 +382,7 @@ export default function AgendaApp() {
         titel={getTitel()}
         onVorige={navigeerVorige}
         onVolgende={navigeerVolgende}
+        onVandaag={gaNaarVandaag}
         onNieuw={() => openNieuwAfspraak()}
         onLabels={() => setLabelBeheerOpen(true)}
         onProfielMenu={() => setProfielMenuOpen(true)}

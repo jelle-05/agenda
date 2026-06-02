@@ -16,6 +16,7 @@ interface Props {
   titel: string
   onVorige: () => void
   onVolgende: () => void
+  onVandaag: () => void
   onNieuw: () => void
   onLabels: () => void
   onProfielMenu: () => void
@@ -23,7 +24,7 @@ interface Props {
 }
 
 export default function TopBar({
-  weergave, onWeergaveChange, titel, onVorige, onVolgende,
+  weergave, onWeergaveChange, titel, onVorige, onVolgende, onVandaag,
   onNieuw, onLabels, onProfielMenu, gebruikerEmail,
 }: Props) {
   const initiaal = gebruikerEmail?.[0]?.toUpperCase() ?? '?'
@@ -32,6 +33,12 @@ export default function TopBar({
     <header className="flex items-center justify-between px-3 h-12 border-b border-gray-200 bg-white shrink-0 gap-2">
       {/* Navigatie */}
       <div className="flex items-center gap-1 min-w-0">
+        <button
+          onClick={onVandaag}
+          className="hidden sm:block text-[13px] font-medium text-[#007AFF] hover:opacity-70 transition-opacity px-1 shrink-0"
+        >
+          Vandaag
+        </button>
         <button onClick={onVorige} className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-500">
           <ChevronLeft size={18} />
         </button>
