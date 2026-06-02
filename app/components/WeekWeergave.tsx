@@ -14,6 +14,8 @@ interface Props {
   onDagKlik: (d: Date) => void
   onAfspraakKlik: (a: Afspraak) => void
   onNieuwAfspraak: (dag: Date, beginTijd: string) => void
+  animatieKlasse?: string
+  animatieSleutel?: number
 }
 
 function minutenNaarTijd(min: number): string {
@@ -21,7 +23,7 @@ function minutenNaarTijd(min: number): string {
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 }
 
-export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKlik, onAfspraakKlik, onNieuwAfspraak }: Props) {
+export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKlik, onAfspraakKlik, onNieuwAfspraak, animatieKlasse = '', animatieSleutel = 0 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [nu, setNu] = useState(() => new Date())
 
@@ -77,35 +79,38 @@ export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKli
 
       {/* Hele-dag rij */}
       {weekDagen.some(dag => afspraken.some(a => a.datum === toISODatum(dag) && a.heeldag)) && (
-        <div className="flex border-b border-gray-200 sm:border-[#dfdfdf] shrink-0 bg-white">
+        <div className="flex border-b border-gray-200 sm:border-[#dfdfdf] shrink-0 bg-white overflow-hidden">
           <div className="w-14 shrink-0 flex items-end justify-end pr-2 pb-1">
             <span className="text-[9px] text-gray-300 uppercase tracking-wide leading-none">hele dag</span>
           </div>
-          {weekDagen.map((dag, di) => {
-            const iso = toISODatum(dag)
-            const heeldagAfspraken = afspraken.filter(a => a.datum === iso && a.heeldag)
-            return (
-              <div key={di} className="flex-1 border-l border-gray-100 sm:border-[#dfdfdf] min-w-0 py-0.5 px-0.5 flex flex-col gap-[2px]">
-                {heeldagAfspraken.map(afspraak => {
-                  const label = labels.find(l => l.id === afspraak.labelIds[0])
-                  const kleur = label?.kleur ?? '#8E8E93'
-                  return (
-                    <button
-                      key={afspraak.id}
-                      onClick={() => onAfspraakKlik(afspraak)}
-                      className="flex items-center gap-1 rounded-[3px] px-1 py-[1px] w-full min-w-0 hover:opacity-80 transition-opacity text-left"
-                      style={{ backgroundColor: labelAchtergrond(kleur, 0.15) }}
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: kleur }} />
-                      <span className="text-[10px] font-medium truncate leading-tight" style={{ color: kleur }}>
-                        {afspraak.titel}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            )
-          })}
+          {/* Alleen de event-cellen animeren, het "hele dag" label blijft vast */}
+          <div key={animatieSleutel} className={`flex flex-1 ${animatieKlasse}`}>
+            {weekDagen.map((dag, di) => {
+              const iso = toISODatum(dag)
+              const heeldagAfspraken = afspraken.filter(a => a.datum === iso && a.heeldag)
+              return (
+                <div key={di} className="flex-1 border-l border-gray-100 sm:border-[#dfdfdf] min-w-0 py-0.5 px-0.5 flex flex-col gap-[2px]">
+                  {heeldagAfspraken.map(afspraak => {
+                    const label = labels.find(l => l.id === afspraak.labelIds[0])
+                    const kleur = label?.kleur ?? '#8E8E93'
+                    return (
+                      <button
+                        key={afspraak.id}
+                        onClick={() => onAfspraakKlik(afspraak)}
+                        className="flex items-center gap-1 rounded-[3px] px-1 py-[1px] w-full min-w-0 hover:opacity-80 transition-opacity text-left"
+                        style={{ backgroundColor: labelAchtergrond(kleur, 0.15) }}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: kleur }} />
+                        <span className="text-[10px] font-medium truncate leading-tight" style={{ color: kleur }}>
+                          {afspraak.titel}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
 
@@ -121,7 +126,8 @@ export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKli
             ))}
           </div>
 
-          {/* Dag kolommen */}
+          {/* Dag kolommen — alleen dit gedeelte animeert; tijdlabels blijven vast */}
+          <div key={animatieSleutel} className={`flex flex-1 ${animatieKlasse}`}>
           {weekDagen.map((dag, di) => {
             const iso = toISODatum(dag)
             const dagAfspraken = afspraken.filter(a => a.datum === iso && !a.heeldag)
@@ -186,6 +192,7 @@ export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKli
               </div>
             )
           })}
+          </div>
         </div>
       </div>
     </div>

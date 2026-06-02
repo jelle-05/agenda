@@ -455,46 +455,48 @@ export default function AgendaApp() {
       )}
 
       <main className="flex-1 overflow-hidden" {...swipeHandlers}>
-        <div key={animatieSleutel} className={`h-full ${animatieKlasse}`}>
-          {weergave === 'maand' && (
-            <MaandWeergave
-              huidigeDatum={huidigeDatum}
-              afspraken={afspraken}
-              labels={labels}
-              onDagKlik={selecteerDag}
-              onAfspraakKlik={openBewerkAfspraak}
-              onNieuwAfspraak={openNieuwAfspraak}
-            />
-          )}
-          {weergave === 'week' && (
-            <WeekWeergave
-              huidigeDatum={huidigeDatum}
-              afspraken={afspraken}
-              labels={labels}
-              onDagKlik={selecteerDag}
-              onAfspraakKlik={openBewerkAfspraak}
-              onNieuwAfspraak={openNieuwAfspraak}
-            />
-          )}
-          {weergave === 'dag' && (
-            <DagWeergave
-              huidigeDatum={huidigeDatum}
-              afspraken={afspraken}
-              labels={labels}
-              onDagKlik={selecteerDag}
-              onAfspraakKlik={openBewerkAfspraak}
-              onNieuwAfspraak={openNieuwAfspraak}
-            />
-          )}
-          {weergave === 'agenda' && (
-            <AgendaLijst
-              huidigeDatum={huidigeDatum}
-              afspraken={afspraken}
-              labels={labels}
-              onAfspraakKlik={openBewerkAfspraak}
-            />
-          )}
-        </div>
+        {weergave === 'maand' && (
+          <MaandWeergave
+            huidigeDatum={huidigeDatum}
+            afspraken={afspraken}
+            labels={labels}
+            onDagKlik={selecteerDag}
+            onAfspraakKlik={openBewerkAfspraak}
+            onNieuwAfspraak={openNieuwAfspraak}
+          />
+        )}
+        {weergave === 'week' && (
+          <WeekWeergave
+            huidigeDatum={huidigeDatum}
+            afspraken={afspraken}
+            labels={labels}
+            onDagKlik={selecteerDag}
+            onAfspraakKlik={openBewerkAfspraak}
+            onNieuwAfspraak={openNieuwAfspraak}
+            animatieKlasse={animatieKlasse}
+            animatieSleutel={animatieSleutel}
+          />
+        )}
+        {weergave === 'dag' && (
+          <DagWeergave
+            huidigeDatum={huidigeDatum}
+            afspraken={afspraken}
+            labels={labels}
+            onDagKlik={selecteerDag}
+            onAfspraakKlik={openBewerkAfspraak}
+            onNieuwAfspraak={openNieuwAfspraak}
+            animatieKlasse={animatieKlasse}
+            animatieSleutel={animatieSleutel}
+          />
+        )}
+        {weergave === 'agenda' && (
+          <AgendaLijst
+            huidigeDatum={huidigeDatum}
+            afspraken={afspraken}
+            labels={labels}
+            onAfspraakKlik={openBewerkAfspraak}
+          />
+        )}
       </main>
 
       <BottomBar

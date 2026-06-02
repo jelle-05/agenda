@@ -15,6 +15,8 @@ interface Props {
   onDagKlik: (d: Date) => void
   onAfspraakKlik: (a: Afspraak) => void
   onNieuwAfspraak: (dag: Date, beginTijd: string) => void
+  animatieKlasse?: string
+  animatieSleutel?: number
 }
 
 function minutenNaarTijd(min: number): string {
@@ -22,7 +24,7 @@ function minutenNaarTijd(min: number): string {
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 }
 
-export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik, onAfspraakKlik, onNieuwAfspraak }: Props) {
+export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik, onAfspraakKlik, onNieuwAfspraak, animatieKlasse = '', animatieSleutel = 0 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [nu, setNu] = useState(() => new Date())
 
@@ -102,9 +104,10 @@ export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik
             ))}
           </div>
 
-          {/* Events kolom */}
+          {/* Events kolom — alleen dit gedeelte animeert; tijdlabels blijven vast */}
           <div
-            className="flex-1 relative border-l border-gray-100 sm:border-[#dfdfdf]"
+            key={animatieSleutel}
+            className={`flex-1 relative border-l border-gray-100 sm:border-[#dfdfdf] ${animatieKlasse}`}
             onDoubleClick={handleDubbelklik}
           >
             {/* Uurlijnen */}
