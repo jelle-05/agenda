@@ -75,7 +75,6 @@ export default function AfspraakFormulier({ open, afspraak, labels, initiaalDatu
               value={form.titel}
               onChange={e => setForm(f => ({ ...f, titel: e.target.value }))}
               placeholder="Titel"
-              autoFocus
               className="w-full text-[17px] font-medium placeholder:text-gray-300 outline-none bg-transparent"
               onKeyDown={e => e.key === 'Enter' && opslaan()}
             />

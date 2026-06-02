@@ -125,7 +125,6 @@ export default function LabelBeheer({ open, labels, onOpslaan, onVerwijder, onSl
                   value={bewerk.naam ?? ''}
                   onChange={e => setBewerk(l => ({ ...l, naam: e.target.value }))}
                   placeholder="Labelnaam"
-                  autoFocus
                   className="w-full text-[17px] font-medium placeholder:text-gray-300 outline-none bg-transparent"
                   onKeyDown={e => e.key === 'Enter' && opslaan()}
                 />

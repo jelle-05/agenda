@@ -38,8 +38,12 @@ export default function AgendaLijst({ huidigeDatum, afspraken, labels, onAfspraa
 
   if (gefilterd.length === 0) {
     return (
-      <div className="h-full flex items-center justify-center text-gray-400 text-sm">
-        Geen afspraken deze maand
+      <div className="h-full flex flex-col items-center justify-center gap-2 text-center px-8">
+        <span className="text-4xl">📭</span>
+        <p className="text-gray-500 text-[15px] font-medium">Geen afspraken</p>
+        <p className="text-gray-400 text-sm">
+          Tik op <strong>+</strong> om een afspraak toe te voegen.
+        </p>
       </div>
     )
   }

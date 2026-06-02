@@ -65,6 +65,13 @@ export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik
         </div>
       )}
 
+      {/* Lege staat */}
+      {dagAfspraken.length === 0 && heeldagAfspraken.length === 0 && (
+        <div className="px-4 py-3 border-b border-gray-100">
+          <p className="text-sm text-gray-300 text-center">Geen afspraken</p>
+        </div>
+      )}
+
       {/* Tijdsgrid */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden">
         <div className="flex" style={{ height: `${24 * UURHOOGTE}px`, minHeight: `${24 * UURHOOGTE}px` }}>
