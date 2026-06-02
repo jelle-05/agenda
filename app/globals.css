@@ -30,3 +30,27 @@ body {
 .safe-area-bottom {
   padding-bottom: env(safe-area-inset-bottom);
 }
+
+/* Slide-animaties voor week/dag-navigatie */
+@keyframes slideVanRechts {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+@keyframes slideVanLinks {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0); }
+}
+
+.slide-van-rechts {
+  animation: slideVanRechts 230ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.slide-van-links {
+  animation: slideVanLinks 230ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slide-van-rechts,
+  .slide-van-links {
+    animation: none;
+  }
+}

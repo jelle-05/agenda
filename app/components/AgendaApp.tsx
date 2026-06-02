@@ -53,6 +53,8 @@ export default function AgendaApp() {
   const [profielMenuOpen, setProfielMenuOpen]     = useState(false)
   const [vooringevuldDatum, setVooringevuldDatum] = useState<Date | null>(null)
   const [vooringevuldTijd, setVooringevuldTijd]   = useState<string | undefined>(undefined)
+  const [animatieSleutel, setAnimatieSleutel]     = useState(0)
+  const [animatieKlasse, setAnimatieKlasse]       = useState('')
 
   // ── Swipe-navigatie (mobiel) ─────────────────────────────────────────────────
 
@@ -262,6 +264,10 @@ export default function AgendaApp() {
     if (weergave === 'maand' || weergave === 'agenda') d.setMonth(d.getMonth() - 1)
     else if (weergave === 'week') d.setDate(d.getDate() - 7)
     else d.setDate(d.getDate() - 1)
+    if (weergave === 'week' || weergave === 'dag') {
+      setAnimatieKlasse('slide-van-links')
+      setAnimatieSleutel(k => k + 1)
+    }
     setHuidigeDatum(d)
   }
 
@@ -270,6 +276,10 @@ export default function AgendaApp() {
     if (weergave === 'maand' || weergave === 'agenda') d.setMonth(d.getMonth() + 1)
     else if (weergave === 'week') d.setDate(d.getDate() + 7)
     else d.setDate(d.getDate() + 1)
+    if (weergave === 'week' || weergave === 'dag') {
+      setAnimatieKlasse('slide-van-rechts')
+      setAnimatieSleutel(k => k + 1)
+    }
     setHuidigeDatum(d)
   }
 
@@ -445,44 +455,46 @@ export default function AgendaApp() {
       )}
 
       <main className="flex-1 overflow-hidden" {...swipeHandlers}>
-        {weergave === 'maand' && (
-          <MaandWeergave
-            huidigeDatum={huidigeDatum}
-            afspraken={afspraken}
-            labels={labels}
-            onDagKlik={selecteerDag}
-            onAfspraakKlik={openBewerkAfspraak}
-            onNieuwAfspraak={openNieuwAfspraak}
-          />
-        )}
-        {weergave === 'week' && (
-          <WeekWeergave
-            huidigeDatum={huidigeDatum}
-            afspraken={afspraken}
-            labels={labels}
-            onDagKlik={selecteerDag}
-            onAfspraakKlik={openBewerkAfspraak}
-            onNieuwAfspraak={openNieuwAfspraak}
-          />
-        )}
-        {weergave === 'dag' && (
-          <DagWeergave
-            huidigeDatum={huidigeDatum}
-            afspraken={afspraken}
-            labels={labels}
-            onDagKlik={selecteerDag}
-            onAfspraakKlik={openBewerkAfspraak}
-            onNieuwAfspraak={openNieuwAfspraak}
-          />
-        )}
-        {weergave === 'agenda' && (
-          <AgendaLijst
-            huidigeDatum={huidigeDatum}
-            afspraken={afspraken}
-            labels={labels}
-            onAfspraakKlik={openBewerkAfspraak}
-          />
-        )}
+        <div key={animatieSleutel} className={`h-full ${animatieKlasse}`}>
+          {weergave === 'maand' && (
+            <MaandWeergave
+              huidigeDatum={huidigeDatum}
+              afspraken={afspraken}
+              labels={labels}
+              onDagKlik={selecteerDag}
+              onAfspraakKlik={openBewerkAfspraak}
+              onNieuwAfspraak={openNieuwAfspraak}
+            />
+          )}
+          {weergave === 'week' && (
+            <WeekWeergave
+              huidigeDatum={huidigeDatum}
+              afspraken={afspraken}
+              labels={labels}
+              onDagKlik={selecteerDag}
+              onAfspraakKlik={openBewerkAfspraak}
+              onNieuwAfspraak={openNieuwAfspraak}
+            />
+          )}
+          {weergave === 'dag' && (
+            <DagWeergave
+              huidigeDatum={huidigeDatum}
+              afspraken={afspraken}
+              labels={labels}
+              onDagKlik={selecteerDag}
+              onAfspraakKlik={openBewerkAfspraak}
+              onNieuwAfspraak={openNieuwAfspraak}
+            />
+          )}
+          {weergave === 'agenda' && (
+            <AgendaLijst
+              huidigeDatum={huidigeDatum}
+              afspraken={afspraken}
+              labels={labels}
+              onAfspraakKlik={openBewerkAfspraak}
+            />
+          )}
+        </div>
       </main>
 
       <BottomBar
