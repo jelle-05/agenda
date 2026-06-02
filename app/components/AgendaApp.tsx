@@ -201,36 +201,50 @@ export default function AgendaApp() {
   useEffect(() => {
     if (!gebruiker) return
 
-    function checkHerinneringen() {
+    async function checkHerinneringen() {
       if (!('Notification' in window) || Notification.permission !== 'granted') return
+
       const nu = Date.now()
 
-      afspraken.forEach((a) => {
-        if ((a.herinneringMinuten ?? -1) < 0 || a.heeldag) return
+      // Gebruik SW showNotification (werkt op iOS 16.4+ PWA én Android);
+      // val terug op new Notification() op desktop waar geen SW nodig is.
+      let swReg: ServiceWorkerRegistration | null = null
+      if ('serviceWorker' in navigator) {
+        try { swReg = await navigator.serviceWorker.ready } catch { /* ignore */ }
+      }
+
+      for (const a of afspraken) {
+        if ((a.herinneringMinuten ?? -1) < 0 || a.heeldag) continue
         const [uur, min] = a.beginTijd.split(':').map(Number)
         const [y, m, d] = a.datum.split('-').map(Number)
         const afspraakMs = new Date(y, m - 1, d, uur, min).getTime()
         const herinneringMs = afspraakMs - (a.herinneringMinuten ?? 0) * 60_000
         const sleutel = `${a.id}-${herinneringMs}`
 
-        // Schiet af als we binnen een venster van 30 seconden rond de herinneringstijd zitten
+        // Venster van 30 seconden rond de herinneringstijd
         if (!gevierdRef.current.has(sleutel) && herinneringMs > nu - 30_000 && herinneringMs <= nu + 30_000) {
           gevierdRef.current.add(sleutel)
           const minuten = a.herinneringMinuten ?? 0
           const tijdTekst = minuten === 0 ? 'Nu' : minuten < 60 ? `Over ${minuten} min` : `Over ${minuten / 60} uur`
-          new Notification(`📅 ${a.titel}`, {
-            body: `${tijdTekst} — ${a.beginTijd}`,
-            icon: '/icon-192.png',
-            tag:  sleutel,
-          })
+          const opties = { body: `${tijdTekst} — ${a.beginTijd}`, icon: '/icon-192.png', tag: sleutel }
+
+          try {
+            if (swReg) {
+              await swReg.showNotification(`📅 ${a.titel}`, opties)
+            } else {
+              new Notification(`📅 ${a.titel}`, opties)
+            }
+          } catch (err) {
+            console.error('Notificatie mislukt:', err)
+          }
         }
-      })
+      }
     }
 
-    const interval = setInterval(checkHerinneringen, 30_000)
-    checkHerinneringen()
+    const interval = setInterval(() => { void checkHerinneringen() }, 30_000)
+    void checkHerinneringen()
     return () => clearInterval(interval)
-  }, [afspraken, gebruiker])
+  }, [afspraken, gebruiker]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Navigatie ───────────────────────────────────────────────────────────────
 

@@ -126,13 +126,17 @@ export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKli
                       className="absolute inset-x-0.5 rounded overflow-hidden text-left hover:brightness-95 transition-all flex flex-col justify-start items-stretch"
                       style={{ top, height, backgroundColor: labelAchtergrond(kleur, 0.18), borderLeft: `2px solid ${kleur}`, padding: 7 }}
                     >
-                      <p className="text-[12px] font-semibold truncate leading-tight" style={{ color: kleur }}>
-                        {afspraak.titel}
-                      </p>
-                      {height >= 44 && afspraak.locatie && (
-                        <p className="text-[11px] truncate leading-tight mt-0.5" style={{ color: kleur, opacity: 0.65 }}>
-                          {afspraak.locatie}
-                        </p>
+                      {height >= 26 && (
+                        <>
+                          <p className="text-[12px] font-semibold truncate leading-tight" style={{ color: kleur }}>
+                            {afspraak.titel}
+                          </p>
+                          {height >= 44 && afspraak.locatie && (
+                            <p className="text-[11px] truncate leading-tight mt-0.5" style={{ color: kleur, opacity: 0.65 }}>
+                              {afspraak.locatie}
+                            </p>
+                          )}
+                        </>
                       )}
                     </button>
                   )
