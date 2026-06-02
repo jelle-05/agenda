@@ -16,4 +16,5 @@ export type Afspraak = {
   labelIds: string[]
   notitie?: string
   locatie?: string
+  herinneringMinuten?: number  // -1 = geen, 0 = bij aanvang, anders N minuten van tevoren
 }

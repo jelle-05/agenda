@@ -133,6 +133,29 @@ export default function AfspraakFormulier({ open, afspraak, labels, initiaalDatu
             )}
           </div>
 
+          {/* Herinnering */}
+          {!form.heeldag && (
+            <div className="bg-gray-50 rounded-xl overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3">
+                <span className="text-[15px] text-gray-800">Herinnering</span>
+                <select
+                  value={form.herinneringMinuten ?? -1}
+                  onChange={e => setForm(f => ({ ...f, herinneringMinuten: parseInt(e.target.value) }))}
+                  className="text-[15px] text-[#007AFF] outline-none bg-transparent text-right"
+                >
+                  <option value={-1}>Geen</option>
+                  <option value={0}>Bij aanvang</option>
+                  <option value={5}>5 min van tevoren</option>
+                  <option value={15}>15 min van tevoren</option>
+                  <option value={30}>30 min van tevoren</option>
+                  <option value={60}>1 uur van tevoren</option>
+                  <option value={120}>2 uur van tevoren</option>
+                  <option value={1440}>1 dag van tevoren</option>
+                </select>
+              </div>
+            </div>
+          )}
+
           {/* Labels */}
           {labels.length > 0 && (
             <div className="bg-gray-50 rounded-xl px-4 py-3">

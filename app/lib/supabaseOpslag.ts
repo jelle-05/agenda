@@ -13,8 +13,9 @@ function rijNaarAfspraak(rij: any): Afspraak {
     eindTijd:  rij.eind_tijd  ?? '23:59',
     heeldag:   rij.heeldag,
     labelIds:  rij.label_ids ?? [],
-    notitie:   rij.notitie   ?? undefined,
-    locatie:   rij.locatie   ?? undefined,
+    notitie:            rij.notitie            ?? undefined,
+    locatie:            rij.locatie            ?? undefined,
+    herinneringMinuten: rij.herinnering_minuten ?? -1,
   }
 }
 
@@ -28,8 +29,9 @@ function afspraakNaarRij(a: Afspraak, userId: string) {
     eind_tijd:  a.heeldag ? null : a.eindTijd,
     heeldag:    a.heeldag,
     label_ids:  a.labelIds,
-    notitie:    a.notitie  ?? null,
-    locatie:    a.locatie  ?? null,
+    notitie:             a.notitie            ?? null,
+    locatie:             a.locatie            ?? null,
+    herinnering_minuten: a.herinneringMinuten ?? -1,
   }
 }
 

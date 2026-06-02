@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { Bell, X } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 import type { WeergaveType, Afspraak, Label } from '@/types'
 import { supabase } from '@/lib/supabase'
@@ -34,6 +35,10 @@ export default function AgendaApp() {
   const [huidigeDatum, setHuidigeDatum] = useState(() => new Date())
   const [afspraken, setAfspraken]       = useState<Afspraak[]>([])
   const [labels, setLabels]             = useState<Label[]>([])
+
+  // Notificatie banner
+  const [toonNotifBanner, setToonNotifBanner]     = useState(false)
+  const gevierdRef                                = useRef(new Set<string>())
 
   // Modal state
   const [formulierOpen, setFormulierOpen]         = useState(false)
@@ -98,6 +103,57 @@ export default function AgendaApp() {
   async function uitloggen() {
     await supabase.auth.signOut()
   }
+
+  // ── Notificaties ─────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (gebruiker && 'Notification' in window && Notification.permission === 'default') {
+      setToonNotifBanner(true)
+    }
+  }, [gebruiker])
+
+  async function vraagNotificatieToestemming() {
+    const perm = await Notification.requestPermission()
+    setToonNotifBanner(false)
+    if (perm === 'granted') {
+      new Notification('Agenda meldingen aan', { body: 'Je ontvangt herinneringen voor je afspraken.', icon: '/icon-192.png' })
+    }
+  }
+
+  // Controleer elke 30 seconden op herinneringen die af moeten gaan
+  useEffect(() => {
+    if (!gebruiker) return
+
+    function checkHerinneringen() {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return
+      const nu = Date.now()
+
+      afspraken.forEach((a) => {
+        if ((a.herinneringMinuten ?? -1) < 0 || a.heeldag) return
+        const [uur, min] = a.beginTijd.split(':').map(Number)
+        const [y, m, d] = a.datum.split('-').map(Number)
+        const afspraakMs = new Date(y, m - 1, d, uur, min).getTime()
+        const herinneringMs = afspraakMs - (a.herinneringMinuten ?? 0) * 60_000
+        const sleutel = `${a.id}-${herinneringMs}`
+
+        // Schiet af als we binnen een venster van 30 seconden rond de herinneringstijd zitten
+        if (!gevierdRef.current.has(sleutel) && herinneringMs > nu - 30_000 && herinneringMs <= nu + 30_000) {
+          gevierdRef.current.add(sleutel)
+          const minuten = a.herinneringMinuten ?? 0
+          const tijdTekst = minuten === 0 ? 'Nu' : minuten < 60 ? `Over ${minuten} min` : `Over ${minuten / 60} uur`
+          new Notification(`📅 ${a.titel}`, {
+            body: `${tijdTekst} — ${a.beginTijd}`,
+            icon: '/icon-192.png',
+            tag:  sleutel,
+          })
+        }
+      })
+    }
+
+    const interval = setInterval(checkHerinneringen, 30_000)
+    checkHerinneringen()
+    return () => clearInterval(interval)
+  }, [afspraken, gebruiker])
 
   // ── Navigatie ───────────────────────────────────────────────────────────────
 
@@ -216,6 +272,24 @@ export default function AgendaApp() {
         onUitloggen={uitloggen}
         gebruikerEmail={gebruiker.email ?? ''}
       />
+
+      {/* Notificatie banner */}
+      {toonNotifBanner && (
+        <div className="flex items-center justify-between bg-blue-50 border-b border-blue-100 px-4 py-2 shrink-0">
+          <div className="flex items-center gap-2">
+            <Bell size={14} className="text-[#007AFF] shrink-0" />
+            <span className="text-[13px] text-gray-700">Zet meldingen aan voor herinneringen</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <button onClick={vraagNotificatieToestemming} className="text-[13px] text-[#007AFF] font-semibold">
+              Aanzetten
+            </button>
+            <button onClick={() => setToonNotifBanner(false)} className="text-gray-400 hover:text-gray-600">
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+      )}
 
       <main className="flex-1 overflow-hidden">
         {weergave === 'maand' && (
