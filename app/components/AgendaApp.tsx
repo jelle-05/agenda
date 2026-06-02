@@ -52,29 +52,61 @@ export default function AgendaApp() {
   // ── Auth & data init ────────────────────────────────────────────────────────
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
       const user = session?.user ?? null
       setGebruiker(user)
-      if (user) await initialiseerData(user.id)
-      setKlaar(true)
+
+      if (user) {
+        // Toon gecachte localStorage-data direct — geen wachten op netwerk
+        setAfspraken(laadAfspraken())
+        setLabels(laadLabels())
+        setKlaar(true)
+        // Sync Supabase stil op de achtergrond
+        achtergrondSync(user.id)
+      } else {
+        setKlaar(true)   // Toon loginpagina
+      }
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       const user = session?.user ?? null
       setGebruiker(user)
-      if (user) {
+
+      if (event === 'SIGNED_IN' && user) {
+        // Verse login: eenmalig volledige initialisatie
         setKlaar(false)
-        await initialiseerData(user.id)
-        setKlaar(true)
-      } else {
+        initialiseerData(user.id).finally(() => setKlaar(true))
+      } else if (event === 'SIGNED_OUT') {
         setAfspraken([])
         setLabels([])
+        // klaar blijft true → loginpagina zichtbaar
       }
+      // TOKEN_REFRESHED / USER_UPDATED: geen actie — data is al geladen
     })
 
     return () => subscription.unsubscribe()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Stille achtergrond-sync: update UI zonder spinner
+  async function achtergrondSync(userId: string) {
+    try {
+      const [supLabels, supAfspraken] = await Promise.all([
+        laadLabelsVanSupabase(),
+        laadAfsprakenVanSupabase(),
+      ])
+      if (supAfspraken.length > 0 || supLabels.length > 0) {
+        setAfspraken(supAfspraken)
+        setLabels(supLabels)
+        slaAlleAfsprakenOp(supAfspraken)
+        slaAlleLabelsOp(supLabels)
+      }
+    } catch {
+      // Netwerk niet beschikbaar: gecachte data blijft zichtbaar
+    }
+    void userId
+  }
+
+  // Volledige initialisatie voor eerste login (upload lokale data als Supabase leeg is)
   async function initialiseerData(userId: string) {
     try {
       const [supLabels, supAfspraken] = await Promise.all([
@@ -83,14 +115,12 @@ export default function AgendaApp() {
       ])
 
       if (supLabels.length === 0 && supAfspraken.length === 0) {
-        // Nieuwe gebruiker: lokale data uploaden naar Supabase
         const lokaleAfspraken = laadAfspraken()
         const lokaleLabels    = laadLabels()
         await uploadNaarSupabase(lokaleAfspraken, lokaleLabels, userId)
         setAfspraken(lokaleAfspraken)
         setLabels(lokaleLabels)
       } else {
-        // Bestaande gebruiker: Supabase is de bron
         setAfspraken(supAfspraken)
         setLabels(supLabels)
         slaAlleAfsprakenOp(supAfspraken)
