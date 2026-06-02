@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronLeft, ChevronRight, Search, Plus, Tag, Settings, LogOut } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Tag } from 'lucide-react'
 import type { WeergaveType } from '@/types'
 
 const WEERGAVEN: { key: WeergaveType; label: string }[] = [
@@ -18,14 +18,13 @@ interface Props {
   onVolgende: () => void
   onNieuw: () => void
   onLabels: () => void
-  onInstellingen: () => void
-  onUitloggen?: () => void
+  onProfielMenu: () => void
   gebruikerEmail?: string
 }
 
 export default function TopBar({
   weergave, onWeergaveChange, titel, onVorige, onVolgende,
-  onNieuw, onLabels, onInstellingen, onUitloggen, gebruikerEmail,
+  onNieuw, onLabels, onProfielMenu, gebruikerEmail,
 }: Props) {
   const initiaal = gebruikerEmail?.[0]?.toUpperCase() ?? '?'
 
@@ -65,26 +64,18 @@ export default function TopBar({
         <button onClick={onLabels} className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-500" title="Labels">
           <Tag size={18} />
         </button>
-        <button onClick={onInstellingen} className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-500" title="Instellingen">
-          <Settings size={18} />
-        </button>
-        <button className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-500" title="Zoeken">
-          <Search size={18} />
-        </button>
         <button onClick={onNieuw} className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-500" title="Nieuwe afspraak">
           <Plus size={18} />
         </button>
 
-        {/* Gebruiker avatar + uitloggen */}
-        {onUitloggen && (
-          <button
-            onClick={onUitloggen}
-            title={`Uitloggen (${gebruikerEmail})`}
-            className="ml-1 w-7 h-7 rounded-full bg-[#007AFF] flex items-center justify-center text-white text-[11px] font-bold hover:bg-blue-600 transition-colors shrink-0"
-          >
-            {initiaal}
-          </button>
-        )}
+        {/* Avatar — opent profielmenu */}
+        <button
+          onClick={onProfielMenu}
+          title={gebruikerEmail}
+          className="ml-1 w-7 h-7 rounded-full bg-[#007AFF] flex items-center justify-center text-white text-[11px] font-bold hover:bg-blue-600 transition-colors shrink-0"
+        >
+          {initiaal}
+        </button>
       </div>
     </header>
   )

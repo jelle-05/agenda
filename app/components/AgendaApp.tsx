@@ -24,8 +24,11 @@ import DagWeergave from './DagWeergave'
 import AgendaLijst from './AgendaLijst'
 import AfspraakFormulier from './AfspraakFormulier'
 import LabelBeheer from './LabelBeheer'
-import InstellingenPanel from './InstellingenPanel'
+import ProfielMenu from './ProfielMenu'
 import { subscribeerOpPush } from '@/lib/pushUtils'
+import { genereerHerhalingen } from '@/lib/herhaling'
+import type { HerhalingConfig } from '@/types'
+import { slaVeelAfsprakenOpInSupabase } from '@/lib/supabaseOpslag'
 
 export default function AgendaApp() {
   // Auth
@@ -33,7 +36,7 @@ export default function AgendaApp() {
   const [klaar, setKlaar]         = useState(false)     // auth + data both loaded
 
   // Calendar state
-  const [weergave, setWeergave]         = useState<WeergaveType>('maand')
+  const [weergave, setWeergave]         = useState<WeergaveType>('week')
   const [huidigeDatum, setHuidigeDatum] = useState(() => new Date())
   const [afspraken, setAfspraken]       = useState<Afspraak[]>([])
   const [labels, setLabels]             = useState<Label[]>([])
@@ -45,8 +48,8 @@ export default function AgendaApp() {
   // Modal state
   const [formulierOpen, setFormulierOpen]         = useState(false)
   const [bewerkAfspraak, setBewerkAfspraak]       = useState<Afspraak | null>(null)
-  const [labelBeheerOpen, setLabelBeheerOpen]         = useState(false)
-  const [instellingenOpen, setInstellingenOpen]       = useState(false)
+  const [labelBeheerOpen, setLabelBeheerOpen]   = useState(false)
+  const [profielMenuOpen, setProfielMenuOpen]   = useState(false)
   const [vooringevuldDatum, setVooringevuldDatum] = useState<Date | null>(null)
 
   // ── Auth & data init ────────────────────────────────────────────────────────
@@ -238,19 +241,42 @@ export default function AgendaApp() {
     setFormulierOpen(true)
   }
 
-  async function handleOpslaanAfspraak(afspraak: Afspraak) {
-    setAfspraken(prev => slaAfspraakOp(afspraak, prev))
+  async function handleOpslaanAfspraak(afspraak: Afspraak, herhaling: HerhalingConfig) {
+    const events = genereerHerhalingen(afspraak, herhaling)
+    setAfspraken(prev => {
+      let next = prev
+      for (const ev of events) next = slaAfspraakOp(ev, next)
+      return next
+    })
     setFormulierOpen(false)
     if (gebruiker) {
-      try { await slaAfspraakOpInSupabase(afspraak, gebruiker.id) }
-      catch (err) { console.error('Supabase afspraak sync mislukt:', err) }
+      try {
+        if (events.length === 1) {
+          await slaAfspraakOpInSupabase(events[0], gebruiker.id)
+        } else {
+          await slaVeelAfsprakenOpInSupabase(events, gebruiker.id)
+        }
+      } catch (err) { console.error('Supabase afspraak sync mislukt:', err) }
     }
   }
 
-  async function handleVerwijderAfspraak(id: string) {
-    setAfspraken(prev => verwijderAfspraak(id, prev))
+  async function handleVerwijderAfspraak(id: string, alleHerhalingen = false) {
+    setAfspraken(prev => {
+      if (alleHerhalingen) {
+        const groepId = prev.find(a => a.id === id)?.herhalingGroepId
+        const teVerwijderen = groepId ? prev.filter(a => a.herhalingGroepId === groepId).map(a => a.id) : [id]
+        let next = prev
+        for (const vid of teVerwijderen) next = verwijderAfspraak(vid, next)
+        if (gebruiker) {
+          Promise.all(teVerwijderen.map(vid => verwijderAfspraakUitSupabase(vid)))
+            .catch(err => console.error('Supabase verwijder sync mislukt:', err))
+        }
+        return next
+      }
+      return verwijderAfspraak(id, prev)
+    })
     setFormulierOpen(false)
-    if (gebruiker) {
+    if (!alleHerhalingen && gebruiker) {
       try { await verwijderAfspraakUitSupabase(id) }
       catch (err) { console.error('Supabase verwijder sync mislukt:', err) }
     }
@@ -313,8 +339,7 @@ export default function AgendaApp() {
         onVolgende={navigeerVolgende}
         onNieuw={() => openNieuwAfspraak()}
         onLabels={() => setLabelBeheerOpen(true)}
-        onInstellingen={() => setInstellingenOpen(true)}
-        onUitloggen={uitloggen}
+        onProfielMenu={() => setProfielMenuOpen(true)}
         gebruikerEmail={gebruiker.email ?? ''}
       />
 
@@ -399,9 +424,11 @@ export default function AgendaApp() {
         onSluit={() => setLabelBeheerOpen(false)}
       />
 
-      <InstellingenPanel
-        open={instellingenOpen}
-        onSluit={() => setInstellingenOpen(false)}
+      <ProfielMenu
+        open={profielMenuOpen}
+        email={gebruiker.email ?? ''}
+        onUitloggen={uitloggen}
+        onSluit={() => setProfielMenuOpen(false)}
       />
     </div>
   )

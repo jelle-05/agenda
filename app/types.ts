@@ -16,5 +16,20 @@ export type Afspraak = {
   labelIds: string[]
   notitie?: string
   locatie?: string
-  herinneringMinuten?: number  // -1 = geen, 0 = bij aanvang, anders N minuten van tevoren
+  herinneringMinuten?: number   // -1 = geen, 0 = bij aanvang, N = N minuten van tevoren
+  herhalingGroepId?: string     // koppelt herhalende instanties aan elkaar
+}
+
+export type HerhalingType = 'nooit' | 'dagelijks' | 'wekelijks' | 'tweewekelijks' | 'maandelijks'
+
+export type HerhalingConfig = {
+  type: HerhalingType
+  dagen: number[]  // 0=Ma … 6=Zo, relevant bij wekelijks/tweewekelijks
+  duur: number     // aantal weken (of maanden bij maandelijks)
+}
+
+export const HERHALING_LEEG: HerhalingConfig = {
+  type: 'nooit',
+  dagen: [],
+  duur: 4,
 }

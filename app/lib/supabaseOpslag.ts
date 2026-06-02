@@ -13,9 +13,10 @@ function rijNaarAfspraak(rij: any): Afspraak {
     eindTijd:  rij.eind_tijd  ?? '23:59',
     heeldag:   rij.heeldag,
     labelIds:  rij.label_ids ?? [],
-    notitie:            rij.notitie            ?? undefined,
-    locatie:            rij.locatie            ?? undefined,
-    herinneringMinuten: rij.herinnering_minuten ?? -1,
+    notitie:            rij.notitie              ?? undefined,
+    locatie:            rij.locatie              ?? undefined,
+    herinneringMinuten: rij.herinnering_minuten  ?? -1,
+    herhalingGroepId:   rij.herhalingsgroep_id   ?? undefined,
   }
 }
 
@@ -32,6 +33,7 @@ function afspraakNaarRij(a: Afspraak, userId: string) {
     notitie:             a.notitie            ?? null,
     locatie:             a.locatie            ?? null,
     herinnering_minuten: a.herinneringMinuten ?? -1,
+    herhalingsgroep_id:  a.herhalingGroepId   ?? null,
   }
 }
 
@@ -54,6 +56,12 @@ export async function laadAfsprakenVanSupabase(): Promise<Afspraak[]> {
 
 export async function slaAfspraakOpInSupabase(a: Afspraak, userId: string): Promise<void> {
   const { error } = await supabase.from('afspraken').upsert(afspraakNaarRij(a, userId))
+  if (error) throw error
+}
+
+export async function slaVeelAfsprakenOpInSupabase(afspraken: Afspraak[], userId: string): Promise<void> {
+  if (!afspraken.length) return
+  const { error } = await supabase.from('afspraken').upsert(afspraken.map(a => afspraakNaarRij(a, userId)))
   if (error) throw error
 }
 

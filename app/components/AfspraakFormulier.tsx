@@ -1,17 +1,20 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import type { Afspraak, Label } from '@/types'
-import { toISODatum } from '@/lib/datum'
+import type { Afspraak, Label, HerhalingConfig, HerhalingType } from '@/types'
+import { HERHALING_LEEG } from '@/types'
+import { toISODatum, getDagIndex } from '@/lib/datum'
 import { labelAchtergrond } from '@/lib/kleuren'
+
+const NL_KORT = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo']
 
 interface Props {
   open: boolean
   afspraak?: Afspraak | null
   labels: Label[]
   initiaalDatum: Date
-  onOpslaan: (afspraak: Afspraak) => void
-  onVerwijder: (id: string) => void
+  onOpslaan: (afspraak: Afspraak, herhaling: HerhalingConfig) => void
+  onVerwijder: (id: string, alleHerhalingen?: boolean) => void
   onSluit: () => void
 }
 
@@ -20,21 +23,28 @@ function leeg(datum: string): Afspraak {
 }
 
 export default function AfspraakFormulier({ open, afspraak, labels, initiaalDatum, onOpslaan, onVerwijder, onSluit }: Props) {
-  const [form, setForm] = useState<Afspraak>(() => leeg(toISODatum(initiaalDatum)))
+  const [form, setForm]           = useState<Afspraak>(() => leeg(toISODatum(initiaalDatum)))
+  const [herhaling, setHerhaling] = useState<HerhalingConfig>(HERHALING_LEEG)
 
   useEffect(() => {
     if (open) {
       setForm(afspraak ? { ...afspraak } : leeg(toISODatum(initiaalDatum)))
+      // Herhaling alleen instelbaar bij nieuwe events; bestaande events tonen huidige waarden
+      setHerhaling(HERHALING_LEEG)
     }
   }, [open, afspraak, initiaalDatum])
 
   if (!open) return null
 
   const isNieuw = !form.id
+  const isHerhalend = !!form.herhalingGroepId
 
   function opslaan() {
     if (!form.titel.trim()) return
-    onOpslaan({ ...form, id: form.id || crypto.randomUUID(), titel: form.titel.trim() })
+    onOpslaan(
+      { ...form, id: form.id || crypto.randomUUID(), titel: form.titel.trim() },
+      herhaling
+    )
   }
 
   function toggleLabel(id: string) {
@@ -43,6 +53,27 @@ export default function AfspraakFormulier({ open, afspraak, labels, initiaalDatu
       labelIds: f.labelIds.includes(id) ? f.labelIds.filter(l => l !== id) : [...f.labelIds, id],
     }))
   }
+
+  function toggleDag(idx: number) {
+    setHerhaling(h => ({
+      ...h,
+      dagen: h.dagen.includes(idx) ? h.dagen.filter(d => d !== idx) : [...h.dagen, idx],
+    }))
+  }
+
+  function setHerhalingType(type: HerhalingType) {
+    // Selecteer automatisch de dag van de huidige datum bij wekelijks/tweewekelijks
+    const [y, m, d] = form.datum.split('-').map(Number)
+    const dagIdx = getDagIndex(new Date(y, m - 1, d))
+    setHerhaling(h => ({
+      ...h,
+      type,
+      dagen: (type === 'wekelijks' || type === 'tweewekelijks') ? [dagIdx] : [],
+    }))
+  }
+
+  const toonDagKiezer = herhaling.type === 'wekelijks' || herhaling.type === 'tweewekelijks'
+  const duuretiket    = herhaling.type === 'maandelijks' ? 'maanden' : 'weken'
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -82,7 +113,6 @@ export default function AfspraakFormulier({ open, afspraak, labels, initiaalDatu
 
           {/* Datum & tijden */}
           <div className="bg-gray-50 rounded-xl overflow-hidden divide-y divide-gray-200">
-            {/* Hele dag toggle */}
             <div className="flex items-center justify-between px-4 py-3">
               <span className="text-[15px] text-gray-800">Hele dag</span>
               <button
@@ -90,13 +120,10 @@ export default function AfspraakFormulier({ open, afspraak, labels, initiaalDatu
                 className={['relative w-12 h-7 rounded-full transition-colors', form.heeldag ? 'bg-[#34C759]' : 'bg-gray-300'].join(' ')}
                 aria-label="Hele dag"
               >
-                <span
-                  className={['absolute top-[3px] w-[22px] h-[22px] bg-white rounded-full shadow transition-all', form.heeldag ? 'left-[26px]' : 'left-[3px]'].join(' ')}
-                />
+                <span className={['absolute top-[3px] w-[22px] h-[22px] bg-white rounded-full shadow transition-all', form.heeldag ? 'left-[26px]' : 'left-[3px]'].join(' ')} />
               </button>
             </div>
 
-            {/* Datum */}
             <div className="flex items-center justify-between px-4 py-3">
               <span className="text-[15px] text-gray-800">Datum</span>
               <input
@@ -107,23 +134,18 @@ export default function AfspraakFormulier({ open, afspraak, labels, initiaalDatu
               />
             </div>
 
-            {/* Tijden */}
             {!form.heeldag && (
               <>
                 <div className="flex items-center justify-between px-4 py-3">
                   <span className="text-[15px] text-gray-800">Begin</span>
-                  <input
-                    type="time"
-                    value={form.beginTijd}
+                  <input type="time" value={form.beginTijd}
                     onChange={e => setForm(f => ({ ...f, beginTijd: e.target.value }))}
                     className="text-[15px] text-[#007AFF] outline-none bg-transparent"
                   />
                 </div>
                 <div className="flex items-center justify-between px-4 py-3">
                   <span className="text-[15px] text-gray-800">Eind</span>
-                  <input
-                    type="time"
-                    value={form.eindTijd}
+                  <input type="time" value={form.eindTijd}
                     onChange={e => setForm(f => ({ ...f, eindTijd: e.target.value }))}
                     className="text-[15px] text-[#007AFF] outline-none bg-transparent"
                   />
@@ -131,6 +153,75 @@ export default function AfspraakFormulier({ open, afspraak, labels, initiaalDatu
               </>
             )}
           </div>
+
+          {/* Herhaling — alleen bij nieuwe events */}
+          {isNieuw && (
+            <div className="bg-gray-50 rounded-xl overflow-hidden divide-y divide-gray-200">
+              {/* Type */}
+              <div className="flex items-center justify-between px-4 py-3">
+                <span className="text-[15px] text-gray-800">Herhalen</span>
+                <select
+                  value={herhaling.type}
+                  onChange={e => setHerhalingType(e.target.value as HerhalingType)}
+                  className="text-[15px] text-[#007AFF] outline-none bg-transparent text-right"
+                >
+                  <option value="nooit">Nooit</option>
+                  <option value="dagelijks">Elke dag</option>
+                  <option value="wekelijks">Elke week</option>
+                  <option value="tweewekelijks">Elke 2 weken</option>
+                  <option value="maandelijks">Elke maand</option>
+                </select>
+              </div>
+
+              {/* Dag-kiezer (wekelijks / tweewekelijks) */}
+              {toonDagKiezer && (
+                <div className="px-4 py-3">
+                  <p className="text-[13px] text-gray-400 mb-2 uppercase tracking-wide font-semibold">Dagen</p>
+                  <div className="flex gap-1.5">
+                    {NL_KORT.map((dag, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => toggleDag(idx)}
+                        className={[
+                          'flex-1 py-1.5 rounded-lg text-[12px] font-semibold transition-colors',
+                          herhaling.dagen.includes(idx)
+                            ? 'bg-[#007AFF] text-white'
+                            : 'bg-gray-200 text-gray-500',
+                        ].join(' ')}
+                      >
+                        {dag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Duur */}
+              {herhaling.type !== 'nooit' && (
+                <div className="flex items-center justify-between px-4 py-3">
+                  <span className="text-[15px] text-gray-800">Eindigt na</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={herhaling.type === 'maandelijks' ? 24 : 52}
+                      value={herhaling.duur}
+                      onChange={e => setHerhaling(h => ({ ...h, duur: Math.max(1, parseInt(e.target.value) || 1) }))}
+                      className="w-14 text-[15px] text-[#007AFF] outline-none bg-gray-100 rounded-lg px-2 py-1 text-center"
+                    />
+                    <span className="text-[15px] text-gray-500">{duuretiket}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Badge als bestaand event herhalend is */}
+          {isHerhalend && (
+            <div className="bg-blue-50 rounded-xl px-4 py-2.5">
+              <p className="text-[13px] text-[#007AFF]">↻ Herhalend event</p>
+            </div>
+          )}
 
           {/* Herinnering */}
           {!form.heeldag && (
@@ -205,12 +296,22 @@ export default function AfspraakFormulier({ open, afspraak, labels, initiaalDatu
 
           {/* Verwijder */}
           {!isNieuw && (
-            <button
-              onClick={() => { onVerwijder(form.id); onSluit() }}
-              className="w-full bg-red-50 text-red-500 rounded-xl py-3 text-[15px] font-medium hover:bg-red-100 transition-colors"
-            >
-              Verwijder afspraak
-            </button>
+            <div className={['flex gap-2', isHerhalend ? '' : ''].join(' ')}>
+              <button
+                onClick={() => { onVerwijder(form.id, false); onSluit() }}
+                className="flex-1 bg-red-50 text-red-500 rounded-xl py-3 text-[15px] font-medium hover:bg-red-100 transition-colors"
+              >
+                {isHerhalend ? 'Dit event' : 'Verwijder afspraak'}
+              </button>
+              {isHerhalend && (
+                <button
+                  onClick={() => { onVerwijder(form.id, true); onSluit() }}
+                  className="flex-1 bg-red-50 text-red-500 rounded-xl py-3 text-[15px] font-medium hover:bg-red-100 transition-colors"
+                >
+                  Alle herhalingen
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>
