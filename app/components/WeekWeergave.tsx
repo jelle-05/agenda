@@ -124,11 +124,19 @@ export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKli
                       onClick={() => onAfspraakKlik(afspraak)}
                       onDoubleClick={e => e.stopPropagation()}
                       className="absolute inset-x-0.5 rounded overflow-hidden text-left hover:brightness-95 transition-all flex flex-col justify-start items-stretch"
-                      style={{ top, height, backgroundColor: labelAchtergrond(kleur, 0.18), borderLeft: `2px solid ${kleur}`, padding: 7 }}
+                      style={{
+                        top, height,
+                        backgroundColor: labelAchtergrond(kleur, 0.18),
+                        borderLeft: `2px solid ${kleur}`,
+                        padding: height < 26 ? '2px 4px' : 7,
+                      }}
                     >
-                      {height >= 26 && (
+                      {height >= 20 && (
                         <>
-                          <p className="text-[12px] font-semibold truncate leading-tight" style={{ color: kleur }}>
+                          <p
+                            className="font-semibold truncate overflow-hidden whitespace-nowrap"
+                            style={{ color: kleur, fontSize: height < 26 ? 10 : 12, lineHeight: height < 26 ? 1.1 : 'normal' }}
+                          >
                             {afspraak.titel}
                           </p>
                           {height >= 44 && afspraak.locatie && (
