@@ -88,8 +88,9 @@ export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik
         </div>
       )}
 
-      {/* Tijdsgrid */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden">
+      {/* Tijdsgrid — wrapper remount triggert de animatie betrouwbaar in alle browsers */}
+      <div key={animatieSleutel} className={`flex-1 overflow-hidden ${animatieKlasse}`}>
+      <div ref={scrollRef} className="h-full overflow-y-auto overflow-x-hidden">
         <div className="flex" style={{ height: `${24 * UURHOOGTE}px`, minHeight: `${24 * UURHOOGTE}px` }}>
           {/* Tijdlabels */}
           <div className="w-14 shrink-0 relative">
@@ -104,10 +105,9 @@ export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik
             ))}
           </div>
 
-          {/* Events kolom — alleen dit gedeelte animeert; tijdlabels blijven vast */}
+          {/* Events kolom */}
           <div
-            key={animatieSleutel}
-            className={`flex-1 relative border-l border-gray-100 sm:border-[#dfdfdf] ${animatieKlasse}`}
+            className="flex-1 relative border-l border-gray-100 sm:border-[#dfdfdf]"
             onDoubleClick={handleDubbelklik}
           >
             {/* Uurlijnen */}
@@ -171,6 +171,7 @@ export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik
             })}
           </div>
         </div>
+      </div>
       </div>
     </div>
   )
