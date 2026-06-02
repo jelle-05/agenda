@@ -4,24 +4,60 @@ Persoonlijke agenda-app gebouwd met Next.js, Supabase en Tailwind CSS. Geïnspir
 
 ## Features
 
+### Kalender
+- **Weekoverzicht standaard** — app opent altijd in de weekweergave
 - **Vier weergaven** — Dag, Week, Maand en Agenda (lijstoverzicht)
-- **Afspraken beheren** — aanmaken, bewerken en verwijderen
-- **Herhalende events** — dagelijks, wekelijks, tweewekelijks of maandelijks met dag-selectie
-- **Labels** — onbeperkt kleur-labels per afspraak
-- **Herinneringen** — browser push-notificaties (ook als de app op de achtergrond staat)
-- **Inloggen** — e-mail en wachtwoord via Supabase Auth
-- **Sync** — data gesynchroniseerd via Supabase, offline beschikbaar via localStorage-cache
-- **PWA** — installeerbaar op Android en iOS als native app
+- **Dubbelklik op tijdslot** (desktop) — opent formulier met vooringevulde starttijd (afgerond op 30 min)
+- **Navigatie** — vorige/volgende periode via pijlknoppen
+
+### Events
+- **Aanmaken, bewerken en verwijderen** van afspraken
+- **Herhalende events** — dagelijks, wekelijks, tweewekelijks of maandelijks met dag-selectie en instelbare duur
+- **Herhalende events verwijderen** — alleen dit event of alle herhalingen
+- **Velden** — titel, datum, begin-/eindtijd, hele dag, locatie, notitie, label, herinnering
+- **Event-blok styling** — titel bovenaan, locatie eronder, compact bij korte tijdsloten
+- **Compacte weergave** — blokken ≥ 20px tonen tekst in compact formaat (10px); blokken ≥ 26px normaal (12px); blokken < 20px tonen alleen kleurblok
+
+### Labels
+- Onbeperkt kleur-labels per afspraak
+- Labels aanmaken/bewerken/verwijderen via Label-beheer
+
+### Auth & profiel
+- Inloggen met e-mail en wachtwoord via Supabase Auth
+- **Profielmenu** — klik op avatar-icoon rechtsboven: toont naam, e-mailadres en uitlogknop
+- Geen instellingen-tab (verwijderd), geen zoekicoon (verwijderd)
+
+### Sync & offline
+- Data gesynchroniseerd via Supabase
+- **Real-time sync** — wijzigingen op één apparaat verschijnen direct op andere apparaten
+- Offline beschikbaar via localStorage-cache
+
+### Reminders
+- **In-app**: controle elke 30 seconden, notificatie via `ServiceWorkerRegistration.showNotification()` (werkt op iOS 16.4+ PWA, Android en desktop)
+- **Server-side push**: cron-job stuurt Web Push (VAPID) via `/api/cron/reminders`
+- **E-mail**: zelfde cron stuurt ook e-mail via Resend naar het e-mailadres van de ingelogde gebruiker
+- **Status**: push-notificaties kunnen onbetrouwbaar zijn op iOS; e-mail is de betrouwbaardere fallback
+
+### PWA
+- Installeerbaar op Android en iOS als native app
+- Witte statusbalk en home-indicator via `viewport-fit=cover` en safe-area CSS
+- Service worker met offline-fallback
+
+---
 
 ## Tech stack
 
 | Onderdeel | Keuze |
 |---|---|
-| Framework | Next.js 16 (App Router) |
+| Framework | Next.js 16 (App Router, Turbopack) |
 | Styling | Tailwind CSS v4 |
 | Backend / Auth | Supabase |
 | Hosting | Vercel |
-| Push notificaties | Web Push (VAPID) |
+| Push notificaties | Web Push (VAPID) via `web-push` |
+| E-mail | Resend |
+| Real-time sync | Supabase Realtime (`postgres_changes`) |
+
+---
 
 ## Lokaal draaien
 
@@ -43,13 +79,22 @@ npm install
 Maak een `.env.local` aan in de root:
 
 ```env
+# Supabase
 NEXT_PUBLIC_SUPABASE_URL=https://jouw-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=jouw-anon-key
 SUPABASE_SERVICE_ROLE_KEY=jouw-service-role-key
+
+# Web Push (VAPID)
 NEXT_PUBLIC_VAPID_PUBLIC_KEY=jouw-vapid-public-key
 VAPID_PRIVATE_KEY=jouw-vapid-private-key
 VAPID_SUBJECT=mailto:jouw@email.nl
+
+# Cron beveiliging
 CRON_SECRET=jouw-geheim-wachtwoord
+
+# E-mail via Resend (optioneel)
+RESEND_API_KEY=re_xxxxxxxxxxxx
+RESEND_FROM_EMAIL=agenda@jouwdomein.nl
 ```
 
 ### Database setup
@@ -105,6 +150,8 @@ create policy "eigen subscriptions" on push_subscriptions for all to authenticat
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
 ```
 
+Zet ook **Realtime** aan voor de tabellen `afspraken` en `labels` via Supabase → Database → Replication.
+
 ### Starten
 
 ```bash
@@ -113,10 +160,30 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-## Push notificaties (optioneel)
+---
 
-Voor herinneringen die werken als de app gesloten is, stel een cron-job in (bijv. via [cron-job.org](https://cron-job.org)):
+## Reminders instellen (server-side)
 
-- URL: `https://jouw-app.vercel.app/api/cron/reminders`
-- Interval: elke minuut
-- Header: `x-cron-secret: jouw-cron-secret`
+Stel een cron-job in (bijv. via [cron-job.org](https://cron-job.org)) die elke minuut draait:
+
+- **URL:** `https://jouw-app.vercel.app/api/cron/reminders`
+- **Methode:** GET
+- **Header:** `x-cron-secret: jouw-cron-secret`
+
+De cron stuurt bij een verlopen herinneringstijd zowel een push-notificatie als een e-mail (als `RESEND_API_KEY` en `RESEND_FROM_EMAIL` ingesteld zijn).
+
+Voor e-mailreminders: maak een gratis account aan op [resend.com](https://resend.com), verifieer je domein en voeg de env vars toe in Vercel.
+
+---
+
+## Deployen
+
+Het project is verbonden met Vercel via GitHub. Elke push naar `main` triggert automatisch een nieuwe deploy.
+
+```bash
+git add .
+git commit -m "beschrijving"
+git push origin main
+```
+
+Env vars beheer je via Vercel → Project → Settings → Environment Variables.
