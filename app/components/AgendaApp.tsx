@@ -102,6 +102,17 @@ export default function AgendaApp() {
     return () => subscription.unsubscribe()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Android back-gesture blokkeren ────────────────────────────────────────────
+  // Single-page app op '/': de systeem-back-swipe zou de app verlaten en een
+  // grijs/leeg scherm tonen. Houd de history-stack gevuld zodat back binnen de
+  // app blijft (modals sluit je via hun eigen knop).
+  useEffect(() => {
+    window.history.pushState(null, '', window.location.href)
+    const onPop = () => window.history.pushState(null, '', window.location.href)
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
   // Stille achtergrond-sync: update UI zonder spinner
   async function achtergrondSync(userId: string) {
     try {

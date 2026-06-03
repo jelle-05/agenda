@@ -25,8 +25,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="nl" className={`${geist.variable} h-full`}>
-      <body className="h-full overflow-hidden">
+    <html lang="nl" className={`${geist.variable} h-full`} style={{ backgroundColor: '#ffffff', colorScheme: 'light' }}>
+      <body className="h-full overflow-hidden" style={{ backgroundColor: '#ffffff' }}>
         <SwRegistratie />
         {children}
       </body>
