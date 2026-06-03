@@ -287,10 +287,10 @@ De eerder openstaande vragen zijn beantwoord en in dit document verwerkt:
 - [ ] Env vars: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`, `TELEGRAM_WEBHOOK_URL` (lokaal + Vercel).
 - [x] `app/lib/telegram.ts` met `verstuurTelegram(chatId, tekst, opties?)` — **Fase 1 gebouwd**.
 - [x] `scripts/setWebhook.mjs` om de webhook te registreren (met `secret_token`) — **Fase 1 gebouwd**.
-- [ ] Tabellen `telegram_accounts` (incl. `actief`-vlag) + `telegram_koppelcodes` (+ RLS). **Geen** `afspraken`-wijziging (kanaal is globaal).
-- [ ] Routes: `/api/telegram/link`, `/api/telegram/status` (status + toggle + ontkoppelen), `/api/telegram/webhook`, (optioneel) `/api/telegram/test`.
-- [ ] Koppelflow end-to-end (code → deeplink → `/start` → koppelen → bevestiging).
-- [ ] `ProfielMenu`: koppelen/ontkoppelen, **toggle "Telegram-reminders aan/uit"**, testbericht.
+- [x] Tabellen `telegram_accounts` (incl. `actief`-vlag) + `telegram_koppelcodes` (+ RLS) — **Fase 2** (SQL door gebruiker te draaien). **Geen** `afspraken`-wijziging (kanaal is globaal).
+- [x] Routes: `/api/telegram/link`, `/api/telegram/status` (status + ontkoppelen), `/api/telegram/webhook` — **Fase 2 gebouwd**. (Toggle = Fase 3; `/api/telegram/test` optioneel, later.)
+- [x] Koppelflow end-to-end (code → deeplink → `/start` → koppelen → bevestiging) — **Fase 2 gebouwd**.
+- [~] `ProfielMenu`: koppelen/ontkoppelen — **Fase 2 (minimaal) gebouwd**. **Toggle "Telegram-reminders aan/uit"** = Fase 3; testbericht = later.
 - [ ] Cron: per gekoppelde+actieve gebruiker **Telegram i.p.v. web-push** + `claimReminder('…|telegram')` (claim-eerst); e-mail ongewijzigd.
 - [ ] **In-app 30s browser-push verwijderen** uit `AgendaApp.tsx` (web-push voorlopig alleen als fallback voor niet-gekoppelden).
 - [ ] Berichtopmaak (eventnaam/datum/tijd/locatie/remindertekst), geen gevoelige data.

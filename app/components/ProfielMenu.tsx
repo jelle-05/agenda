@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { LogOut, Mail, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { LogOut, Mail, Send, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 interface Props {
@@ -14,6 +14,77 @@ interface Props {
 export default function ProfielMenu({ open, email, onUitloggen, onSluit }: Props) {
   const [emailTestStatus, setEmailTestStatus] = useState<'idle' | 'laden' | 'ok' | 'fout'>('idle')
   const [emailTestFout, setEmailTestFout] = useState('')
+
+  const [tgStatus, setTgStatus] = useState<'laden' | 'niet' | 'gekoppeld'>('laden')
+  const [tgUsername, setTgUsername] = useState<string | null>(null)
+  const [tgBezig, setTgBezig] = useState(false)
+  const [tgFout, setTgFout] = useState('')
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  async function token() {
+    const { data: { session } } = await supabase.auth.getSession()
+    return session?.access_token ?? null
+  }
+
+  // Haalt de koppelstatus op; geeft true terug als Telegram gekoppeld is.
+  async function haalTgStatus(): Promise<boolean> {
+    const t = await token()
+    if (!t) { setTgStatus('niet'); return false }
+    try {
+      const res = await fetch('/api/telegram/status', { headers: { Authorization: `Bearer ${t}` } })
+      const j = await res.json()
+      if (res.ok && j.gekoppeld) { setTgStatus('gekoppeld'); setTgUsername(j.telegramUsername); return true }
+      setTgStatus('niet'); setTgUsername(null); return false
+    } catch {
+      setTgStatus('niet'); return false
+    }
+  }
+
+  // Bij openen status ophalen; bij sluiten een lopende poll netjes stoppen.
+  useEffect(() => {
+    // setState gebeurt pas ná de fetch (async), niet synchroon in de effect-body.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (open) haalTgStatus()
+    return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null } }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
+  async function startKoppelen() {
+    setTgFout(''); setTgBezig(true)
+    const t = await token()
+    if (!t) { setTgBezig(false); setTgFout('Niet ingelogd'); return }
+    try {
+      const res = await fetch('/api/telegram/link', { method: 'POST', headers: { Authorization: `Bearer ${t}` } })
+      const j = await res.json()
+      if (!res.ok) { setTgBezig(false); setTgFout(j.error ?? 'Kon niet koppelen'); return }
+      window.open(j.deeplink, '_blank', 'noopener')
+      // Poll tot de webhook de koppeling heeft verwerkt (max ~2 min).
+      let pogingen = 0
+      pollRef.current = setInterval(async () => {
+        pogingen++
+        const ok = await haalTgStatus()
+        if (ok || pogingen >= 40) {
+          if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
+          setTgBezig(false)
+          if (!ok) setTgFout('Nog niet gekoppeld. Open de link en druk op Start in Telegram.')
+        }
+      }, 3000)
+    } catch {
+      setTgBezig(false); setTgFout('Netwerkfout')
+    }
+  }
+
+  async function ontkoppel() {
+    setTgFout('')
+    const t = await token()
+    if (!t) return
+    try {
+      await fetch('/api/telegram/status', { method: 'DELETE', headers: { Authorization: `Bearer ${t}` } })
+      setTgStatus('niet'); setTgUsername(null)
+    } catch {
+      setTgFout('Ontkoppelen mislukt')
+    }
+  }
 
   if (!open) return null
 
@@ -79,6 +150,34 @@ export default function ProfielMenu({ open, email, onUitloggen, onSluit }: Props
           {emailTestStatus === 'fout' && (
             <p className="text-[12px] text-red-500 text-center mt-2">{emailTestFout}</p>
           )}
+        </div>
+
+        {/* Telegram koppelen */}
+        <div className="px-4 pt-4 pb-0">
+          {tgStatus === 'gekoppeld' ? (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-center gap-2 text-[13px] text-green-600">
+                <Send size={15} />
+                <span>Telegram gekoppeld{tgUsername ? ` (@${tgUsername})` : ''}</span>
+              </div>
+              <button
+                onClick={ontkoppel}
+                className="w-full flex items-center justify-center gap-2 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-xl py-3 text-[15px] font-medium transition-colors"
+              >
+                Telegram ontkoppelen
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={startKoppelen}
+              disabled={tgBezig || tgStatus === 'laden'}
+              className="w-full flex items-center justify-center gap-2 bg-gray-50 hover:bg-gray-100 disabled:opacity-50 text-gray-700 rounded-xl py-3 text-[15px] font-medium transition-colors"
+            >
+              <Send size={16} />
+              {tgBezig ? 'Wacht op koppeling…' : 'Telegram koppelen'}
+            </button>
+          )}
+          {tgFout && <p className="text-[12px] text-red-500 text-center mt-2">{tgFout}</p>}
         </div>
 
         {/* Uitloggen */}

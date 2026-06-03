@@ -195,6 +195,29 @@ public/
   alter table labels add column if not exists achtergrond_kleur text;
   alter table labels add column if not exists tekst_kleur text;
   ```
+- Telegram-koppeling (Fase 2) — twee tabellen toevoegen:
+  ```sql
+  create table if not exists telegram_accounts (
+    user_id uuid primary key references auth.users not null,
+    chat_id text not null,
+    telegram_username text,
+    actief boolean default true,
+    gekoppeld_op timestamptz default now()
+  );
+  alter table telegram_accounts enable row level security;
+  create policy "eigen telegram_account" on telegram_accounts for all to authenticated
+    using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+  create table if not exists telegram_koppelcodes (
+    code text primary key,
+    user_id uuid references auth.users not null,
+    aangemaakt_op timestamptz default now(),
+    verloopt_op timestamptz not null,
+    gebruikt boolean default false
+  );
+  alter table telegram_koppelcodes enable row level security;
+  ```
+  `telegram_koppelcodes` heeft bewust **geen** authenticated-policy: alleen de service-role (link-route + webhook) leest/schrijft codes, clients hebben geen toegang. `telegram_accounts` wordt door de status-route (user-scoped, RLS) gelezen/verwijderd en door de webhook (service-role) ge-upsert.
 
 ---
 
@@ -207,4 +230,5 @@ public/
 - **Timezone** — cron gebruikt `Europe/Amsterdam`; client gebruikt lokale timezone; consistent als gebruiker in NL zit
 - **Accountlimiet** — ingesteld op 10 accounts max (`/api/auth/check-capacity`)
 - **Telegram-reminders (in opbouw)** — onderzoek + fasering in `telegram_fases.md`. Telegram-bot (richting **HerinnerMij**) als betrouwbaarder pushkanaal: **globale voorkeur per gebruiker**, Telegram **vervangt browser-push** (e-mail blijft); de in-app 30s-push wordt verwijderd. Aanpak sluit aan op de bestaande cron (`/api/cron/reminders`) + `verzonden_reminders`-dedup (sleutel `…|telegram`, claim-eerst); koppelen via kortlevende koppelcode + bot-deeplink + **webhook** (geen polling op Vercel), geregistreerd met `scripts/setWebhook.mjs`. Nieuwe tabellen `telegram_accounts` (incl. `actief`-vlag) + `telegram_koppelcodes`; **geen** `afspraken`-wijziging. Env-namen: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`, `TELEGRAM_WEBHOOK_URL` (geen waarden in repo/docs).
-  - **Fase 1 gebouwd**: server-side helper `app/lib/telegram.ts` (`verstuurTelegram(chatId, tekst, opties?)`, alleen `fetch`, fail-soft → `false` bij ontbrekend token of fout, logt nooit token/chat_id) + herhaalbaar registratiescript `scripts/setWebhook.mjs` (`node --env-file=.env.local scripts/setWebhook.mjs`, zet `setWebhook` met `secret_token` + `allowed_updates:['message']`). Nog géén koppelflow/DB/UI/cron-integratie (Fase 2+).
+  - **Fase 1 gebouwd**: server-side helper `app/lib/telegram.ts` (`verstuurTelegram(chatId, tekst, opties?)`, alleen `fetch`, fail-soft → `false` bij ontbrekend token of fout, logt nooit token/chat_id) + herhaalbaar registratiescript `scripts/setWebhook.mjs` (`node --env-file=.env.local scripts/setWebhook.mjs`, zet `setWebhook` met `secret_token` + `allowed_updates:['message']`).
+  - **Fase 2 gebouwd**: koppelflow. Tabellen `telegram_accounts` + `telegram_koppelcodes` (SQL hierboven). Routes: `POST /api/telegram/link` (authed → genereert kortlevende `base64url`-code (10 min), slaat op via service-role, geeft `t.me/<bot>?start=<code>` terug), `POST /api/telegram/webhook` (verifieert `X-Telegram-Bot-Api-Secret-Token`, claimt de code **atomisch** via `update ... where gebruikt=false and verloopt_op>now() returning user_id` → upsert `telegram_accounts` → bevestigingsbericht), `GET/DELETE /api/telegram/status` (user-scoped: status / ontkoppelen). UI: minimale "Telegram koppelen/ontkoppelen"-sectie in `ProfielMenu.tsx` (opent deeplink + polled status elke 3s tot ~2 min). Nog géén globale aan/uit-toggle (Fase 3) en géén cron-integratie (Fase 4).

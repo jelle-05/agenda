@@ -245,6 +245,33 @@ alter table labels add column if not exists achtergrond_kleur text;
 alter table labels add column if not exists tekst_kleur text;
 ```
 
+Voor de Telegram-koppeling (Fase 2) — twee nieuwe tabellen:
+
+```sql
+-- Koppeling app-gebruiker ↔ Telegram-chat (+ globale voorkeur 'actief').
+create table if not exists telegram_accounts (
+  user_id uuid primary key references auth.users not null,
+  chat_id text not null,
+  telegram_username text,
+  actief boolean default true,
+  gekoppeld_op timestamptz default now()
+);
+alter table telegram_accounts enable row level security;
+create policy "eigen telegram_account" on telegram_accounts for all to authenticated
+  using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- Kortlevende, eenmalige koppelcodes. Alleen de service-role (link-route + webhook)
+-- raakt deze tabel aan; clients hebben geen policy en dus geen toegang tot de codes.
+create table if not exists telegram_koppelcodes (
+  code text primary key,
+  user_id uuid references auth.users not null,
+  aangemaakt_op timestamptz default now(),
+  verloopt_op timestamptz not null,
+  gebruikt boolean default false
+);
+alter table telegram_koppelcodes enable row level security;
+```
+
 > Zonder deze migratie blijft de app werken: labels slaan lokaal op en naam/kleur blijven syncen (de upsert valt terug op een variant zonder de nieuwe kolommen); de eigen kleuren persisten server-side pas ná de migratie.
 
 ### Starten
@@ -273,7 +300,12 @@ Voor e-mailreminders: maak een gratis account aan op [resend.com](https://resend
 
 ## Telegram-reminders (in opbouw)
 
-Telegram wordt als betrouwbaarder pushkanaal toegevoegd (zie het faseringsdocument `telegram_fases.md`). **Fase 1** zet de technische basis neer: een server-side verzendhelper (`app/lib/telegram.ts`) en een script om de webhook te registreren.
+Telegram wordt als betrouwbaarder pushkanaal toegevoegd (zie het faseringsdocument `telegram_fases.md`).
+
+- **Fase 1** — technische basis: server-side verzendhelper (`app/lib/telegram.ts`) + webhook-registratiescript (`scripts/setWebhook.mjs`).
+- **Fase 2** — veilige koppelflow: tabellen `telegram_accounts` + `telegram_koppelcodes`, routes `/api/telegram/link`, `/api/telegram/webhook`, `/api/telegram/status`, en een "Telegram koppelen"-knop in het profielmenu.
+
+**Koppelen (na het aanmaken van de bot + env vars):** open het profielmenu → *Telegram koppelen* → de bot opent in Telegram → druk op **Start** → je krijgt een bevestigingsbericht en het profiel toont "gekoppeld".
 
 De webhook registreren bij Telegram (herhaalbaar bij URL- of secret-wijziging):
 
@@ -281,7 +313,7 @@ De webhook registreren bij Telegram (herhaalbaar bij URL- of secret-wijziging):
 node --env-file=.env.local scripts/setWebhook.mjs
 ```
 
-Het script (`scripts/setWebhook.mjs`) leest `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET` en `TELEGRAM_WEBHOOK_URL` uit de omgeving en roept Telegram's `setWebhook` aan met een `secret_token` (zodat de webhook-route later kan verifiëren dat een call echt van Telegram komt). Tokens/secrets worden nooit getoond in de output. De koppelflow, profiel-UI en cron-verzending volgen in latere fases.
+Het script leest `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET` en `TELEGRAM_WEBHOOK_URL` (= `https://<domein>/api/telegram/webhook`) en roept Telegram's `setWebhook` aan met een `secret_token`. De webhook-route verifieert dat secret via de header `X-Telegram-Bot-Api-Secret-Token`, zodat alleen Telegram de route kan aanroepen. Tokens/secrets worden nooit getoond in de output. De globale aan/uit-voorkeur en de cron-verzending volgen in latere fases.
 
 ---
 
