@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import type { Verjaardag } from '@/types'
-import { toISODatum } from '@/lib/datum'
+import { berekenLeeftijd, geldigeDag, dagenInMaand, MND_LANG } from '@/lib/verjaardagen'
 
 interface Props {
   open: boolean
@@ -13,7 +13,8 @@ interface Props {
 }
 
 function leeg(): Verjaardag {
-  return { id: '', naam: '', datum: toISODatum(new Date()), terugkomend: true, herinneringMinuten: -1 }
+  const nu = new Date()
+  return { id: '', naam: '', dag: nu.getDate(), maand: nu.getMonth() + 1, terugkomend: true, herinneringMinuten: -1 }
 }
 
 export default function VerjaardagFormulier({ open, verjaardag, onOpslaan, onVerwijder, onSluit }: Props) {
@@ -29,8 +30,21 @@ export default function VerjaardagFormulier({ open, verjaardag, onOpslaan, onVer
 
   if (!open) return null
 
-  const isNieuw = !form.id
-  const geldig  = form.naam.trim().length > 0 && !!form.datum
+  const isNieuw  = !form.id
+  const geldig   = form.naam.trim().length > 0 && geldigeDag(form.dag, form.maand, form.geboortejaar)
+  const leeftijd = berekenLeeftijd(form)
+
+  // Zet dag/maand/geboortejaar en klem de dag binnen het aantal dagen van de maand.
+  function setDatum(patch: { dag?: number; maand?: number; geboortejaar?: number | undefined; jaarLeeg?: boolean }) {
+    setForm(f => {
+      const maand = patch.maand ?? f.maand
+      const geboortejaar = patch.jaarLeeg ? undefined : (patch.geboortejaar ?? f.geboortejaar)
+      let dag = patch.dag ?? f.dag
+      const max = dagenInMaand(maand, geboortejaar)
+      if (dag > max) dag = max
+      return { ...f, dag, maand, geboortejaar }
+    })
+  }
 
   function opslaan() {
     if (!geldig) return
@@ -78,34 +92,62 @@ export default function VerjaardagFormulier({ open, verjaardag, onOpslaan, onVer
             />
           </div>
 
-          {/* Datum, leeftijd, terugkomend */}
+          {/* Datum, geboortejaar, leeftijd, terugkomend */}
           <div className="bg-gray-50 rounded-xl overflow-hidden divide-y divide-gray-200">
-            <div className="flex items-center justify-between px-4 py-3">
-              <span className="text-[15px] text-gray-800">Datum</span>
-              <input
-                type="date"
-                value={form.datum}
-                onChange={e => setForm(f => ({ ...f, datum: e.target.value }))}
-                className="text-[15px] text-[#007AFF] outline-none bg-transparent"
-              />
+            {/* Dag + maand (verplicht) */}
+            <div className="flex items-center justify-between px-4 py-3 gap-3">
+              <span className="text-[15px] text-gray-800 shrink-0">Datum</span>
+              <div className="flex items-center gap-2">
+                <select
+                  value={form.dag}
+                  onChange={e => setDatum({ dag: parseInt(e.target.value) })}
+                  className="text-[15px] text-[#007AFF] outline-none bg-gray-100 rounded-lg px-2 py-1"
+                  aria-label="Dag"
+                >
+                  {Array.from({ length: dagenInMaand(form.maand, form.geboortejaar) }, (_, i) => i + 1).map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+                <select
+                  value={form.maand}
+                  onChange={e => setDatum({ maand: parseInt(e.target.value) })}
+                  className="text-[15px] text-[#007AFF] outline-none bg-gray-100 rounded-lg px-2 py-1"
+                  aria-label="Maand"
+                >
+                  {MND_LANG.map((naam, i) => (
+                    <option key={i} value={i + 1}>{naam}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
+            {/* Geboortejaar (optioneel) */}
             <div className="flex items-center justify-between px-4 py-3">
-              <span className="text-[15px] text-gray-800">Leeftijd <span className="text-gray-400 text-[13px]">(optioneel)</span></span>
+              <span className="text-[15px] text-gray-800">Geboortejaar <span className="text-gray-400 text-[13px]">(optioneel)</span></span>
               <input
                 type="number"
-                min={0}
-                max={150}
-                value={form.leeftijd ?? ''}
+                min={1900}
+                max={new Date().getFullYear()}
+                value={form.geboortejaar ?? ''}
                 onChange={e => {
                   const v = e.target.value
-                  setForm(f => ({ ...f, leeftijd: v === '' ? undefined : Math.max(0, parseInt(v) || 0) }))
+                  if (v === '') setDatum({ jaarLeeg: true })
+                  else setDatum({ geboortejaar: Math.max(1900, parseInt(v) || 1900) })
                 }}
                 placeholder="—"
-                className="w-20 text-[15px] text-[#007AFF] outline-none bg-gray-100 rounded-lg px-2 py-1 text-center placeholder:text-gray-300"
+                className="w-24 text-[15px] text-[#007AFF] outline-none bg-gray-100 rounded-lg px-2 py-1 text-center placeholder:text-gray-300"
               />
             </div>
 
+            {/* Berekende leeftijd (read-only) */}
+            <div className="flex items-center justify-between px-4 py-3">
+              <span className="text-[15px] text-gray-800">Leeftijd</span>
+              <span className="text-[15px] text-gray-500">
+                {leeftijd != null ? `${leeftijd} jaar` : 'Onbekend'}
+              </span>
+            </div>
+
+            {/* Terugkomend */}
             <div className="flex items-center justify-between px-4 py-3">
               <span className="text-[15px] text-gray-800">Elk jaar terugkomend</span>
               <button
@@ -130,6 +172,7 @@ export default function VerjaardagFormulier({ open, verjaardag, onOpslaan, onVer
                 <option value={-1}>Geen</option>
                 <option value={60}>1 uur van tevoren</option>
                 <option value={1440}>1 dag van tevoren</option>
+                <option value={10080}>1 week van tevoren</option>
               </select>
             </div>
           </div>

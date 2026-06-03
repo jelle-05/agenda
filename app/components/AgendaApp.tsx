@@ -29,6 +29,7 @@ import LabelBeheer from './LabelBeheer'
 import ProfielMenu from './ProfielMenu'
 import VerjaardagenLijst from './VerjaardagenLijst'
 import VerjaardagFormulier from './VerjaardagFormulier'
+import VerjaardagKeuze from './VerjaardagKeuze'
 import { subscribeerOpPush } from '@/lib/pushUtils'
 import { genereerHerhalingen } from '@/lib/herhaling'
 import type { HerhalingConfig } from '@/types'
@@ -60,6 +61,7 @@ export default function AgendaApp() {
   const [bewerkAfspraak, setBewerkAfspraak]       = useState<Afspraak | null>(null)
   const [labelBeheerOpen, setLabelBeheerOpen]     = useState(false)
   const [profielMenuOpen, setProfielMenuOpen]     = useState(false)
+  const [verjaardagKeuzeOpen, setVerjaardagKeuzeOpen] = useState(false)
   const [verjaardagenOpen, setVerjaardagenOpen]   = useState(false)
   const [verjaardagFormOpen, setVerjaardagFormOpen] = useState(false)
   const [bewerkVerjaardag, setBewerkVerjaardag]   = useState<Verjaardag | null>(null)
@@ -139,6 +141,14 @@ export default function AgendaApp() {
     const onPop = () => window.history.pushState(null, '', window.location.href)
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
+  // ── Standaardweergave: desktop = week, mobiel = dag ───────────────────────────
+  // Eenmalig bij init: initiële state is 'dag' (SSR-veilig). Op desktop (≥ sm,
+  // 640px) eenmaal upgraden naar 'week'. Draait één keer → springt niet terug
+  // tijdens gebruik en resizen verandert de keuze niet.
+  useEffect(() => {
+    if (window.matchMedia('(min-width: 640px)').matches) setWeergave('week')
   }, [])
 
   // Stille achtergrond-sync: update UI zonder spinner
@@ -323,7 +333,8 @@ export default function AgendaApp() {
 
         if (!gevierdRef.current.has(sleutel) && herinneringMs > nu - 30_000 && herinneringMs <= nu + 30_000) {
           gevierdRef.current.add(sleutel)
-          const tekst = (v.herinneringMinuten ?? 0) >= 1440 ? 'Morgen jarig' : 'Bijna jarig'
+          const rm = v.herinneringMinuten ?? 0
+          const tekst = rm >= 10080 ? 'Over een week jarig' : rm >= 1440 ? 'Morgen jarig' : 'Bijna jarig'
           const opties = { body: tekst, icon: '/icon-192.png', tag: sleutel }
           try {
             if (swReg) {
@@ -402,14 +413,21 @@ export default function AgendaApp() {
 
   function openNieuwVerjaardag() {
     setBewerkVerjaardag(null)
+    setVerjaardagKeuzeOpen(false)
     setVerjaardagenOpen(false)
     setVerjaardagFormOpen(true)
   }
 
   function openBewerkVerjaardag(v: Verjaardag) {
     setBewerkVerjaardag(v)
+    setVerjaardagKeuzeOpen(false)
     setVerjaardagenOpen(false)
     setVerjaardagFormOpen(true)
+  }
+
+  function openVerjaardagenOverzicht() {
+    setVerjaardagKeuzeOpen(false)
+    setVerjaardagenOpen(true)
   }
 
   async function handleOpslaanVerjaardag(v: Verjaardag) {
@@ -557,7 +575,7 @@ export default function AgendaApp() {
         onVandaag={gaNaarVandaag}
         onNieuw={() => openNieuwAfspraak()}
         onLabels={() => setLabelBeheerOpen(true)}
-        onVerjaardagen={() => setVerjaardagenOpen(true)}
+        onVerjaardagen={() => setVerjaardagKeuzeOpen(true)}
         onProfielMenu={() => setProfielMenuOpen(true)}
         gebruikerEmail={gebruiker.email ?? ''}
       />
@@ -655,6 +673,13 @@ export default function AgendaApp() {
         email={gebruiker.email ?? ''}
         onUitloggen={uitloggen}
         onSluit={() => setProfielMenuOpen(false)}
+      />
+
+      <VerjaardagKeuze
+        open={verjaardagKeuzeOpen}
+        onNieuw={openNieuwVerjaardag}
+        onBekijken={openVerjaardagenOverzicht}
+        onSluit={() => setVerjaardagKeuzeOpen(false)}
       />
 
       <VerjaardagenLijst

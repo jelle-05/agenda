@@ -23,10 +23,11 @@ export type Afspraak = {
 export type Verjaardag = {
   id: string
   naam: string
-  datum: string      // YYYY-MM-DD (volledige datum; jaar bepaalt geboortejaar voor leeftijd)
-  leeftijd?: number  // optioneel; leeftijd op `datum`
+  dag: number        // 1-31, verplicht
+  maand: number      // 1-12, verplicht
+  geboortejaar?: number   // optioneel; leeftijd wordt hieruit berekend
   notitie?: string
-  herinneringMinuten?: number   // -1 = geen, 60 = 1 uur, 1440 = 1 dag van tevoren
+  herinneringMinuten?: number   // -1 = geen, 60 = 1 uur, 1440 = 1 dag, 10080 = 1 week van tevoren
   terugkomend: boolean          // elk jaar opnieuw op dezelfde maand/dag
 }
 

@@ -5,7 +5,7 @@ Persoonlijke agenda-app gebouwd met Next.js, Supabase en Tailwind CSS. Geïnspir
 ## Features
 
 ### Kalender
-- **Weekoverzicht standaard** — app opent altijd in de weekweergave
+- **Standaardweergave** — desktop opent in **week**, mobiel in **dag** (bepaald op basis van de `sm`-breakpoint van 640px bij het openen; daarna blijft je handmatige keuze staan)
 - **Vier weergaven** — Dag, Week, Maand en Agenda (lijstoverzicht)
 - **Dubbelklik op tijdslot** (desktop) — opent formulier met vooringevulde starttijd (afgerond op 30 min)
 - **Navigatie** — vorige/volgende periode via pijlknoppen
@@ -23,9 +23,10 @@ Persoonlijke agenda-app gebouwd met Next.js, Supabase en Tailwind CSS. Geïnspir
 - Labels aanmaken/bewerken/verwijderen via Label-beheer
 
 ### Verjaardagen
-- **Apart beheer** — open via het taart-icoon rechtsboven (desktop én mobiel)
-- **Overzicht** — lijst gesorteerd op eerstvolgende datum, met nette empty state
-- **Velden** — naam (verplicht), datum (verplicht), leeftijd, notitie, herinnering (geen / 1 uur / 1 dag), elk jaar terugkomend (toggle)
+- **Apart beheer** — open via het taart-icoon rechtsboven (desktop én mobiel); dit toont eerst een **keuzestap**: *Nieuwe verjaardag toevoegen* of *Huidige verjaardagen bekijken*
+- **Overzicht** — nette tabel (naam · datum · leeftijd · herinnering) gesorteerd op eerstvolgende datum, met **paginatie** (8 per pagina) en nette empty state; rijen zijn klikbaar om te bewerken
+- **Velden** — naam (verplicht), **dag + maand** (verplicht), **geboortejaar** (optioneel), notitie, herinnering (geen / 1 uur / 1 dag / 1 week), elk jaar terugkomend (toggle)
+- **Leeftijd** — automatisch berekend zodra een geboortejaar is ingevuld (houdt rekening met of de verjaardag dit jaar al geweest is); zonder jaar: "Onbekend"
 - **In de kalender** — verschijnen als groen all-day event bovenaan de dag (`🎂 Naam`), niet als tijdslot-event; terugkomende verjaardagen elk jaar opnieuw
 - **Reminders** — verankerd op 09:00; zowel in-app als via de cron (push + e-mail), jaarlijks voor terugkomende verjaardagen
 - **Bewerken/verwijderen** — tik op een verjaardag (in het overzicht of de kalender); verwijderen vraagt bevestiging
@@ -148,11 +149,14 @@ create table verjaardagen (
   id text primary key,
   user_id uuid references auth.users not null,
   naam text not null,
-  datum text not null,
-  leeftijd integer,
+  dag integer not null,
+  maand integer not null,
+  geboortejaar integer,
   notitie text,
   herinnering_minuten integer default -1,
   terugkomend boolean default true,
+  datum text,        -- legacy/compat (wordt bij opslaan gesynthetiseerd)
+  leeftijd integer,  -- legacy/compat
   aangemaakt_op timestamptz default now()
 );
 
@@ -175,6 +179,16 @@ create policy "eigen verjaardagen" on verjaardagen for all to authenticated
 ```
 
 Zet ook **Realtime** aan voor de tabellen `afspraken`, `labels` en `verjaardagen` via Supabase → Database → Replication.
+
+**Bestaande installatie migreren** (verjaardagen-tabel had eerder alleen `datum`/`leeftijd`):
+
+```sql
+alter table verjaardagen add column if not exists dag integer;
+alter table verjaardagen add column if not exists maand integer;
+alter table verjaardagen add column if not exists geboortejaar integer;
+```
+
+Bestaande rijen worden bij het inlezen automatisch geïnterpreteerd (dag/maand uit `datum`, geboortejaar uit `datum`-jaar − `leeftijd`). De kolommen `datum`/`leeftijd` blijven bestaan voor compatibiliteit.
 
 ### Starten
 

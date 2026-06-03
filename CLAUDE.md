@@ -35,8 +35,9 @@ app/
     AgendaLijst.tsx               — lijstweergave
     AfspraakFormulier.tsx         — modal: aanmaken/bewerken event (incl. herhaling)
     LabelBeheer.tsx               — modal: labels aanmaken/bewerken/verwijderen
-    VerjaardagenLijst.tsx         — modal: overzicht verjaardagen (lijst + empty state)
-    VerjaardagFormulier.tsx       — modal: verjaardag aanmaken/bewerken/verwijderen
+    VerjaardagKeuze.tsx           — modal: keuzestap (nieuwe toevoegen / huidige bekijken)
+    VerjaardagenLijst.tsx         — modal: overzicht verjaardagen (tabel + paginatie + empty state)
+    VerjaardagFormulier.tsx       — modal: verjaardag aanmaken/bewerken/verwijderen (dag/maand + optioneel geboortejaar)
     ProfielMenu.tsx               — modal: naam, e-mail, uitlogknop
     LoginPagina.tsx               — inlogformulier
     WeekStrip.tsx                 — horizontale weekstrip (dagweergave mobiel)
@@ -101,11 +102,14 @@ public/
 ## Wat al gedaan is
 
 ### Functionaliteit
-- **Weekoverzicht standaard** — `useState<WeergaveType>('week')` in AgendaApp
+- **Standaardweergave per apparaat** — initiële state `useState<WeergaveType>('dag')` (SSR-veilig); een mount-effect zet op desktop (`window.matchMedia('(min-width: 640px)')`, = Tailwind `sm`) eenmalig naar `'week'`. Draait één keer → springt niet terug en resizen verandert de keuze niet.
 - **Herhalende events** — `HerhalingConfig` type, `genereerHerhalingen()` in `herhaling.ts`, bulk-opslaan via `slaVeelAfsprakenOpInSupabase()`; verwijderen van één of alle herhalingen
 - **Real-time sync** — Supabase Realtime `postgres_changes` op `afspraken` en `labels`; Realtime moet aan staan in Supabase dashboard
 - **Profielmenu** — `ProfielMenu.tsx`, geöpend via avatar in TopBar
-- **Verjaardagen** — aparte structuur (tabel `verjaardagen` + localStorage-cache), geopend via taart-icoon in TopBar (zichtbaar op desktop én mobiel). Beheer via `VerjaardagenLijst.tsx` (overzicht) + `VerjaardagFormulier.tsx` (aanmaken/bewerken/verwijderen met bevestiging). In de kalender getoond als **virtuele all-day events**: `genereerVerjaardagAfspraken()` leidt `Afspraak`-objecten af (id `vj:<id>:<jaar>`, heeldag, groen virtueel label `VERJAARDAG_LABEL`) die samen met de echte afspraken aan de views worden meegegeven — **geen view-component aangepast**. Klik op zo'n event opent de verjaardag-editor (gedetecteerd via `isVerjaardagEvent`). Terugkomende verjaardagen genereren een instantie per jaar binnen een bereik rond nu. Reminders verankerd op **09:00** (geen / 1 uur / 1 dag), zowel in-app (`AgendaApp` 30s-check) als via de cron (push + e-mail; jaarlijks herberekend).
+- **Verjaardagen** — aparte structuur (tabel `verjaardagen` + localStorage-cache), geopend via taart-icoon in TopBar (zichtbaar op desktop én mobiel). Klik opent eerst `VerjaardagKeuze.tsx` (keuzestap: nieuwe toevoegen / huidige bekijken). Beheer via `VerjaardagenLijst.tsx` (tabel + paginatie, klikbare rijen) + `VerjaardagFormulier.tsx` (aanmaken/bewerken/verwijderen met bevestiging).
+  - **Datamodel**: `dag` + `maand` (verplicht), `geboortejaar` (optioneel) — géén opgeslagen `datum`/`leeftijd` meer. Leeftijd wordt berekend (`berekenLeeftijd()` in `lib/verjaardagen.ts`). `migreerDatumVelden()` leest zowel het nieuwe model als oude rijen (`datum`/`leeftijd`) in, gebruikt bij Supabase- én localStorage-load. Bij opslaan wordt `datum` gesynthetiseerd gevuld (kolom is NOT NULL bij bestaande installaties), maar dag/maand/geboortejaar zijn leidend.
+  - **Kalender**: getoond als **virtuele all-day events** via `genereerVerjaardagAfspraken()` (id `vj:<id>:<jaar>`, heeldag, groen virtueel label `VERJAARDAG_LABEL`), samen met de echte afspraken aan de views meegegeven — **geen view-component aangepast**. Klik op zo'n event opent de verjaardag-editor (`isVerjaardagEvent`). Terugkomend = instantie per jaar binnen een bereik rond nu.
+  - **Reminders**: verankerd op **09:00**, opties geen / 1 uur / 1 dag / **1 week** (`herinneringMinuten` -1 / 60 / 1440 / 10080), zowel in-app (`AgendaApp` 30s-check) als via de cron (push + e-mail; kandidaat-jaren `[ditJaar, ditJaar+1]`, jaarlijks herberekend).
 - **Settings-tab verwijderd** — `InstellingenPanel` volledig verwijderd
 - **Zoekicoon verwijderd** — uit TopBar
 
@@ -150,6 +154,13 @@ public/
     using (auth.uid() = user_id) with check (auth.uid() = user_id);
   ```
   Zet **Realtime** aan voor `verjaardagen` (Database → Replication).
+- Verjaardagen-model uitgebreid naar dag/maand/geboortejaar — kolommen toevoegen aan bestaande `verjaardagen` tabel:
+  ```sql
+  alter table verjaardagen add column if not exists dag integer;
+  alter table verjaardagen add column if not exists maand integer;
+  alter table verjaardagen add column if not exists geboortejaar integer;
+  ```
+  Oude rijen (`datum`/`leeftijd`) worden bij inlezen automatisch geïnterpreteerd via `migreerDatumVelden()`; die kolommen blijven bestaan voor compatibiliteit.
 
 ---
 

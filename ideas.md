@@ -2,7 +2,7 @@
 
 Centrale plek voor toekomstige features, verbeteringen en ideeën. Bijgewerkt naarmate de app groeit.
 
-**Huidige staat (juni 2026):** weekoverzicht standaard, events aanmaken/bewerken/verwijderen, herhalende events, labels, profielmenu, real-time sync, push-notificaties, e-mailreminders via Resend, PWA met witte safe areas.
+**Huidige staat (juni 2026):** standaardweergave week op desktop / dag op mobiel, events aanmaken/bewerken/verwijderen, herhalende events, labels, **verjaardagen** (dag/maand + optioneel geboortejaar, auto-leeftijd, keuzestap, tabel met paginatie, reminders 1u/1dag/1week), profielmenu, real-time sync, push-notificaties, e-mailreminders via Resend, PWA met witte safe areas.
 
 ---
 
@@ -40,6 +40,13 @@ Kleine wijzigingen met direct zichtbaar resultaat. Weinig backend-werk.
 **Wat:** Op mobiel kun je naar links/rechts swipen om naar de volgende of vorige week/dag te navigeren.
 **Geïmplementeerd:** `useSwipe` hook met pointer events (touch-only, drempel 60 px, ratio 1.5×). Actief in week- en dagweergave via `<main>` in `AgendaApp`. Vuurt niet bij start op button/input/select/textarea/a. Vertical scroll blijft ongestoord.
 **Bestanden:** `lib/useSwipe.ts` (nieuw), `AgendaApp.tsx`
+
+---
+
+### ~~Verjaardagen-module~~ ✅ Geïmplementeerd (juni 2026)
+**Wat:** Apart verjaardagbeheer via taart-icoon → keuzestap (toevoegen / bekijken). Tabel met paginatie, klikbare rijen voor bewerken. Datamodel dag/maand (verplicht) + geboortejaar (optioneel) met automatisch berekende leeftijd; oude `datum`/`leeftijd`-rijen worden bij inlezen gemigreerd (`migreerDatumVelden`). Reminders 1 uur / 1 dag / 1 week van tevoren (09:00-anker), in-app + cron (push + e-mail). Getoond als groene all-day events in de kalender zonder de view-componenten aan te passen.
+**Bestanden:** `VerjaardagKeuze.tsx`, `VerjaardagenLijst.tsx`, `VerjaardagFormulier.tsx`, `lib/verjaardagen.ts`, `AgendaApp.tsx`, `api/cron/reminders/route.ts`, opslag-helpers.
+**Nog open:** "deze en toekomstige" reminder-methode per kanaal; eigen kleur per verjaardag.
 
 ---
 

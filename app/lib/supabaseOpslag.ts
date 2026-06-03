@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import type { Afspraak, Label, Verjaardag } from '@/types'
+import { migreerDatumVelden } from './verjaardagen'
 
 // ── Converters ───────────────────────────────────────────────────────────────
 
@@ -48,11 +49,13 @@ function labelNaarRij(l: Label, userId: string) {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function rijNaarVerjaardag(rij: any): Verjaardag {
+  const { dag, maand, geboortejaar } = migreerDatumVelden(rij)
   return {
     id:    rij.id,
     naam:  rij.naam,
-    datum: rij.datum,
-    leeftijd:           rij.leeftijd            ?? undefined,
+    dag,
+    maand,
+    geboortejaar,
     notitie:            rij.notitie             ?? undefined,
     herinneringMinuten: rij.herinnering_minuten ?? -1,
     terugkomend:        rij.terugkomend         ?? true,
@@ -60,12 +63,19 @@ function rijNaarVerjaardag(rij: any): Verjaardag {
 }
 
 function verjaardagNaarRij(v: Verjaardag, userId: string) {
+  // `datum` blijft gevuld (kolom is NOT NULL) maar dag/maand/geboortejaar zijn
+  // leidend; het synthetische jaar (2000 als geboortejaar onbekend) doet er niet toe.
+  const jaar = v.geboortejaar ?? 2000
+  const datum = `${jaar}-${String(v.maand).padStart(2, '0')}-${String(v.dag).padStart(2, '0')}`
   return {
     id:       v.id,
     user_id:  userId,
     naam:     v.naam,
-    datum:    v.datum,
-    leeftijd:            v.leeftijd           ?? null,
+    dag:          v.dag,
+    maand:        v.maand,
+    geboortejaar: v.geboortejaar ?? null,
+    datum,
+    leeftijd:            null,
     notitie:             v.notitie            ?? null,
     herinnering_minuten: v.herinneringMinuten ?? -1,
     terugkomend:         v.terugkomend,

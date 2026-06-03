@@ -1,4 +1,5 @@
 import type { Afspraak, Label, Verjaardag } from '@/types'
+import { migreerDatumVelden } from './verjaardagen'
 
 const SLEUTEL_AFSPRAKEN    = 'agenda_afspraken'
 const SLEUTEL_LABELS       = 'agenda_labels'
@@ -55,7 +56,22 @@ export function verwijderLabel(id: string, alle: Label[]): Label[] {
 export function laadVerjaardagen(): Verjaardag[] {
   const data = localStorage.getItem(SLEUTEL_VERJAARDAGEN)
   if (!data) return []
-  return JSON.parse(data) as Verjaardag[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const ruw = JSON.parse(data) as any[]
+  // Migreer eventueel oude gecachte vorm (datum/leeftijd) naar dag/maand/geboortejaar.
+  return ruw.map(r => {
+    const { dag, maand, geboortejaar } = migreerDatumVelden(r)
+    return {
+      id: r.id,
+      naam: r.naam,
+      dag,
+      maand,
+      geboortejaar,
+      notitie: r.notitie ?? undefined,
+      herinneringMinuten: r.herinneringMinuten ?? -1,
+      terugkomend: r.terugkomend ?? true,
+    } as Verjaardag
+  })
 }
 
 export function slaVerjaardagOp(verjaardag: Verjaardag, alle: Verjaardag[]): Verjaardag[] {

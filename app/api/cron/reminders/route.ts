@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import webpush from 'web-push'
 import { Resend } from 'resend'
+import { migreerDatumVelden } from '@/lib/verjaardagen'
 
 export const runtime = 'nodejs'
 
@@ -196,14 +197,15 @@ export async function GET(req: NextRequest) {
   // verjaardagen herhalen jaarlijks op dezelfde maand/dag.
   const { data: verjaardagen } = await supabaseAdmin
     .from('verjaardagen')
-    .select('id, user_id, naam, datum, leeftijd, terugkomend, herinnering_minuten')
+    .select('id, user_id, naam, dag, maand, geboortejaar, datum, leeftijd, terugkomend, herinnering_minuten')
     .gte('herinnering_minuten', 0)
 
   for (const vj of verjaardagen ?? []) {
-    const [vy, vm, vd] = String(vj.datum).split('-').map(Number)
-    // Kandidaat-jaren: dit jaar en volgend jaar (vangt de dag-ervoor-reminder
-    // rond de jaarwisseling op). Eenmalige verjaardagen: alleen het eigen jaar.
-    const kandidaatJaren = vj.terugkomend ? [amNu.getFullYear(), amNu.getFullYear() + 1] : [vy]
+    // Ondersteun zowel nieuw model (dag/maand/geboortejaar) als oude rijen (datum/leeftijd).
+    const { dag: vd, maand: vm, geboortejaar } = migreerDatumVelden(vj)
+    // Kandidaat-jaren: dit jaar en volgend jaar (vangt de dag-ervoor- en
+    // week-ervoor-reminder rond de jaarwisseling op).
+    const kandidaatJaren = [amNu.getFullYear(), amNu.getFullYear() + 1]
 
     for (const jaar of kandidaatJaren) {
       const occ = new Date(jaar, vm - 1, vd, 9, 0, 0, 0)              // 09:00 anker
@@ -218,10 +220,10 @@ export async function GET(req: NextRequest) {
       if (remDatum !== vandaag) continue
       if (remMinuut < nuMinuten - 1 || remMinuut > nuMinuten + 2) continue
 
-      const morgenJarig = (vj.herinnering_minuten ?? 0) >= 1440
-      const wanneer = morgenJarig ? 'morgen' : 'vandaag'
-      const leeftijdTekst = vj.leeftijd != null
-        ? ` en wordt ${occ.getFullYear() - (vy - vj.leeftijd)}`
+      const rmMin = vj.herinnering_minuten ?? 0
+      const wanneer = rmMin >= 10080 ? 'over een week' : rmMin >= 1440 ? 'morgen' : 'vandaag'
+      const leeftijdTekst = geboortejaar != null
+        ? ` en wordt ${occ.getFullYear() - geboortejaar}`
         : ''
 
       // ── Push ────────────────────────────────────────────────────────────────
