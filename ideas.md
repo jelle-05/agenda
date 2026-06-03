@@ -50,6 +50,12 @@ Kleine wijzigingen met direct zichtbaar resultaat. Weinig backend-werk.
 
 ---
 
+### ~~Filters + maand-swipe + stabiele desktop-header~~ ✅ Geïmplementeerd (juni 2026)
+**Wat:** Filters om events/verjaardagen/feestdagen per type te tonen/verbergen (persistent in localStorage), via desktop-filtericoon of mobiel hamburger-menu (`FilterMenu.tsx`); filtering in de `afsprakenVoorWeergave`-memo. Mobiel swipen werkt nu ook in maandweergave (`useSwipe` aan voor maand). Desktop-header: titel met vaste breedte zodat prev/next-knoppen niet meer verschuiven.
+**Bestanden:** `FilterMenu.tsx` (nieuw), `TopBar.tsx`, `AgendaApp.tsx`, `types.ts`, `lib/opslag.ts`.
+
+---
+
 ### ~~Nederlandse feestdagen~~ ✅ Geïmplementeerd (juni 2026)
 **Wat:** Nationale feestdagen automatisch in de kalender als paarse all-day events (read-only, niet opgeslagen). Vaste datums + Pasen-afhankelijke dagen berekend uit Eerste Paasdag (Meeus-algoritme), per jaar gegenereerd. Zelfde virtuele-event-patroon als verjaardagen, geen view-component aangepast.
 **Bestanden:** `lib/feestdagen.ts` (nieuw), `AgendaApp.tsx`.

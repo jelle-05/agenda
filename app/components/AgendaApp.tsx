@@ -3,12 +3,13 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { Bell, X } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
-import type { WeergaveType, Afspraak, Label, Verjaardag } from '@/types'
+import type { WeergaveType, Afspraak, Label, Verjaardag, Filters } from '@/types'
 import { supabase } from '@/lib/supabase'
 import {
   laadAfspraken, slaAfspraakOp, verwijderAfspraak, slaAlleAfsprakenOp,
   laadLabels, slaLabelOp, verwijderLabel, slaAlleLabelsOp,
   laadVerjaardagen, slaVerjaardagOp, verwijderVerjaardag, slaAlleVerjaardagenOp,
+  STANDAARD_FILTERS, laadFilters, slaFiltersOp,
 } from '@/lib/opslag'
 import {
   laadAfsprakenVanSupabase, slaAfspraakOpInSupabase, verwijderAfspraakUitSupabase,
@@ -30,6 +31,7 @@ import ProfielMenu from './ProfielMenu'
 import VerjaardagenLijst from './VerjaardagenLijst'
 import VerjaardagFormulier from './VerjaardagFormulier'
 import VerjaardagKeuze from './VerjaardagKeuze'
+import FilterMenu from './FilterMenu'
 import { subscribeerOpPush } from '@/lib/pushUtils'
 import { genereerHerhalingen } from '@/lib/herhaling'
 import type { HerhalingConfig } from '@/types'
@@ -66,6 +68,8 @@ export default function AgendaApp() {
   const [verjaardagenOpen, setVerjaardagenOpen]   = useState(false)
   const [verjaardagFormOpen, setVerjaardagFormOpen] = useState(false)
   const [bewerkVerjaardag, setBewerkVerjaardag]   = useState<Verjaardag | null>(null)
+  const [filterMenuOpen, setFilterMenuOpen]       = useState(false)
+  const [filters, setFilters]                     = useState<Filters>(STANDAARD_FILTERS)
   const [vooringevuldDatum, setVooringevuldDatum] = useState<Date | null>(null)
   const [vooringevuldTijd, setVooringevuldTijd]   = useState<string | undefined>(undefined)
   const [animatieSleutel, setAnimatieSleutel]     = useState(0)
@@ -76,7 +80,7 @@ export default function AgendaApp() {
   const swipeHandlers = useSwipe(
     navigeerVolgende,
     navigeerVorige,
-    weergave === 'week' || weergave === 'dag',
+    weergave === 'week' || weergave === 'dag' || weergave === 'maand',
   )
 
   // ── Verjaardagen in de kalender ───────────────────────────────────────────────
@@ -92,11 +96,27 @@ export default function AgendaApp() {
     () => genereerFeestdagAfspraken(huidigeDatum.getFullYear()),
     [huidigeDatum],
   )
+  // Filters bepalen welke itemtypes zichtbaar zijn (alleen weergave, data blijft intact).
   const afsprakenVoorWeergave = useMemo(
-    () => [...afspraken, ...feestdagAfspraken, ...verjaardagAfspraken],
-    [afspraken, feestdagAfspraken, verjaardagAfspraken],
+    () => [
+      ...(filters.events ? afspraken : []),
+      ...(filters.feestdagen ? feestdagAfspraken : []),
+      ...(filters.verjaardagen ? verjaardagAfspraken : []),
+    ],
+    [afspraken, feestdagAfspraken, verjaardagAfspraken, filters],
   )
   const labelsVoorWeergave = useMemo(() => [...labels, FEESTDAG_LABEL, VERJAARDAG_LABEL], [labels])
+
+  // Laad opgeslagen filtervoorkeuren bij opstarten (client-only, SSR-veilig).
+  useEffect(() => { setFilters(laadFilters()) }, [])
+
+  function wijzigFilter(key: keyof Filters) {
+    setFilters(prev => {
+      const next = { ...prev, [key]: !prev[key] }
+      slaFiltersOp(next)
+      return next
+    })
+  }
 
   // ── Auth & data init ────────────────────────────────────────────────────────
 
@@ -584,6 +604,7 @@ export default function AgendaApp() {
         onNieuw={() => openNieuwAfspraak()}
         onLabels={() => setLabelBeheerOpen(true)}
         onVerjaardagen={() => setVerjaardagKeuzeOpen(true)}
+        onFilters={() => setFilterMenuOpen(true)}
         onProfielMenu={() => setProfielMenuOpen(true)}
         gebruikerEmail={gebruiker.email ?? ''}
       />
@@ -681,6 +702,13 @@ export default function AgendaApp() {
         email={gebruiker.email ?? ''}
         onUitloggen={uitloggen}
         onSluit={() => setProfielMenuOpen(false)}
+      />
+
+      <FilterMenu
+        open={filterMenuOpen}
+        filters={filters}
+        onWijzig={wijzigFilter}
+        onSluit={() => setFilterMenuOpen(false)}
       />
 
       <VerjaardagKeuze

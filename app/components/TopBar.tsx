@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronLeft, ChevronRight, Plus, Tag, Cake } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Tag, Cake, Menu, SlidersHorizontal } from 'lucide-react'
 import type { WeergaveType } from '@/types'
 
 const WEERGAVEN: { key: WeergaveType; label: string }[] = [
@@ -20,33 +20,43 @@ interface Props {
   onNieuw: () => void
   onLabels: () => void
   onVerjaardagen: () => void
+  onFilters: () => void
   onProfielMenu: () => void
   gebruikerEmail?: string
 }
 
 export default function TopBar({
   weergave, onWeergaveChange, titel, onVorige, onVolgende, onVandaag,
-  onNieuw, onLabels, onVerjaardagen, onProfielMenu, gebruikerEmail,
+  onNieuw, onLabels, onVerjaardagen, onFilters, onProfielMenu, gebruikerEmail,
 }: Props) {
   const initiaal = gebruikerEmail?.[0]?.toUpperCase() ?? '?'
 
   return (
     <header className="flex items-center justify-between px-3 h-12 border-b border-gray-200 bg-white shrink-0 gap-2">
       {/* Navigatie */}
-      <div className="flex items-center gap-1 min-w-0">
+      <div className="flex items-center gap-1 min-w-0 flex-1 sm:flex-none">
+        {/* Hamburger — alleen mobiel */}
+        <button
+          onClick={onFilters}
+          className="sm:hidden p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-600 shrink-0"
+          title="Menu"
+          aria-label="Menu"
+        >
+          <Menu size={20} />
+        </button>
         <button
           onClick={onVandaag}
           className="hidden sm:block text-[13px] font-medium text-[#007AFF] hover:opacity-70 transition-opacity px-1 shrink-0"
         >
           Vandaag
         </button>
-        <button onClick={onVorige} className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-500">
+        <button onClick={onVorige} className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-500 shrink-0">
           <ChevronLeft size={18} />
         </button>
-        <span className="text-[15px] font-semibold text-gray-900 whitespace-nowrap px-1">
+        <span className="text-[15px] font-semibold text-gray-900 px-1 text-center truncate flex-1 sm:flex-none sm:w-[200px]">
           {titel}
         </span>
-        <button onClick={onVolgende} className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-500">
+        <button onClick={onVolgende} className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-500 shrink-0">
           <ChevronRight size={18} />
         </button>
       </div>
@@ -69,6 +79,9 @@ export default function TopBar({
 
       {/* Acties */}
       <div className="flex items-center gap-1 shrink-0">
+        <button onClick={onFilters} className="hidden sm:inline-flex p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-500" title="Filters">
+          <SlidersHorizontal size={18} />
+        </button>
         <button onClick={onVerjaardagen} className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-500" title="Verjaardagen">
           <Cake size={18} />
         </button>

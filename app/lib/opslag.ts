@@ -1,9 +1,10 @@
-import type { Afspraak, Label, Verjaardag } from '@/types'
+import type { Afspraak, Label, Verjaardag, Filters } from '@/types'
 import { migreerDatumVelden } from './verjaardagen'
 
 const SLEUTEL_AFSPRAKEN    = 'agenda_afspraken'
 const SLEUTEL_LABELS       = 'agenda_labels'
 const SLEUTEL_VERJAARDAGEN = 'agenda_verjaardagen'
+const SLEUTEL_FILTERS      = 'agenda_filters'
 
 export function laadAfspraken(): Afspraak[] {
   const data = localStorage.getItem(SLEUTEL_AFSPRAKEN)
@@ -89,4 +90,23 @@ export function verwijderVerjaardag(id: string, alle: Verjaardag[]): Verjaardag[
 
 export function slaAlleVerjaardagenOp(alle: Verjaardag[]): void {
   localStorage.setItem(SLEUTEL_VERJAARDAGEN, JSON.stringify(alle))
+}
+
+// ── Weergavefilters ──────────────────────────────────────────────────────────
+
+export const STANDAARD_FILTERS: Filters = { events: true, verjaardagen: true, feestdagen: true }
+
+export function laadFilters(): Filters {
+  const data = localStorage.getItem(SLEUTEL_FILTERS)
+  if (!data) return { ...STANDAARD_FILTERS }
+  try {
+    // Merge met defaults zodat ontbrekende keys standaard zichtbaar blijven.
+    return { ...STANDAARD_FILTERS, ...(JSON.parse(data) as Partial<Filters>) }
+  } catch {
+    return { ...STANDAARD_FILTERS }
+  }
+}
+
+export function slaFiltersOp(filters: Filters): void {
+  localStorage.setItem(SLEUTEL_FILTERS, JSON.stringify(filters))
 }

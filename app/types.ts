@@ -1,5 +1,12 @@
 export type WeergaveType = 'dag' | 'week' | 'maand' | 'agenda'
 
+// Weergavefilters: bepalen welke itemtypes in de kalender getoond worden.
+export type Filters = {
+  events: boolean
+  verjaardagen: boolean
+  feestdagen: boolean
+}
+
 export type Label = {
   id: string
   naam: string
