@@ -44,6 +44,13 @@ function plusDagen(jaar: number, maand: number, dag: number, n: number): Date {
   return new Date(jaar, maand - 1, dag + n)
 }
 
+// Derde dinsdag van september (Prinsjesdag).
+function derdeDinsdagSeptember(jaar: number): Date {
+  const eersteDag = new Date(jaar, 8, 1).getDay()          // 0=zo … 6=za
+  const eersteDinsdag = 1 + ((2 - eersteDag + 7) % 7)      // dinsdag = 2
+  return new Date(jaar, 8, eersteDinsdag + 14)
+}
+
 type FeestdagDef = { key: string; naam: string; datum: Date }
 
 // Officiële Nederlandse feestdagen voor een gegeven jaar.
@@ -61,10 +68,13 @@ export function feestdagenVoorJaar(jaar: number): FeestdagDef[] {
     { key: 'pasen1',          naam: 'Eerste Paasdag',     datum: paasDatum(0) },
     { key: 'pasen2',          naam: 'Tweede Paasdag',     datum: paasDatum(1) },
     { key: 'koningsdag',      naam: 'Koningsdag',         datum: koningsdag },
+    { key: 'dodenherdenking', naam: 'Dodenherdenking',    datum: new Date(jaar, 4, 4) },
     { key: 'bevrijdingsdag',  naam: 'Bevrijdingsdag',     datum: new Date(jaar, 4, 5) },
     { key: 'hemelvaart',      naam: 'Hemelvaartsdag',     datum: paasDatum(39) },
     { key: 'pinksteren1',     naam: 'Eerste Pinksterdag', datum: paasDatum(49) },
     { key: 'pinksteren2',     naam: 'Tweede Pinksterdag', datum: paasDatum(50) },
+    { key: 'prinsjesdag',     naam: 'Prinsjesdag',        datum: derdeDinsdagSeptember(jaar) },
+    { key: 'sinterklaas',     naam: 'Sinterklaas',        datum: new Date(jaar, 11, 5) },
     { key: 'kerst1',          naam: 'Eerste Kerstdag',    datum: new Date(jaar, 11, 25) },
     { key: 'kerst2',          naam: 'Tweede Kerstdag',    datum: new Date(jaar, 11, 26) },
     { key: 'oudjaar',         naam: 'Oudjaarsdag',        datum: new Date(jaar, 11, 31) },

@@ -36,8 +36,8 @@ Persoonlijke agenda-app gebouwd met Next.js, Supabase en Tailwind CSS. Geïnspir
 - **Automatisch** — Nederlandse nationale feestdagen verschijnen vanzelf in de kalender, zonder handmatige invoer; per zichtbaar jaar berekend (geen opslag, geen duplicaten)
 - **Paarse all-day events** — bovenaan de dag, duidelijk onderscheiden van events en (groene) verjaardagen; op een dag met zowel een feestdag als een verjaardag blijven beide zichtbaar
 - **Read-only** — feestdagen kunnen niet bewerkt of verwijderd worden (klik doet niets)
-- **Ondersteund:** Nieuwjaarsdag, Goede Vrijdag, Eerste/Tweede Paasdag, Koningsdag, Bevrijdingsdag, Hemelvaartsdag, Eerste/Tweede Pinksterdag, Eerste/Tweede Kerstdag, Oudjaarsdag
-- **Vaste vs. variabele datums** — vaste datums (bijv. Koningsdag 27 april, of 26 april als die op zondag valt) staan hard gecodeerd; de Pasen-afhankelijke dagen (Goede Vrijdag, Pasen, Hemelvaart, Pinksteren) worden per jaar berekend uit Eerste Paasdag (Gauss/Meeus-algoritme)
+- **Ondersteund:** Nieuwjaarsdag, Goede Vrijdag, Eerste/Tweede Paasdag, Koningsdag, Dodenherdenking, Bevrijdingsdag, Hemelvaartsdag, Eerste/Tweede Pinksterdag, Prinsjesdag, Sinterklaas, Eerste/Tweede Kerstdag, Oudjaarsdag
+- **Vaste vs. variabele datums** — vaste datums (bijv. Koningsdag 27 april of 26 april als die op zondag valt, Dodenherdenking 4 mei, Sinterklaas 5 december) staan hard gecodeerd; de Pasen-afhankelijke dagen (Goede Vrijdag, Pasen, Hemelvaart, Pinksteren) worden per jaar berekend uit Eerste Paasdag (Gauss/Meeus-algoritme) en Prinsjesdag als de derde dinsdag van september
 
 ### Auth & profiel
 - Inloggen met e-mail en wachtwoord via Supabase Auth
