@@ -22,6 +22,14 @@ Persoonlijke agenda-app gebouwd met Next.js, Supabase en Tailwind CSS. Geïnspir
 - Onbeperkt kleur-labels per afspraak
 - Labels aanmaken/bewerken/verwijderen via Label-beheer
 
+### Verjaardagen
+- **Apart beheer** — open via het taart-icoon rechtsboven (desktop én mobiel)
+- **Overzicht** — lijst gesorteerd op eerstvolgende datum, met nette empty state
+- **Velden** — naam (verplicht), datum (verplicht), leeftijd, notitie, herinnering (geen / 1 uur / 1 dag), elk jaar terugkomend (toggle)
+- **In de kalender** — verschijnen als groen all-day event bovenaan de dag (`🎂 Naam`), niet als tijdslot-event; terugkomende verjaardagen elk jaar opnieuw
+- **Reminders** — verankerd op 09:00; zowel in-app als via de cron (push + e-mail), jaarlijks voor terugkomende verjaardagen
+- **Bewerken/verwijderen** — tik op een verjaardag (in het overzicht of de kalender); verwijderen vraagt bevestiging
+
 ### Auth & profiel
 - Inloggen met e-mail en wachtwoord via Supabase Auth
 - **Profielmenu** — klik op avatar-icoon rechtsboven: toont naam, e-mailadres en uitlogknop
@@ -136,9 +144,22 @@ create table push_subscriptions (
   unique(user_id, endpoint)
 );
 
+create table verjaardagen (
+  id text primary key,
+  user_id uuid references auth.users not null,
+  naam text not null,
+  datum text not null,
+  leeftijd integer,
+  notitie text,
+  herinnering_minuten integer default -1,
+  terugkomend boolean default true,
+  aangemaakt_op timestamptz default now()
+);
+
 alter table afspraken enable row level security;
 alter table labels enable row level security;
 alter table push_subscriptions enable row level security;
+alter table verjaardagen enable row level security;
 
 create policy "eigen afspraken" on afspraken for all to authenticated
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
@@ -148,9 +169,12 @@ create policy "eigen labels" on labels for all to authenticated
 
 create policy "eigen subscriptions" on push_subscriptions for all to authenticated
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "eigen verjaardagen" on verjaardagen for all to authenticated
+  using (auth.uid() = user_id) with check (auth.uid() = user_id);
 ```
 
-Zet ook **Realtime** aan voor de tabellen `afspraken` en `labels` via Supabase → Database → Replication.
+Zet ook **Realtime** aan voor de tabellen `afspraken`, `labels` en `verjaardagen` via Supabase → Database → Replication.
 
 ### Starten
 

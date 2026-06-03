@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import type { Afspraak, Label } from '@/types'
+import type { Afspraak, Label, Verjaardag } from '@/types'
 
 // ── Converters ───────────────────────────────────────────────────────────────
 
@@ -46,6 +46,32 @@ function labelNaarRij(l: Label, userId: string) {
   return { id: l.id, user_id: userId, naam: l.naam, kleur: l.kleur }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function rijNaarVerjaardag(rij: any): Verjaardag {
+  return {
+    id:    rij.id,
+    naam:  rij.naam,
+    datum: rij.datum,
+    leeftijd:           rij.leeftijd            ?? undefined,
+    notitie:            rij.notitie             ?? undefined,
+    herinneringMinuten: rij.herinnering_minuten ?? -1,
+    terugkomend:        rij.terugkomend         ?? true,
+  }
+}
+
+function verjaardagNaarRij(v: Verjaardag, userId: string) {
+  return {
+    id:       v.id,
+    user_id:  userId,
+    naam:     v.naam,
+    datum:    v.datum,
+    leeftijd:            v.leeftijd           ?? null,
+    notitie:             v.notitie            ?? null,
+    herinnering_minuten: v.herinneringMinuten ?? -1,
+    terugkomend:         v.terugkomend,
+  }
+}
+
 // ── Afspraken ────────────────────────────────────────────────────────────────
 
 export async function laadAfsprakenVanSupabase(): Promise<Afspraak[]> {
@@ -85,6 +111,24 @@ export async function slaLabelOpInSupabase(l: Label, userId: string): Promise<vo
 
 export async function verwijderLabelUitSupabase(id: string): Promise<void> {
   const { error } = await supabase.from('labels').delete().eq('id', id)
+  if (error) throw error
+}
+
+// ── Verjaardagen ───────────────────────────────────────────────────────────────
+
+export async function laadVerjaardagenVanSupabase(): Promise<Verjaardag[]> {
+  const { data, error } = await supabase.from('verjaardagen').select('*')
+  if (error) throw error
+  return (data ?? []).map(rijNaarVerjaardag)
+}
+
+export async function slaVerjaardagOpInSupabase(v: Verjaardag, userId: string): Promise<void> {
+  const { error } = await supabase.from('verjaardagen').upsert(verjaardagNaarRij(v, userId))
+  if (error) throw error
+}
+
+export async function verwijderVerjaardagUitSupabase(id: string): Promise<void> {
+  const { error } = await supabase.from('verjaardagen').delete().eq('id', id)
   if (error) throw error
 }
 

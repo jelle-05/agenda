@@ -53,12 +53,11 @@ export async function GET(req: NextRequest) {
     .gte('herinnering_minuten', 0)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  if (!afspraken?.length) return NextResponse.json({ ok: true, verstuurd: 0 })
 
   let pushVerstuurd  = 0
   let emailVerstuurd = 0
 
-  for (const afspraak of afspraken) {
+  for (const afspraak of afspraken ?? []) {
     if (!afspraak.begin_tijd) continue
     const [uur, min] = afspraak.begin_tijd.split(':').map(Number)
     const afspraakMin = uur * 60 + min
@@ -192,5 +191,107 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, pushVerstuurd, emailVerstuurd, gecontroleerd: afspraken.length })
+  // ── Verjaardags-herinneringen ─────────────────────────────────────────────────
+  // Verjaardagen zijn all-day; we verankeren ze op 09:00. Terugkomende
+  // verjaardagen herhalen jaarlijks op dezelfde maand/dag.
+  const { data: verjaardagen } = await supabaseAdmin
+    .from('verjaardagen')
+    .select('id, user_id, naam, datum, leeftijd, terugkomend, herinnering_minuten')
+    .gte('herinnering_minuten', 0)
+
+  for (const vj of verjaardagen ?? []) {
+    const [vy, vm, vd] = String(vj.datum).split('-').map(Number)
+    // Kandidaat-jaren: dit jaar en volgend jaar (vangt de dag-ervoor-reminder
+    // rond de jaarwisseling op). Eenmalige verjaardagen: alleen het eigen jaar.
+    const kandidaatJaren = vj.terugkomend ? [amNu.getFullYear(), amNu.getFullYear() + 1] : [vy]
+
+    for (const jaar of kandidaatJaren) {
+      const occ = new Date(jaar, vm - 1, vd, 9, 0, 0, 0)              // 09:00 anker
+      const rem = new Date(occ.getTime() - (vj.herinnering_minuten ?? 0) * 60_000)
+      const remDatum = [
+        rem.getFullYear(),
+        String(rem.getMonth() + 1).padStart(2, '0'),
+        String(rem.getDate()).padStart(2, '0'),
+      ].join('-')
+      const remMinuut = rem.getHours() * 60 + rem.getMinutes()
+
+      if (remDatum !== vandaag) continue
+      if (remMinuut < nuMinuten - 1 || remMinuut > nuMinuten + 2) continue
+
+      const morgenJarig = (vj.herinnering_minuten ?? 0) >= 1440
+      const wanneer = morgenJarig ? 'morgen' : 'vandaag'
+      const leeftijdTekst = vj.leeftijd != null
+        ? ` en wordt ${occ.getFullYear() - (vy - vj.leeftijd)}`
+        : ''
+
+      // ── Push ────────────────────────────────────────────────────────────────
+      const { data: subs } = await supabaseAdmin
+        .from('push_subscriptions')
+        .select('endpoint, p256dh, auth')
+        .eq('user_id', vj.user_id)
+
+      if (subs?.length) {
+        const payload = JSON.stringify({
+          titel:   `🎂 ${vj.naam}`,
+          bericht: `${vj.naam} is ${wanneer} jarig${leeftijdTekst}`,
+          id:      `vj-${vj.id}`,
+        })
+        for (const sub of subs) {
+          try {
+            await webpush.sendNotification(
+              { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+              payload
+            )
+            pushVerstuurd++
+          } catch (err) {
+            if ((err as { statusCode?: number }).statusCode === 410) {
+              await supabaseAdmin.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
+            }
+          }
+        }
+      }
+
+      // ── E-mail ──────────────────────────────────────────────────────────────
+      if (process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL) {
+        const { data: userResult } = await supabaseAdmin.auth.admin.getUserById(vj.user_id)
+        const email = userResult?.user?.email
+        if (email) {
+          const onderwerp = `🎂 ${vj.naam} is ${wanneer} jarig`
+          const tekstRegel = `${vj.naam} is ${wanneer} jarig${leeftijdTekst}.`
+          const resend = new Resend(process.env.RESEND_API_KEY)
+          const { error: resendFout } = await resend.emails.send({
+            from:    process.env.RESEND_FROM_EMAIL!,
+            to:      email,
+            replyTo: process.env.RESEND_FROM_EMAIL,
+            subject: onderwerp,
+            text:    `${tekstRegel}\n\n—\nAgenda`,
+            html: `<!DOCTYPE html>
+<html lang="nl">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:transparent">
+  <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;padding:48px 24px;color:#1a1a1a">
+    <p style="margin:0 0 36px;font-size:11px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#aaa">Verjaardag</p>
+    <h1 style="margin:0 0 24px;font-size:22px;font-weight:600;line-height:1.25;color:#1a1a1a">🎂 ${vj.naam}</h1>
+    <hr style="border:none;border-top:1px solid #e8e8e8;margin:0 0 24px">
+    <p style="margin:0 0 48px;font-size:14px;color:#555;line-height:1.5">${tekstRegel}</p>
+    <p style="margin:0;font-size:11px;color:#ccc">Agenda</p>
+  </div>
+</body>
+</html>`,
+          })
+          if (resendFout) console.error('[reminders] Verjaardag-e-mail mislukt:', resendFout)
+          else emailVerstuurd++
+        }
+      }
+
+      break   // reminder voor deze verjaardag verstuurd — geen tweede kandidaat-jaar
+    }
+  }
+
+  return NextResponse.json({
+    ok: true,
+    pushVerstuurd,
+    emailVerstuurd,
+    gecontroleerd: (afspraken?.length ?? 0) + (verjaardagen?.length ?? 0),
+  })
 }

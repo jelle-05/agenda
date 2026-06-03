@@ -1,7 +1,8 @@
-import type { Afspraak, Label } from '@/types'
+import type { Afspraak, Label, Verjaardag } from '@/types'
 
-const SLEUTEL_AFSPRAKEN = 'agenda_afspraken'
-const SLEUTEL_LABELS    = 'agenda_labels'
+const SLEUTEL_AFSPRAKEN    = 'agenda_afspraken'
+const SLEUTEL_LABELS       = 'agenda_labels'
+const SLEUTEL_VERJAARDAGEN = 'agenda_verjaardagen'
 
 export function laadAfspraken(): Afspraak[] {
   const data = localStorage.getItem(SLEUTEL_AFSPRAKEN)
@@ -47,4 +48,29 @@ export function verwijderLabel(id: string, alle: Label[]): Label[] {
   const nieuw = alle.filter(l => l.id !== id)
   localStorage.setItem(SLEUTEL_LABELS, JSON.stringify(nieuw))
   return nieuw
+}
+
+// ── Verjaardagen ───────────────────────────────────────────────────────────────
+
+export function laadVerjaardagen(): Verjaardag[] {
+  const data = localStorage.getItem(SLEUTEL_VERJAARDAGEN)
+  if (!data) return []
+  return JSON.parse(data) as Verjaardag[]
+}
+
+export function slaVerjaardagOp(verjaardag: Verjaardag, alle: Verjaardag[]): Verjaardag[] {
+  const idx = alle.findIndex(v => v.id === verjaardag.id)
+  const nieuw = idx >= 0 ? alle.map((v, i) => (i === idx ? verjaardag : v)) : [...alle, verjaardag]
+  localStorage.setItem(SLEUTEL_VERJAARDAGEN, JSON.stringify(nieuw))
+  return nieuw
+}
+
+export function verwijderVerjaardag(id: string, alle: Verjaardag[]): Verjaardag[] {
+  const nieuw = alle.filter(v => v.id !== id)
+  localStorage.setItem(SLEUTEL_VERJAARDAGEN, JSON.stringify(nieuw))
+  return nieuw
+}
+
+export function slaAlleVerjaardagenOp(alle: Verjaardag[]): void {
+  localStorage.setItem(SLEUTEL_VERJAARDAGEN, JSON.stringify(alle))
 }

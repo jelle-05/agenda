@@ -1,17 +1,19 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { Bell, X } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
-import type { WeergaveType, Afspraak, Label } from '@/types'
+import type { WeergaveType, Afspraak, Label, Verjaardag } from '@/types'
 import { supabase } from '@/lib/supabase'
 import {
   laadAfspraken, slaAfspraakOp, verwijderAfspraak, slaAlleAfsprakenOp,
   laadLabels, slaLabelOp, verwijderLabel, slaAlleLabelsOp,
+  laadVerjaardagen, slaVerjaardagOp, verwijderVerjaardag, slaAlleVerjaardagenOp,
 } from '@/lib/opslag'
 import {
   laadAfsprakenVanSupabase, slaAfspraakOpInSupabase, verwijderAfspraakUitSupabase,
   laadLabelsVanSupabase, slaLabelOpInSupabase, verwijderLabelUitSupabase,
+  laadVerjaardagenVanSupabase, slaVerjaardagOpInSupabase, verwijderVerjaardagUitSupabase,
   uploadNaarSupabase,
 } from '@/lib/supabaseOpslag'
 import { NL_MAANDEN, NL_MAANDEN_KORT, formatWeekTitel } from '@/lib/datum'
@@ -25,11 +27,17 @@ import AgendaLijst from './AgendaLijst'
 import AfspraakFormulier from './AfspraakFormulier'
 import LabelBeheer from './LabelBeheer'
 import ProfielMenu from './ProfielMenu'
+import VerjaardagenLijst from './VerjaardagenLijst'
+import VerjaardagFormulier from './VerjaardagFormulier'
 import { subscribeerOpPush } from '@/lib/pushUtils'
 import { genereerHerhalingen } from '@/lib/herhaling'
 import type { HerhalingConfig } from '@/types'
 import { slaVeelAfsprakenOpInSupabase } from '@/lib/supabaseOpslag'
 import { useSwipe } from '@/lib/useSwipe'
+import {
+  VERJAARDAG_LABEL, genereerVerjaardagAfspraken, isVerjaardagEvent,
+  verjaardagIdUitEvent, eerstvolgendeVerjaardag,
+} from '@/lib/verjaardagen'
 
 export default function AgendaApp() {
   // Auth
@@ -41,6 +49,7 @@ export default function AgendaApp() {
   const [huidigeDatum, setHuidigeDatum] = useState(() => new Date())
   const [afspraken, setAfspraken]       = useState<Afspraak[]>([])
   const [labels, setLabels]             = useState<Label[]>([])
+  const [verjaardagen, setVerjaardagen] = useState<Verjaardag[]>([])
 
   // Notificatie banner
   const [toonNotifBanner, setToonNotifBanner]     = useState(false)
@@ -51,6 +60,9 @@ export default function AgendaApp() {
   const [bewerkAfspraak, setBewerkAfspraak]       = useState<Afspraak | null>(null)
   const [labelBeheerOpen, setLabelBeheerOpen]     = useState(false)
   const [profielMenuOpen, setProfielMenuOpen]     = useState(false)
+  const [verjaardagenOpen, setVerjaardagenOpen]   = useState(false)
+  const [verjaardagFormOpen, setVerjaardagFormOpen] = useState(false)
+  const [bewerkVerjaardag, setBewerkVerjaardag]   = useState<Verjaardag | null>(null)
   const [vooringevuldDatum, setVooringevuldDatum] = useState<Date | null>(null)
   const [vooringevuldTijd, setVooringevuldTijd]   = useState<string | undefined>(undefined)
   const [animatieSleutel, setAnimatieSleutel]     = useState(0)
@@ -64,6 +76,20 @@ export default function AgendaApp() {
     weergave === 'week' || weergave === 'dag',
   )
 
+  // ── Verjaardagen in de kalender ───────────────────────────────────────────────
+  // Leid virtuele all-day events af uit de verjaardagen en voeg een groen
+  // virtueel label toe; zo renderen alle views verjaardagen automatisch zonder
+  // dat de view-componenten verjaardagen apart hoeven te kennen.
+  const verjaardagAfspraken = useMemo(
+    () => genereerVerjaardagAfspraken(verjaardagen, huidigeDatum.getFullYear()),
+    [verjaardagen, huidigeDatum],
+  )
+  const afsprakenVoorWeergave = useMemo(
+    () => [...afspraken, ...verjaardagAfspraken],
+    [afspraken, verjaardagAfspraken],
+  )
+  const labelsVoorWeergave = useMemo(() => [...labels, VERJAARDAG_LABEL], [labels])
+
   // ── Auth & data init ────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -75,6 +101,7 @@ export default function AgendaApp() {
         // Toon gecachte localStorage-data direct — geen wachten op netwerk
         setAfspraken(laadAfspraken())
         setLabels(laadLabels())
+        setVerjaardagen(laadVerjaardagen())
         setKlaar(true)
         // Sync Supabase stil op de achtergrond
         achtergrondSync(user.id)
@@ -94,6 +121,7 @@ export default function AgendaApp() {
       } else if (event === 'SIGNED_OUT') {
         setAfspraken([])
         setLabels([])
+        setVerjaardagen([])
         // klaar blijft true → loginpagina zichtbaar
       }
       // TOKEN_REFRESHED / USER_UPDATED: geen actie — data is al geladen
@@ -129,6 +157,14 @@ export default function AgendaApp() {
     } catch {
       // Netwerk niet beschikbaar: gecachte data blijft zichtbaar
     }
+    // Verjaardagen apart: tabel kan ontbreken vóór migratie — fouten negeren
+    try {
+      const supVerjaardagen = await laadVerjaardagenVanSupabase()
+      setVerjaardagen(supVerjaardagen)
+      slaAlleVerjaardagenOp(supVerjaardagen)
+    } catch {
+      // Tabel bestaat nog niet of netwerk niet beschikbaar
+    }
     void userId
   }
 
@@ -146,6 +182,13 @@ export default function AgendaApp() {
     } catch {
       // Netwerk niet beschikbaar
     }
+    try {
+      const supVerjaardagen = await laadVerjaardagenVanSupabase()
+      setVerjaardagen(supVerjaardagen)
+      slaAlleVerjaardagenOp(supVerjaardagen)
+    } catch {
+      // Tabel bestaat nog niet of netwerk niet beschikbaar
+    }
   }
 
   // Real-time sync: luister naar wijzigingen in de database
@@ -156,6 +199,7 @@ export default function AgendaApp() {
       .channel(`agenda-${gebruiker.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'afspraken' }, herlaadData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'labels' }, herlaadData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'verjaardagen' }, herlaadData)
       .subscribe()
 
     return () => { supabase.removeChannel(kanaal) }
@@ -185,6 +229,13 @@ export default function AgendaApp() {
       console.error('Supabase laden mislukt, gebruik lokale data:', err)
       setAfspraken(laadAfspraken())
       setLabels(laadLabels())
+    }
+    try {
+      const supVerjaardagen = await laadVerjaardagenVanSupabase()
+      setVerjaardagen(supVerjaardagen)
+      slaAlleVerjaardagenOp(supVerjaardagen)
+    } catch {
+      setVerjaardagen(laadVerjaardagen())
     }
   }
 
@@ -261,12 +312,36 @@ export default function AgendaApp() {
           }
         }
       }
+
+      // Verjaardags-herinneringen — verankerd op 09:00; werkt jaarlijks voor
+      // terugkomende verjaardagen via eerstvolgendeVerjaardag().
+      for (const v of verjaardagen) {
+        if ((v.herinneringMinuten ?? -1) < 0) continue
+        const occMs = eerstvolgendeVerjaardag(v, new Date(nu)).getTime()
+        const herinneringMs = occMs - (v.herinneringMinuten ?? 0) * 60_000
+        const sleutel = `vj-${v.id}-${herinneringMs}`
+
+        if (!gevierdRef.current.has(sleutel) && herinneringMs > nu - 30_000 && herinneringMs <= nu + 30_000) {
+          gevierdRef.current.add(sleutel)
+          const tekst = (v.herinneringMinuten ?? 0) >= 1440 ? 'Morgen jarig' : 'Bijna jarig'
+          const opties = { body: tekst, icon: '/icon-192.png', tag: sleutel }
+          try {
+            if (swReg) {
+              await swReg.showNotification(`🎂 ${v.naam}`, opties)
+            } else {
+              new Notification(`🎂 ${v.naam}`, opties)
+            }
+          } catch (err) {
+            console.error('Notificatie mislukt:', err)
+          }
+        }
+      }
     }
 
     const interval = setInterval(() => { void checkHerinneringen() }, 30_000)
     void checkHerinneringen()
     return () => clearInterval(interval)
-  }, [afspraken, gebruiker]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [afspraken, verjaardagen, gebruiker]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Navigatie ───────────────────────────────────────────────────────────────
 
@@ -311,9 +386,48 @@ export default function AgendaApp() {
   }
 
   function openBewerkAfspraak(afspraak: Afspraak) {
+    // Virtuele verjaardags-events openen de verjaardag-editor i.p.v. het afspraakformulier
+    if (isVerjaardagEvent(afspraak.id)) {
+      const vid = verjaardagIdUitEvent(afspraak.id)
+      const v = verjaardagen.find(x => x.id === vid)
+      if (v) openBewerkVerjaardag(v)
+      return
+    }
     setBewerkAfspraak(afspraak)
     setVooringevuldDatum(null)
     setFormulierOpen(true)
+  }
+
+  // ── Verjaardagen ─────────────────────────────────────────────────────────────
+
+  function openNieuwVerjaardag() {
+    setBewerkVerjaardag(null)
+    setVerjaardagenOpen(false)
+    setVerjaardagFormOpen(true)
+  }
+
+  function openBewerkVerjaardag(v: Verjaardag) {
+    setBewerkVerjaardag(v)
+    setVerjaardagenOpen(false)
+    setVerjaardagFormOpen(true)
+  }
+
+  async function handleOpslaanVerjaardag(v: Verjaardag) {
+    setVerjaardagen(prev => slaVerjaardagOp(v, prev))
+    setVerjaardagFormOpen(false)
+    if (gebruiker) {
+      try { await slaVerjaardagOpInSupabase(v, gebruiker.id) }
+      catch (err) { console.error('Supabase verjaardag sync mislukt:', err) }
+    }
+  }
+
+  async function handleVerwijderVerjaardag(id: string) {
+    setVerjaardagen(prev => verwijderVerjaardag(id, prev))
+    setVerjaardagFormOpen(false)
+    if (gebruiker) {
+      try { await verwijderVerjaardagUitSupabase(id) }
+      catch (err) { console.error('Supabase verjaardag verwijder sync mislukt:', err) }
+    }
   }
 
   async function handleOpslaanAfspraak(afspraak: Afspraak, herhaling: HerhalingConfig, scope?: 'enkel' | 'alles') {
@@ -443,6 +557,7 @@ export default function AgendaApp() {
         onVandaag={gaNaarVandaag}
         onNieuw={() => openNieuwAfspraak()}
         onLabels={() => setLabelBeheerOpen(true)}
+        onVerjaardagen={() => setVerjaardagenOpen(true)}
         onProfielMenu={() => setProfielMenuOpen(true)}
         gebruikerEmail={gebruiker.email ?? ''}
       />
@@ -469,8 +584,8 @@ export default function AgendaApp() {
         {weergave === 'maand' && (
           <MaandWeergave
             huidigeDatum={huidigeDatum}
-            afspraken={afspraken}
-            labels={labels}
+            afspraken={afsprakenVoorWeergave}
+            labels={labelsVoorWeergave}
             onDagKlik={selecteerDag}
             onAfspraakKlik={openBewerkAfspraak}
             onNieuwAfspraak={openNieuwAfspraak}
@@ -479,8 +594,8 @@ export default function AgendaApp() {
         {weergave === 'week' && (
           <WeekWeergave
             huidigeDatum={huidigeDatum}
-            afspraken={afspraken}
-            labels={labels}
+            afspraken={afsprakenVoorWeergave}
+            labels={labelsVoorWeergave}
             onDagKlik={selecteerDag}
             onAfspraakKlik={openBewerkAfspraak}
             onNieuwAfspraak={openNieuwAfspraak}
@@ -491,8 +606,8 @@ export default function AgendaApp() {
         {weergave === 'dag' && (
           <DagWeergave
             huidigeDatum={huidigeDatum}
-            afspraken={afspraken}
-            labels={labels}
+            afspraken={afsprakenVoorWeergave}
+            labels={labelsVoorWeergave}
             onDagKlik={selecteerDag}
             onAfspraakKlik={openBewerkAfspraak}
             onNieuwAfspraak={openNieuwAfspraak}
@@ -503,8 +618,8 @@ export default function AgendaApp() {
         {weergave === 'agenda' && (
           <AgendaLijst
             huidigeDatum={huidigeDatum}
-            afspraken={afspraken}
-            labels={labels}
+            afspraken={afsprakenVoorWeergave}
+            labels={labelsVoorWeergave}
             onAfspraakKlik={openBewerkAfspraak}
           />
         )}
@@ -540,6 +655,22 @@ export default function AgendaApp() {
         email={gebruiker.email ?? ''}
         onUitloggen={uitloggen}
         onSluit={() => setProfielMenuOpen(false)}
+      />
+
+      <VerjaardagenLijst
+        open={verjaardagenOpen}
+        verjaardagen={verjaardagen}
+        onNieuw={openNieuwVerjaardag}
+        onBewerk={openBewerkVerjaardag}
+        onSluit={() => setVerjaardagenOpen(false)}
+      />
+
+      <VerjaardagFormulier
+        open={verjaardagFormOpen}
+        verjaardag={bewerkVerjaardag}
+        onOpslaan={handleOpslaanVerjaardag}
+        onVerwijder={handleVerwijderVerjaardag}
+        onSluit={() => setVerjaardagFormOpen(false)}
       />
     </div>
   )

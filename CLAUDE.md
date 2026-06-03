@@ -35,6 +35,8 @@ app/
     AgendaLijst.tsx               — lijstweergave
     AfspraakFormulier.tsx         — modal: aanmaken/bewerken event (incl. herhaling)
     LabelBeheer.tsx               — modal: labels aanmaken/bewerken/verwijderen
+    VerjaardagenLijst.tsx         — modal: overzicht verjaardagen (lijst + empty state)
+    VerjaardagFormulier.tsx       — modal: verjaardag aanmaken/bewerken/verwijderen
     ProfielMenu.tsx               — modal: naam, e-mail, uitlogknop
     LoginPagina.tsx               — inlogformulier
     WeekStrip.tsx                 — horizontale weekstrip (dagweergave mobiel)
@@ -45,7 +47,9 @@ app/
     opslag.ts                     — localStorage cache
     datum.ts                      — datumhulpfuncties (NL namen, tijdNaarMinuten, etc.)
     herhaling.ts                  — genereerHerhalingen() op basis van HerhalingConfig
+    verjaardagen.ts               — VERJAARDAG_LABEL + genereerVerjaardagAfspraken() (virtuele all-day events) + reminder-helpers
     kleuren.ts                    — labelAchtergrond() kleurberekening
+    useSwipe.ts                   — swipe-navigatie hook (mobiel)
     pushUtils.ts                  — subscribeerOpPush() voor Web Push abonnement
   api/
     cron/reminders/route.ts       — cron-endpoint: push + e-mail reminders versturen
@@ -101,6 +105,7 @@ public/
 - **Herhalende events** — `HerhalingConfig` type, `genereerHerhalingen()` in `herhaling.ts`, bulk-opslaan via `slaVeelAfsprakenOpInSupabase()`; verwijderen van één of alle herhalingen
 - **Real-time sync** — Supabase Realtime `postgres_changes` op `afspraken` en `labels`; Realtime moet aan staan in Supabase dashboard
 - **Profielmenu** — `ProfielMenu.tsx`, geöpend via avatar in TopBar
+- **Verjaardagen** — aparte structuur (tabel `verjaardagen` + localStorage-cache), geopend via taart-icoon in TopBar (zichtbaar op desktop én mobiel). Beheer via `VerjaardagenLijst.tsx` (overzicht) + `VerjaardagFormulier.tsx` (aanmaken/bewerken/verwijderen met bevestiging). In de kalender getoond als **virtuele all-day events**: `genereerVerjaardagAfspraken()` leidt `Afspraak`-objecten af (id `vj:<id>:<jaar>`, heeldag, groen virtueel label `VERJAARDAG_LABEL`) die samen met de echte afspraken aan de views worden meegegeven — **geen view-component aangepast**. Klik op zo'n event opent de verjaardag-editor (gedetecteerd via `isVerjaardagEvent`). Terugkomende verjaardagen genereren een instantie per jaar binnen een bereik rond nu. Reminders verankerd op **09:00** (geen / 1 uur / 1 dag), zowel in-app (`AgendaApp` 30s-check) als via de cron (push + e-mail; jaarlijks herberekend).
 - **Settings-tab verwijderd** — `InstellingenPanel` volledig verwijderd
 - **Zoekicoon verwijderd** — uit TopBar
 
@@ -127,6 +132,24 @@ public/
   ```sql
   alter table afspraken add column if not exists herhalingsgroep_id text;
   ```
+- Tabel `verjaardagen` toevoegen (nodig vóór de verjaardagen-feature persistent werkt; client vangt afwezigheid netjes op):
+  ```sql
+  create table if not exists verjaardagen (
+    id text primary key,
+    user_id uuid references auth.users not null,
+    naam text not null,
+    datum text not null,
+    leeftijd integer,
+    notitie text,
+    herinnering_minuten integer default -1,
+    terugkomend boolean default true,
+    aangemaakt_op timestamptz default now()
+  );
+  alter table verjaardagen enable row level security;
+  create policy "eigen verjaardagen" on verjaardagen for all to authenticated
+    using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  ```
+  Zet **Realtime** aan voor `verjaardagen` (Database → Replication).
 
 ---
 
