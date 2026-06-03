@@ -120,7 +120,15 @@ CRON_SECRET=jouw-geheim-wachtwoord
 # E-mail via Resend (optioneel)
 RESEND_API_KEY=re_xxxxxxxxxxxx
 RESEND_FROM_EMAIL=agenda@jouwdomein.nl
+
+# Telegram (optioneel, reminders — Fase 1)
+TELEGRAM_BOT_TOKEN=bot-token-van-botfather
+TELEGRAM_WEBHOOK_SECRET=zelfgekozen-geheim-voor-webhook-verificatie
+NEXT_PUBLIC_TELEGRAM_BOT_USERNAME=JouwBotUsername
+TELEGRAM_WEBHOOK_URL=https://jouw-app.vercel.app/api/telegram/webhook
 ```
+
+> **Nooit echte tokens of secrets in Git of documentatie zetten** — alleen in `.env.local` (lokaal) en in de Vercel-omgevingsvariabelen. De waarden hierboven zijn placeholders.
 
 ### Database setup
 
@@ -260,6 +268,20 @@ Stel een cron-job in (bijv. via [cron-job.org](https://cron-job.org)) die elke m
 De cron stuurt bij een verlopen herinneringstijd zowel een push-notificatie als een e-mail (als `RESEND_API_KEY` en `RESEND_FROM_EMAIL` ingesteld zijn).
 
 Voor e-mailreminders: maak een gratis account aan op [resend.com](https://resend.com), verifieer je domein en voeg de env vars toe in Vercel.
+
+---
+
+## Telegram-reminders (in opbouw)
+
+Telegram wordt als betrouwbaarder pushkanaal toegevoegd (zie het faseringsdocument `telegram_fases.md`). **Fase 1** zet de technische basis neer: een server-side verzendhelper (`app/lib/telegram.ts`) en een script om de webhook te registreren.
+
+De webhook registreren bij Telegram (herhaalbaar bij URL- of secret-wijziging):
+
+```bash
+node --env-file=.env.local scripts/setWebhook.mjs
+```
+
+Het script (`scripts/setWebhook.mjs`) leest `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET` en `TELEGRAM_WEBHOOK_URL` uit de omgeving en roept Telegram's `setWebhook` aan met een `secret_token` (zodat de webhook-route later kan verifiëren dat een call echt van Telegram komt). Tokens/secrets worden nooit getoond in de output. De koppelflow, profiel-UI en cron-verzending volgen in latere fases.
 
 ---
 

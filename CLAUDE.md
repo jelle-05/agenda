@@ -99,6 +99,10 @@ public/
 | `CRON_SECRET` | Geheim voor cron-endpoint beveiliging |
 | `RESEND_API_KEY` | Resend API sleutel voor e-mailreminders |
 | `RESEND_FROM_EMAIL` | Verzendadres, bijv. `agenda@jellebol.nl` |
+| `TELEGRAM_BOT_TOKEN` | Telegram bot-token (BotFather), server-only |
+| `TELEGRAM_WEBHOOK_SECRET` | Secret voor verificatie van inkomende Telegram-webhookcalls, server-only |
+| `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` | Bot-username voor de koppel-deeplink (publiek) |
+| `TELEGRAM_WEBHOOK_URL` | Volledige webhook-URL, alleen gebruikt door `scripts/setWebhook.mjs` |
 
 ---
 
@@ -202,3 +206,5 @@ public/
 - **Mobiele weergave testen** — na safe-area wijzigingen altijd testen op echte iOS en Android
 - **Timezone** — cron gebruikt `Europe/Amsterdam`; client gebruikt lokale timezone; consistent als gebruiker in NL zit
 - **Accountlimiet** — ingesteld op 10 accounts max (`/api/auth/check-capacity`)
+- **Telegram-reminders (in opbouw)** — onderzoek + fasering in `telegram_fases.md`. Telegram-bot (richting **HerinnerMij**) als betrouwbaarder pushkanaal: **globale voorkeur per gebruiker**, Telegram **vervangt browser-push** (e-mail blijft); de in-app 30s-push wordt verwijderd. Aanpak sluit aan op de bestaande cron (`/api/cron/reminders`) + `verzonden_reminders`-dedup (sleutel `…|telegram`, claim-eerst); koppelen via kortlevende koppelcode + bot-deeplink + **webhook** (geen polling op Vercel), geregistreerd met `scripts/setWebhook.mjs`. Nieuwe tabellen `telegram_accounts` (incl. `actief`-vlag) + `telegram_koppelcodes`; **geen** `afspraken`-wijziging. Env-namen: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`, `TELEGRAM_WEBHOOK_URL` (geen waarden in repo/docs).
+  - **Fase 1 gebouwd**: server-side helper `app/lib/telegram.ts` (`verstuurTelegram(chatId, tekst, opties?)`, alleen `fetch`, fail-soft → `false` bij ontbrekend token of fout, logt nooit token/chat_id) + herhaalbaar registratiescript `scripts/setWebhook.mjs` (`node --env-file=.env.local scripts/setWebhook.mjs`, zet `setWebhook` met `secret_token` + `allowed_updates:['message']`). Nog géén koppelflow/DB/UI/cron-integratie (Fase 2+).
