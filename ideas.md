@@ -50,6 +50,12 @@ Kleine wijzigingen met direct zichtbaar resultaat. Weinig backend-werk.
 
 ---
 
+### ~~Nederlandse feestdagen~~ ✅ Geïmplementeerd (juni 2026)
+**Wat:** Nationale feestdagen automatisch in de kalender als paarse all-day events (read-only, niet opgeslagen). Vaste datums + Pasen-afhankelijke dagen berekend uit Eerste Paasdag (Meeus-algoritme), per jaar gegenereerd. Zelfde virtuele-event-patroon als verjaardagen, geen view-component aangepast.
+**Bestanden:** `lib/feestdagen.ts` (nieuw), `AgendaApp.tsx`.
+
+---
+
 ### Event aanmaken via klik op maandweergave
 **Wat:** Klikken op een dag in de maandweergave opent direct het formulier met die datum vooringevuld.
 **Waarom:** Nu werkt dubbelklik alleen in week- en dagweergave. Maandweergave heeft geen snelle aanmaakflow.

@@ -49,6 +49,7 @@ app/
     datum.ts                      — datumhulpfuncties (NL namen, tijdNaarMinuten, etc.)
     herhaling.ts                  — genereerHerhalingen() op basis van HerhalingConfig
     verjaardagen.ts               — VERJAARDAG_LABEL + genereerVerjaardagAfspraken() (virtuele all-day events) + reminder-helpers
+    feestdagen.ts                 — FEESTDAG_LABEL + berekenPasen()/feestdagenVoorJaar()/genereerFeestdagAfspraken() (virtuele paarse all-day events)
     kleuren.ts                    — labelAchtergrond() kleurberekening
     useSwipe.ts                   — swipe-navigatie hook (mobiel)
     pushUtils.ts                  — subscribeerOpPush() voor Web Push abonnement
@@ -111,6 +112,7 @@ public/
   - **Import**: `scripts/importVerjaardagen.mjs` importeert `namen_en_verjaardagen.md` (formaat `Naam:` / `Verjaardag: DD-MM-YYYY`) via service-role naar Supabase. Idempotent (dedup op naam+dag+maand, deterministische id `imp-<slug>-<ddmm>`); `--dry-run` voor controle. Draaien: `node --env-file=.env.local scripts/importVerjaardagen.mjs`.
   - **Kalender**: getoond als **virtuele all-day events** via `genereerVerjaardagAfspraken()` (id `vj:<id>:<jaar>`, heeldag, groen virtueel label `VERJAARDAG_LABEL`), samen met de echte afspraken aan de views meegegeven — **geen view-component aangepast**. Klik op zo'n event opent de verjaardag-editor (`isVerjaardagEvent`). Terugkomend = instantie per jaar binnen een bereik rond nu.
   - **Reminders**: verankerd op **09:00**, opties geen / 1 uur / 1 dag / **1 week** (`herinneringMinuten` -1 / 60 / 1440 / 10080), zowel in-app (`AgendaApp` 30s-check) als via de cron (push + e-mail; kandidaat-jaren `[ditJaar, ditJaar+1]`, jaarlijks herberekend).
+- **Feestdagen** — Nederlandse nationale feestdagen, getoond via hetzelfde virtuele-event-patroon als verjaardagen: `genereerFeestdagAfspraken()` in `lib/feestdagen.ts` levert virtuele all-day `Afspraak`-objecten (id `fd:<key>:<jaar>`, heeldag, **paars** virtueel label `FEESTDAG_LABEL` kleur `#AF52DE`) die in `AgendaApp` aan `afsprakenVoorWeergave`/`labelsVoorWeergave` worden toegevoegd — **geen view-component aangepast**. **Geen opslag/DB/reminders**: puur per jaar berekend (bereik `peiljaar-2…+6`), dus geen duplicaten en read-only. Klik op een feestdag is een no-op (`isFeestdagEvent`-guard in `openBewerkAfspraak`). Vaste datums hard gecodeerd (incl. Koningsdag → 26 apr als 27 apr op zondag valt); Pasen-afhankelijke dagen (Goede Vrijdag, Eerste/Tweede Paasdag, Hemelvaart, Eerste/Tweede Pinksterdag) berekend uit `berekenPasen()` (Meeus/Jones/Butcher).
 - **Settings-tab verwijderd** — `InstellingenPanel` volledig verwijderd
 - **Zoekicoon verwijderd** — uit TopBar
 

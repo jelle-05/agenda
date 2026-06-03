@@ -39,6 +39,7 @@ import {
   VERJAARDAG_LABEL, genereerVerjaardagAfspraken, isVerjaardagEvent,
   verjaardagIdUitEvent, eerstvolgendeVerjaardag,
 } from '@/lib/verjaardagen'
+import { FEESTDAG_LABEL, genereerFeestdagAfspraken, isFeestdagEvent } from '@/lib/feestdagen'
 
 export default function AgendaApp() {
   // Auth
@@ -86,11 +87,16 @@ export default function AgendaApp() {
     () => genereerVerjaardagAfspraken(verjaardagen, huidigeDatum.getFullYear()),
     [verjaardagen, huidigeDatum],
   )
-  const afsprakenVoorWeergave = useMemo(
-    () => [...afspraken, ...verjaardagAfspraken],
-    [afspraken, verjaardagAfspraken],
+  // Nederlandse feestdagen — eveneens als virtuele paarse all-day events.
+  const feestdagAfspraken = useMemo(
+    () => genereerFeestdagAfspraken(huidigeDatum.getFullYear()),
+    [huidigeDatum],
   )
-  const labelsVoorWeergave = useMemo(() => [...labels, VERJAARDAG_LABEL], [labels])
+  const afsprakenVoorWeergave = useMemo(
+    () => [...afspraken, ...feestdagAfspraken, ...verjaardagAfspraken],
+    [afspraken, feestdagAfspraken, verjaardagAfspraken],
+  )
+  const labelsVoorWeergave = useMemo(() => [...labels, FEESTDAG_LABEL, VERJAARDAG_LABEL], [labels])
 
   // ── Auth & data init ────────────────────────────────────────────────────────
 
@@ -397,6 +403,8 @@ export default function AgendaApp() {
   }
 
   function openBewerkAfspraak(afspraak: Afspraak) {
+    // Feestdagen zijn read-only: klikken doet niets (geen bewerken/verwijderen).
+    if (isFeestdagEvent(afspraak.id)) return
     // Virtuele verjaardags-events openen de verjaardag-editor i.p.v. het afspraakformulier
     if (isVerjaardagEvent(afspraak.id)) {
       const vid = verjaardagIdUitEvent(afspraak.id)
