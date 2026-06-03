@@ -10,7 +10,9 @@ export type Filters = {
 export type Label = {
   id: string
   naam: string
-  kleur: string
+  kleur: string              // accent (rand/stip) + fallback voor achtergrond/tekst
+  achtergrondKleur?: string  // optioneel: eigen achtergrondkleur voor events
+  tekstKleur?: string        // optioneel: eigen tekstkleur voor events
 }
 
 export type Afspraak = {

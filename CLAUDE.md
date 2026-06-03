@@ -51,7 +51,7 @@ app/
     herhaling.ts                  — genereerHerhalingen() op basis van HerhalingConfig
     verjaardagen.ts               — VERJAARDAG_LABEL + genereerVerjaardagAfspraken() (virtuele all-day events) + reminder-helpers
     feestdagen.ts                 — FEESTDAG_LABEL + berekenPasen()/feestdagenVoorJaar()/genereerFeestdagAfspraken() (virtuele paarse all-day events)
-    kleuren.ts                    — labelAchtergrond() kleurberekening
+    kleuren.ts                    — labelAchtergrond() + eventKleuren() (achtergrond/tekst/accent per label) + contrastRatio()
     overlap.ts                    — stapelVolgorde() sorteert overlappende getimede events (korter bovenop)
     useSwipe.ts                   — swipe-navigatie hook (mobiel)
     pushUtils.ts                  — subscribeerOpPush() voor Web Push abonnement
@@ -117,6 +117,7 @@ public/
 - **Filters** — `FilterMenu.tsx` (geopend via desktop-filtericoon `SlidersHorizontal` in TopBar-acties óf het mobiele hamburger-menu linksboven). Type `Filters` (`{ events, verjaardagen, feestdagen }`) in `types.ts`; persistent in localStorage via `laadFilters`/`slaFiltersOp`/`STANDAARD_FILTERS` (`opslag.ts`, key `agenda_filters`). Filtering gebeurt in de `afsprakenVoorWeergave`-memo in `AgendaApp` (per type wel/niet meenemen) — alleen weergave, data blijft. Bij opstarten geladen via mount-`useEffect` (SSR-veilig).
 - **Maand-swipe** — `useSwipe` is in `AgendaApp` aangezet voor `dag`/`week`/`maand`; `navigeerVorige/Volgende` doen maand ±1. Geen view-wijziging nodig (swipe staat op `<main>`).
 - **Stabiele desktop-header** — titel-`<span>` in `TopBar` heeft `text-center truncate flex-1 sm:flex-none sm:w-[200px]`: vaste breedte op desktop zodat prev/next niet verschuiven; vloeiend op mobiel. Mobiele hamburger (`Menu`) staat als eerste in de nav-groep (`sm:hidden`).
+- **Kleur-customization per label** — `Label` heeft naast `kleur` (accent) optionele `achtergrondKleur`/`tekstKleur` (`types.ts`; DB-kolommen `achtergrond_kleur`/`tekst_kleur`). `eventKleuren(label, tintOpacity)` in `lib/kleuren.ts` geeft `{ accent, achtergrond, tekst }`: zonder eigen kleuren = huidige tint + accent-tekst (dus verjaardag/feestdag/label-loos ongewijzigd). Alle event-renders (Week/Dag/Maand/Agenda, timed + all-day) gebruiken `eventKleuren`. Beheer in `LabelBeheer.tsx`: toggle "Eigen achtergrond/tekstkleur" + twee native `<input type=color>` + live event-preview + `contrastRatio < 3` waarschuwing. `slaLabelOpInSupabase`/`uploadNaarSupabase` gebruiken `upsertLabels()` die fail-open terugvalt zonder de nieuwe kolommen (pre-migratie).
 - **Feestdagen** — Nederlandse nationale feestdagen, getoond via hetzelfde virtuele-event-patroon als verjaardagen: `genereerFeestdagAfspraken()` in `lib/feestdagen.ts` levert virtuele all-day `Afspraak`-objecten (id `fd:<key>:<jaar>`, heeldag, **paars** virtueel label `FEESTDAG_LABEL` kleur `#AF52DE`) die in `AgendaApp` aan `afsprakenVoorWeergave`/`labelsVoorWeergave` worden toegevoegd — **geen view-component aangepast**. **Geen opslag/DB/reminders**: puur per jaar berekend (bereik `peiljaar-2…+6`), dus geen duplicaten en read-only. Klik op een feestdag is een no-op (`isFeestdagEvent`-guard in `openBewerkAfspraak`). Vaste datums hard gecodeerd (incl. Koningsdag → 26 apr als 27 apr op zondag valt, Dodenherdenking 4 mei, Sinterklaas 5 dec); Pasen-afhankelijke dagen (Goede Vrijdag, Eerste/Tweede Paasdag, Hemelvaart, Eerste/Tweede Pinksterdag) berekend uit `berekenPasen()` (Meeus/Jones/Butcher); Prinsjesdag = derde dinsdag van september.
 - **Settings-tab verwijderd** — `InstellingenPanel` volledig verwijderd
 - **Zoekicoon verwijderd** — uit TopBar
@@ -182,6 +183,11 @@ public/
 - `geboortejaar` omgezet naar vrij tekstveld — kolomtype aanpassen:
   ```sql
   alter table verjaardagen alter column geboortejaar type text using geboortejaar::text;
+  ```
+- Kleur-customization per label — kolommen toevoegen aan `labels` (client valt fail-open terug zonder deze kolommen):
+  ```sql
+  alter table labels add column if not exists achtergrond_kleur text;
+  alter table labels add column if not exists tekst_kleur text;
   ```
 
 ---

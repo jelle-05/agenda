@@ -40,11 +40,47 @@ function afspraakNaarRij(a: Afspraak, userId: string) {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function rijNaarLabel(rij: any): Label {
-  return { id: rij.id, naam: rij.naam, kleur: rij.kleur }
+  return {
+    id:    rij.id,
+    naam:  rij.naam,
+    kleur: rij.kleur,
+    achtergrondKleur: rij.achtergrond_kleur ?? undefined,
+    tekstKleur:       rij.tekst_kleur       ?? undefined,
+  }
 }
 
 function labelNaarRij(l: Label, userId: string) {
-  return { id: l.id, user_id: userId, naam: l.naam, kleur: l.kleur }
+  return {
+    id: l.id, user_id: userId, naam: l.naam, kleur: l.kleur,
+    achtergrond_kleur: l.achtergrondKleur ?? null,
+    tekst_kleur:       l.tekstKleur       ?? null,
+  }
+}
+
+// Herkent een ontbrekende kolom (vóór de migratie) zodat we fail-open kunnen retryen.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function kolomOntbreekt(error: any): boolean {
+  return error?.code === 'PGRST204'
+    || error?.code === '42703'
+    || /column .* does not exist/i.test(error?.message ?? '')
+    || /achtergrond_kleur|tekst_kleur/.test(error?.message ?? '')
+}
+
+// Upsert labels; valt terug op een variant zonder de nieuwe kleurkolommen als die
+// (nog) niet bestaan, zodat naam/kleur blijven syncen vóór de SQL-migratie.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function upsertLabels(rows: any[]): Promise<void> {
+  let { error } = await supabase.from('labels').upsert(rows)
+  if (error && kolomOntbreekt(error)) {
+    const basis = rows.map(r => {
+      const kopie = { ...r }
+      delete kopie.achtergrond_kleur
+      delete kopie.tekst_kleur
+      return kopie
+    })
+    ;({ error } = await supabase.from('labels').upsert(basis))
+  }
+  if (error) throw error
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -115,8 +151,7 @@ export async function laadLabelsVanSupabase(): Promise<Label[]> {
 }
 
 export async function slaLabelOpInSupabase(l: Label, userId: string): Promise<void> {
-  const { error } = await supabase.from('labels').upsert(labelNaarRij(l, userId))
-  if (error) throw error
+  await upsertLabels([labelNaarRij(l, userId)])
 }
 
 export async function verwijderLabelUitSupabase(id: string): Promise<void> {
@@ -150,10 +185,7 @@ export async function uploadNaarSupabase(
   userId: string
 ): Promise<void> {
   if (labels.length > 0) {
-    const { error } = await supabase
-      .from('labels')
-      .upsert(labels.map(l => labelNaarRij(l, userId)))
-    if (error) throw error
+    await upsertLabels(labels.map(l => labelNaarRij(l, userId)))
   }
   if (afspraken.length > 0) {
     const { error } = await supabase

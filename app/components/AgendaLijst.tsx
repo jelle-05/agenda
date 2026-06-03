@@ -1,7 +1,7 @@
 'use client'
 
 import { toISODatum, NL_DAGEN_LANG, NL_MAANDEN_KORT, getDagIndex } from '@/lib/datum'
-import { labelAchtergrond } from '@/lib/kleuren'
+import { eventKleuren } from '@/lib/kleuren'
 import type { Afspraak, Label } from '@/types'
 
 interface Props {
@@ -61,14 +61,14 @@ export default function AgendaLijst({ huidigeDatum, afspraken, labels, onAfspraa
 
           {dagAfspraken.map(afspraak => {
             const label = labels.find(l => l.id === afspraak.labelIds[0])
-            const kleur = label?.kleur ?? '#8E8E93'
+            const { accent } = eventKleuren(label)
             return (
               <button
                 key={afspraak.id}
                 onClick={() => onAfspraakKlik(afspraak)}
                 className="flex items-start gap-3 w-full px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors text-left"
               >
-                <span className="w-1 self-stretch rounded-full shrink-0 mt-0.5" style={{ backgroundColor: kleur }} />
+                <span className="w-1 self-stretch rounded-full shrink-0 mt-0.5" style={{ backgroundColor: accent }} />
                 <div className="w-20 shrink-0">
                   {afspraak.heeldag
                     ? <span className="text-xs text-gray-400">hele dag</span>
@@ -81,11 +81,12 @@ export default function AgendaLijst({ huidigeDatum, afspraken, labels, onAfspraa
                     {afspraak.labelIds.map(lid => {
                       const l = labels.find(x => x.id === lid)
                       if (!l) return null
+                      const ck = eventKleuren(l, 0.15)
                       return (
                         <span
                           key={lid}
                           className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                          style={{ backgroundColor: labelAchtergrond(l.kleur, 0.15), color: l.kleur }}
+                          style={{ backgroundColor: ck.achtergrond, color: ck.tekst }}
                         >
                           {l.naam}
                         </span>

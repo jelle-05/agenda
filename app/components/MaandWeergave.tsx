@@ -1,7 +1,7 @@
 'use client'
 
 import { getMaandDagen, toISODatum, isVandaag, getDagIndex, NL_DAGEN_KORT } from '@/lib/datum'
-import { labelAchtergrond } from '@/lib/kleuren'
+import { eventKleuren } from '@/lib/kleuren'
 import type { Afspraak, Label } from '@/types'
 
 interface Props {
@@ -76,16 +76,16 @@ export default function MaandWeergave({ huidigeDatum, afspraken, labels, onDagKl
               <div className="flex flex-col gap-[2px] w-full min-w-0">
                 {dagAfspraken.slice(0, 3).map(afspraak => {
                   const label = labels.find(l => l.id === afspraak.labelIds[0])
-                  const kleur = label?.kleur ?? '#8E8E93'
+                  const { accent, achtergrond, tekst } = eventKleuren(label, 0.15)
                   return (
                     <button
                       key={afspraak.id}
                       onClick={() => onAfspraakKlik(afspraak)}
                       className="flex items-center gap-1 rounded-[3px] px-1 py-[1px] w-full min-w-0 hover:opacity-80 transition-opacity text-left"
-                      style={{ backgroundColor: labelAchtergrond(kleur, 0.15) }}
+                      style={{ backgroundColor: achtergrond }}
                     >
-                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: kleur }} />
-                      <span className="text-[10px] font-medium truncate leading-tight" style={{ color: kleur }}>
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: accent }} />
+                      <span className="text-[10px] font-medium truncate leading-tight" style={{ color: tekst }}>
                         {afspraak.titel}
                       </span>
                     </button>

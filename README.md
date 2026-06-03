@@ -25,6 +25,7 @@ Persoonlijke agenda-app gebouwd met Next.js, Supabase en Tailwind CSS. Geïnspir
 ### Labels
 - Onbeperkt kleur-labels per afspraak
 - Labels aanmaken/bewerken/verwijderen via Label-beheer
+- **Kleur-customization per label** — naast de accentkleur (rand/stip) kun je per label een **eigen achtergrondkleur én tekstkleur** instellen (toggle "Eigen achtergrond/tekstkleur" + native color pickers, met live preview). Events met dat label gebruiken die kleuren in alle weergaven (dag/week/maand/agenda). Labels zonder eigen kleuren houden de standaard lichte tint; events zonder label blijven grijs; **verjaardagen blijven groen, feestdagen paars**. De editor toont een **contrastwaarschuwing** bij een slecht leesbare combinatie (de keuze wordt niet overschreven). Opgeslagen in de `labels`-tabel (kolommen `achtergrond_kleur`/`tekst_kleur`) + localStorage; de helper `eventKleuren()` (`lib/kleuren.ts`) bepaalt achtergrond/tekst/accent met nette fallbacks.
 
 ### Verjaardagen
 - **Apart beheer** — open via het taart-icoon rechtsboven (desktop én mobiel); dit toont eerst een **keuzestap**: *Nieuwe verjaardag toevoegen* of *Huidige verjaardagen bekijken*
@@ -130,6 +131,8 @@ create table labels (
   user_id uuid references auth.users not null,
   naam text not null,
   kleur text not null,
+  achtergrond_kleur text,  -- optioneel: eigen achtergrondkleur
+  tekst_kleur text,        -- optioneel: eigen tekstkleur
   aangemaakt_op timestamptz default now()
 );
 
@@ -225,6 +228,15 @@ create table if not exists verzonden_reminders (
 );
 alter table verzonden_reminders enable row level security;
 ```
+
+Voeg de kolommen toe voor kleur-customization per label (eigen achtergrond-/tekstkleur):
+
+```sql
+alter table labels add column if not exists achtergrond_kleur text;
+alter table labels add column if not exists tekst_kleur text;
+```
+
+> Zonder deze migratie blijft de app werken: labels slaan lokaal op en naam/kleur blijven syncen (de upsert valt terug op een variant zonder de nieuwe kolommen); de eigen kleuren persisten server-side pas ná de migratie.
 
 ### Starten
 

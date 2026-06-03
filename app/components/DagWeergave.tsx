@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import WeekStrip from './WeekStrip'
 import { toISODatum, isVandaag, formatDagTitel, tijdNaarMinuten } from '@/lib/datum'
-import { labelAchtergrond } from '@/lib/kleuren'
+import { labelAchtergrond, eventKleuren } from '@/lib/kleuren'
 import { stapelVolgorde } from '@/lib/overlap'
 import type { Afspraak, Label } from '@/types'
 
@@ -68,13 +68,13 @@ export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik
           <span className="text-[10px] text-gray-400 shrink-0">hele dag</span>
           {heeldagAfspraken.map(a => {
             const label = labels.find(l => l.id === a.labelIds[0])
-            const kleur = label?.kleur ?? '#8E8E93'
+            const { achtergrond, tekst } = eventKleuren(label, 0.15)
             return (
               <button
                 key={a.id}
                 onClick={() => onAfspraakKlik(a)}
                 className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium hover:opacity-80 transition-opacity"
-                style={{ backgroundColor: labelAchtergrond(kleur, 0.15), color: kleur }}
+                style={{ backgroundColor: achtergrond, color: tekst }}
               >
                 {a.titel}
               </button>
@@ -134,7 +134,7 @@ export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik
             {/* Afspraken */}
             {dagAfspraken.map(afspraak => {
               const label    = labels.find(l => l.id === afspraak.labelIds[0])
-              const kleur    = label?.kleur ?? '#8E8E93'
+              const { accent, achtergrond, tekst } = eventKleuren(label, 0.22)
               const beginMin = tijdNaarMinuten(afspraak.beginTijd)
               const eindMin  = tijdNaarMinuten(afspraak.eindTijd)
               const top      = (beginMin / 60) * UURHOOGTE
@@ -148,9 +148,9 @@ export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik
                   className="absolute left-1 right-2 rounded-md overflow-hidden text-left hover:brightness-95 transition-all flex flex-col justify-start items-stretch"
                   style={{
                     top, height,
-                    backgroundColor: labelAchtergrond(kleur, 0.22),
-                    border: `1px solid ${labelAchtergrond(kleur, 0.55)}`,
-                    borderLeft: `3px solid ${kleur}`,
+                    backgroundColor: achtergrond,
+                    border: `1px solid ${labelAchtergrond(accent, 0.55)}`,
+                    borderLeft: `3px solid ${accent}`,
                     boxShadow: '0 0 0 1px rgba(255,255,255,0.92), 0 1px 3px rgba(0,0,0,0.10)',
                     padding: height < 26 ? '2px 5px' : 7,
                   }}
@@ -159,12 +159,12 @@ export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik
                     <>
                       <p
                         className="font-semibold truncate overflow-hidden whitespace-nowrap"
-                        style={{ color: kleur, fontSize: height < 26 ? 10 : 12, lineHeight: height < 26 ? 1.1 : 'normal' }}
+                        style={{ color: tekst, fontSize: height < 26 ? 10 : 12, lineHeight: height < 26 ? 1.1 : 'normal' }}
                       >
                         {afspraak.titel}
                       </p>
                       {afspraak.locatie && height >= 42 && (
-                        <p className="text-[11px] truncate leading-tight mt-0.5" style={{ color: kleur, opacity: 0.65 }}>
+                        <p className="text-[11px] truncate leading-tight mt-0.5" style={{ color: tekst, opacity: 0.65 }}>
                           {afspraak.locatie}
                         </p>
                       )}

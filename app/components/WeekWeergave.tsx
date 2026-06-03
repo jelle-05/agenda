@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { getWeekDagen, toISODatum, isVandaag, getDagIndex, isSameDag, NL_DAGEN_KORT, tijdNaarMinuten } from '@/lib/datum'
-import { labelAchtergrond } from '@/lib/kleuren'
+import { labelAchtergrond, eventKleuren } from '@/lib/kleuren'
 import { stapelVolgorde } from '@/lib/overlap'
 import type { Afspraak, Label } from '@/types'
 
@@ -91,16 +91,16 @@ export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKli
               <div key={di} className="flex-1 border-l border-gray-100 sm:border-[#dfdfdf] min-w-0 py-0.5 px-0.5 flex flex-col gap-[2px]">
                 {heeldagAfspraken.map(afspraak => {
                   const label = labels.find(l => l.id === afspraak.labelIds[0])
-                  const kleur = label?.kleur ?? '#8E8E93'
+                  const { accent, achtergrond, tekst } = eventKleuren(label, 0.15)
                   return (
                     <button
                       key={afspraak.id}
                       onClick={() => onAfspraakKlik(afspraak)}
                       className="flex items-center gap-1 rounded-[3px] px-1 py-[1px] w-full min-w-0 hover:opacity-80 transition-opacity text-left"
-                      style={{ backgroundColor: labelAchtergrond(kleur, 0.15) }}
+                      style={{ backgroundColor: achtergrond }}
                     >
-                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: kleur }} />
-                      <span className="text-[10px] font-medium truncate leading-tight" style={{ color: kleur }}>
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: accent }} />
+                      <span className="text-[10px] font-medium truncate leading-tight" style={{ color: tekst }}>
                         {afspraak.titel}
                       </span>
                     </button>
@@ -151,7 +151,7 @@ export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKli
 
                 {dagAfspraken.map(afspraak => {
                   const label    = labels.find(l => l.id === afspraak.labelIds[0])
-                  const kleur    = label?.kleur ?? '#8E8E93'
+                  const { accent, achtergrond, tekst } = eventKleuren(label, 0.22)
                   const beginMin = tijdNaarMinuten(afspraak.beginTijd)
                   const eindMin  = tijdNaarMinuten(afspraak.eindTijd)
                   const top      = (beginMin / 60) * UURHOOGTE
@@ -165,9 +165,9 @@ export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKli
                       className="absolute inset-x-0.5 rounded overflow-hidden text-left hover:brightness-95 transition-all flex flex-col justify-start items-stretch"
                       style={{
                         top, height,
-                        backgroundColor: labelAchtergrond(kleur, 0.22),
-                        border: `1px solid ${labelAchtergrond(kleur, 0.55)}`,
-                        borderLeft: `2px solid ${kleur}`,
+                        backgroundColor: achtergrond,
+                        border: `1px solid ${labelAchtergrond(accent, 0.55)}`,
+                        borderLeft: `2px solid ${accent}`,
                         boxShadow: '0 0 0 1px rgba(255,255,255,0.92), 0 1px 3px rgba(0,0,0,0.10)',
                         padding: height < 26 ? '2px 4px' : 7,
                       }}
@@ -176,12 +176,12 @@ export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKli
                         <>
                           <p
                             className="font-semibold truncate overflow-hidden whitespace-nowrap"
-                            style={{ color: kleur, fontSize: height < 26 ? 10 : 12, lineHeight: height < 26 ? 1.1 : 'normal' }}
+                            style={{ color: tekst, fontSize: height < 26 ? 10 : 12, lineHeight: height < 26 ? 1.1 : 'normal' }}
                           >
                             {afspraak.titel}
                           </p>
                           {height >= 44 && afspraak.locatie && (
-                            <p className="text-[11px] truncate leading-tight mt-0.5" style={{ color: kleur, opacity: 0.65 }}>
+                            <p className="text-[11px] truncate leading-tight mt-0.5" style={{ color: tekst, opacity: 0.65 }}>
                               {afspraak.locatie}
                             </p>
                           )}

@@ -50,6 +50,12 @@ Kleine wijzigingen met direct zichtbaar resultaat. Weinig backend-werk.
 
 ---
 
+### ~~Kleur-customization per label~~ ✅ Geïmplementeerd (juni 2026)
+**Wat:** Per label een eigen achtergrond- én tekstkleur (naast de accentkleur) via toggle + native color pickers in `LabelBeheer`, met live preview en contrastwaarschuwing. `eventKleuren()` bepaalt achtergrond/tekst/accent met fallback naar de bestaande tint; verjaardagen blijven groen, feestdagen paars, label-loze events grijs. Opslag in `labels`-kolommen `achtergrond_kleur`/`tekst_kleur` (resiliente upsert, fail-open vóór migratie).
+**Bestanden:** `types.ts`, `lib/kleuren.ts`, `lib/supabaseOpslag.ts`, `LabelBeheer.tsx`, Week/Dag/Maand/Agenda-weergaven.
+
+---
+
 ### ~~Filters + maand-swipe + stabiele desktop-header~~ ✅ Geïmplementeerd (juni 2026)
 **Wat:** Filters om events/verjaardagen/feestdagen per type te tonen/verbergen (persistent in localStorage), via desktop-filtericoon of mobiel hamburger-menu (`FilterMenu.tsx`); filtering in de `afsprakenVoorWeergave`-memo. Mobiel swipen werkt nu ook in maandweergave (`useSwipe` aan voor maand). Desktop-header: titel met vaste breedte zodat prev/next-knoppen niet meer verschuiven.
 **Bestanden:** `FilterMenu.tsx` (nieuw), `TopBar.tsx`, `AgendaApp.tsx`, `types.ts`, `lib/opslag.ts`.
