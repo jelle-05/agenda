@@ -28,6 +28,7 @@ import AgendaLijst from './AgendaLijst'
 import AfspraakFormulier from './AfspraakFormulier'
 import LabelBeheer from './LabelBeheer'
 import ProfielMenu from './ProfielMenu'
+import InstellingenMenu from './InstellingenMenu'
 import VerjaardagenLijst from './VerjaardagenLijst'
 import VerjaardagFormulier from './VerjaardagFormulier'
 import VerjaardagKeuze from './VerjaardagKeuze'
@@ -63,6 +64,7 @@ export default function AgendaApp() {
   const [bewerkAfspraak, setBewerkAfspraak]       = useState<Afspraak | null>(null)
   const [labelBeheerOpen, setLabelBeheerOpen]     = useState(false)
   const [profielMenuOpen, setProfielMenuOpen]     = useState(false)
+  const [instellingenOpen, setInstellingenOpen]   = useState(false)
   const [verjaardagKeuzeOpen, setVerjaardagKeuzeOpen] = useState(false)
   const [verjaardagenOpen, setVerjaardagenOpen]   = useState(false)
   const [verjaardagFormOpen, setVerjaardagFormOpen] = useState(false)
@@ -632,8 +634,15 @@ export default function AgendaApp() {
       <ProfielMenu
         open={profielMenuOpen}
         email={gebruiker.email ?? ''}
+        onInstellingen={() => setInstellingenOpen(true)}
         onUitloggen={uitloggen}
         onSluit={() => setProfielMenuOpen(false)}
+      />
+
+      <InstellingenMenu
+        open={instellingenOpen}
+        email={gebruiker.email ?? ''}
+        onSluit={() => setInstellingenOpen(false)}
       />
 
       <FilterMenu

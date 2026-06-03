@@ -2,7 +2,7 @@
 
 > Onderzoeks- en faseringsdocument. Doel: betrouwbare pushmeldingen via een Telegram-bot toevoegen aan de bestaande agenda-app, naast de huidige e-mail- (Resend) en browser-push (web-push/VAPID) reminders.
 >
-> **Voortgang:** Fase 1 (helper + webhook-script) en Fase 2 (koppelflow) zijn **gebouwd en end-to-end getest** — koppelen via de app levert een bevestigingsbericht in Telegram. **Fase 4 (cron verstuurt reminders via Telegram i.p.v. push) is gebouwd** in `app/api/cron/reminders/route.ts`. **Fase 5 (in-app 30s browser-push verwijderd) is gebouwd** in `app/components/AgendaApp.tsx`. De optionele **"Stuur testbericht"-knop** (`POST /api/telegram/test` + knop in `ProfielMenu`) is óók gebouwd. Nog open: Fase 3 (globale aan/uit-toggle in de UI).
+> **Voortgang:** Fase 1 (helper + webhook-script) en Fase 2 (koppelflow) zijn **gebouwd en end-to-end getest** — koppelen via de app levert een bevestigingsbericht in Telegram. **Fase 4 (cron verstuurt reminders via Telegram i.p.v. push) is gebouwd** in `app/api/cron/reminders/route.ts`. **Fase 5 (in-app 30s browser-push verwijderd) is gebouwd** in `app/components/AgendaApp.tsx`. De optionele **"Stuur testbericht"-knop** (`POST /api/telegram/test`) is óók gebouwd. De test-e-mail- en Telegram-knoppen zijn verplaatst naar een nieuwe **instellingenpagina met tabs** (`InstellingenMenu.tsx`, tab "Notificaties"), bereikbaar via het profielmenu. De Telegram-reminderberichten zijn **emoji-vrij** gemaakt (zie §4.6). Nog open: Fase 3 (globale aan/uit-toggle in de UI).
 
 ---
 
@@ -87,11 +87,12 @@ Waarom veilig: de code is **per gebruiker, eenmalig en verloopt snel**; alleen w
 - **Markeren als verstuurd:** dat is precies wat de `verzonden_reminders`-insert doet.
 
 ### 4.6 Berichtopmaak (onderzoeksvraag 5)
-Kort, duidelijk, professioneel. Voorbeeld (Telegram `parse_mode: HTML` of platte tekst):
+Kort, duidelijk, professioneel. **Zonder emoji's** (bewust verwijderd) — `parse_mode: HTML`, titel vetgedrukt:
 ```
-📅 <eventnaam>
-🗓️ <datum> · <begin–eindtijd>
-📍 <locatie>            ← alleen tonen als er een locatie is
+<b><eventnaam></b>
+<datum> · <begin–eindtijd>
+<locatie>              ← alleen tonen als er een locatie is
+
 Dit event begint over 5 minuten.
 ```
 - Eventnaam, datum, tijd, en locatie (alleen indien aanwezig).

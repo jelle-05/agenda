@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
 
   const ok = await verstuurTelegram(
     String(data.chat_id),
-    '🔔 <b>Testbericht</b>\nJe Telegram-reminders werken — je ontvangt je herinneringen vanaf nu hier.',
+    '<b>Testbericht</b>\nJe Telegram-reminders werken — je ontvangt je herinneringen vanaf nu hier.',
   )
   if (!ok) {
     return NextResponse.json(

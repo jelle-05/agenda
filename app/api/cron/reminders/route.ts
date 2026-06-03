@@ -149,10 +149,10 @@ export async function GET(req: NextRequest) {
     const tgChat = await actieveTelegramChat(afspraak.user_id)
     if (tgChat) {
       const regels = [
-        `📅 <b>${escapeHtml(afspraak.titel)}</b>`,
-        `🗓️ ${datumLabel} · ${tijdLabel}`,
+        `<b>${escapeHtml(afspraak.titel)}</b>`,
+        `${datumLabel} · ${tijdLabel}`,
       ]
-      if (locatie) regels.push(`📍 ${escapeHtml(locatie)}`)
+      if (locatie) regels.push(escapeHtml(locatie))
       regels.push('', starttekst)
       if (await verstuurTelegram(tgChat, regels.join('\n'))) {
         telegramVerstuurd++
@@ -308,7 +308,7 @@ export async function GET(req: NextRequest) {
       // ── Reminderkanaal: Telegram vervangt browser-push (globale voorkeur) ───
       const tgChat = await actieveTelegramChat(vj.user_id)
       if (tgChat) {
-        const bericht = `🎂 <b>${escapeHtml(vj.naam)}</b>\n${escapeHtml(verjaardagRegel)}`
+        const bericht = `<b>${escapeHtml(vj.naam)}</b>\n${escapeHtml(verjaardagRegel)}`
         if (await verstuurTelegram(tgChat, bericht)) {
           telegramVerstuurd++
           console.log('[reminders] telegram verjaardag verstuurd', { verjaardagId: vj.id, sleutel })
