@@ -20,7 +20,7 @@ Persoonlijke agenda-app gebouwd met Next.js, Supabase en Tailwind CSS. Geïnspir
 - **Velden** — titel, datum, begin-/eindtijd, hele dag, locatie, notitie, label, herinnering
 - **Event-blok styling** — titel bovenaan, locatie eronder, compact bij korte tijdsloten
 - **Compacte weergave** — blokken ≥ 20px tonen tekst in compact formaat (10px); blokken ≥ 26px normaal (12px); blokken < 20px tonen alleen kleurblok
-- **Overlappende events** — gelijktijdige/deels-overlappende events worden **naast elkaar in kolommen** geplaatst (`lib/overlap.ts`) i.p.v. over elkaar; elk blok heeft een subtiele witte scheidingsrand en zachte schaduw zodat ze duidelijk los van elkaar leesbaar blijven (dag- en weekweergave, desktop en mobiel). All-day items (verjaardagen groen, feestdagen paars) staan in de aparte hele-dag-rij en blijven ongewijzigd.
+- **Overlappende events** — gelijktijdige/deels-overlappende events worden **over elkaar** getoond (volle breedte), maar met styling die ze duidelijk onderscheidbaar maakt: een fijne gekleurde omlijning per blok, een witte scheidingsrand + zachte schaduw, en een **stapelvolgorde** (`lib/overlap.ts` → `stapelVolgorde`) waarbij langere events achter komen en kortere events bovenop blijven (zichtbaar en tappable). Werkt in dag- en weekweergave, desktop en mobiel. All-day items (verjaardagen groen, feestdagen paars) staan in de aparte hele-dag-rij en blijven ongewijzigd.
 
 ### Labels
 - Onbeperkt kleur-labels per afspraak

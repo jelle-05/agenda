@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { getWeekDagen, toISODatum, isVandaag, getDagIndex, isSameDag, NL_DAGEN_KORT, tijdNaarMinuten } from '@/lib/datum'
 import { labelAchtergrond } from '@/lib/kleuren'
-import { berekenOverlap } from '@/lib/overlap'
+import { stapelVolgorde } from '@/lib/overlap'
 import type { Afspraak, Label } from '@/types'
 
 const UURHOOGTE = 60
@@ -128,8 +128,8 @@ export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKli
           {/* Dag kolommen */}
           {weekDagen.map((dag, di) => {
             const iso = toISODatum(dag)
-            const dagAfspraken = afspraken.filter(a => a.datum === iso && !a.heeldag)
-            const overlap = berekenOverlap(dagAfspraken)
+            // Sorteer zo dat langere events achter kortere komen (korter bovenop, tappable).
+            const dagAfspraken = afspraken.filter(a => a.datum === iso && !a.heeldag).sort(stapelVolgorde)
             const toonTijdlijn = isVandaag(dag)
 
             return (
@@ -156,22 +156,19 @@ export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKli
                   const eindMin  = tijdNaarMinuten(afspraak.eindTijd)
                   const top      = (beginMin / 60) * UURHOOGTE
                   const height   = Math.max(((eindMin - beginMin) / 60) * UURHOOGTE, 20)
-                  const { kolom, kolommen } = overlap[afspraak.id] ?? { kolom: 0, kolommen: 1 }
-                  const breedte  = 100 / kolommen
 
                   return (
                     <button
                       key={afspraak.id}
                       onClick={() => onAfspraakKlik(afspraak)}
                       onDoubleClick={e => e.stopPropagation()}
-                      className="absolute rounded overflow-hidden text-left hover:brightness-95 transition-all flex flex-col justify-start items-stretch"
+                      className="absolute inset-x-0.5 rounded overflow-hidden text-left hover:brightness-95 transition-all flex flex-col justify-start items-stretch"
                       style={{
                         top, height,
-                        left: `calc(${kolom * breedte}% + 1px)`,
-                        width: `calc(${breedte}% - 2px)`,
                         backgroundColor: labelAchtergrond(kleur, 0.22),
+                        border: `1px solid ${labelAchtergrond(kleur, 0.55)}`,
                         borderLeft: `2px solid ${kleur}`,
-                        boxShadow: '0 0 0 1px #fff, 0 1px 2px rgba(0,0,0,0.06)',
+                        boxShadow: '0 0 0 1px rgba(255,255,255,0.92), 0 1px 3px rgba(0,0,0,0.10)',
                         padding: height < 26 ? '2px 4px' : 7,
                       }}
                     >

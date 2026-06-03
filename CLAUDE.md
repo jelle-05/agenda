@@ -52,7 +52,7 @@ app/
     verjaardagen.ts               — VERJAARDAG_LABEL + genereerVerjaardagAfspraken() (virtuele all-day events) + reminder-helpers
     feestdagen.ts                 — FEESTDAG_LABEL + berekenPasen()/feestdagenVoorJaar()/genereerFeestdagAfspraken() (virtuele paarse all-day events)
     kleuren.ts                    — labelAchtergrond() kleurberekening
-    overlap.ts                    — berekenOverlap() kolomindeling voor overlappende getimede events
+    overlap.ts                    — stapelVolgorde() sorteert overlappende getimede events (korter bovenop)
     useSwipe.ts                   — swipe-navigatie hook (mobiel)
     pushUtils.ts                  — subscribeerOpPush() voor Web Push abonnement
   api/
@@ -129,7 +129,7 @@ public/
   - `height 20–25px`: tekst zichtbaar, compacte stijl (font 10px, line-height 1.1, padding 2px/4px)
   - `height ≥ 26px`: normale stijl (font 12px, padding 7px)
   - Locatie alleen zichtbaar bij height ≥ 44px
-- **Overlappende events** — `berekenOverlap()` (`lib/overlap.ts`) deelt gelijktijdige/deels-overlappende getimede events op in kolommen (interval-packing); WeekWeergave/DagWeergave zetten per event `left`/`width` als percentage (`100/kolommen`) i.p.v. volle breedte. Subtiele witte scheidingsrand + zachte schaduw (`boxShadow: '0 0 0 1px #fff, …'`) en tint 0.22 voor contrast. All-day items (verjaardag/feestdag) niet betrokken (aparte hele-dag-rij).
+- **Overlappende events** — events mogen elkaar overlappen (volle breedte, géén kolommen). Duidelijkheid via styling: gekleurde omlijning (`border: 1px solid labelAchtergrond(kleur,0.55)` + `borderLeft` accent), witte scheidingsrand + zachte schaduw (`boxShadow: '0 0 0 1px rgba(255,255,255,0.92), …'`) en tint 0.22. Stapelvolgorde via `stapelVolgorde()` (`lib/overlap.ts`): langere events achter, kortere bovenop (zichtbaar/tappable). All-day items (verjaardag/feestdag) niet betrokken (aparte hele-dag-rij).
 
 ### Mobiel / PWA
 - **Witte statusbalk en home indicator** — `viewport-fit: cover` in `layout.tsx`, `padding-top: env(safe-area-inset-top)` op body, `.safe-area-bottom` class op BottomBar
