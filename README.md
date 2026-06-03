@@ -302,8 +302,9 @@ Voor e-mailreminders: maak een gratis account aan op [resend.com](https://resend
 
 Telegram wordt als betrouwbaarder pushkanaal toegevoegd (zie het faseringsdocument `telegram_fases.md`).
 
-- **Fase 1** — technische basis: server-side verzendhelper (`app/lib/telegram.ts`) + webhook-registratiescript (`scripts/setWebhook.mjs`).
-- **Fase 2** — veilige koppelflow: tabellen `telegram_accounts` + `telegram_koppelcodes`, routes `/api/telegram/link`, `/api/telegram/webhook`, `/api/telegram/status`, en een "Telegram koppelen"-knop in het profielmenu.
+- **Fase 1** ✅ — technische basis: server-side verzendhelper (`app/lib/telegram.ts`) + webhook-registratiescript (`scripts/setWebhook.mjs`).
+- **Fase 2** ✅ — veilige koppelflow (gebouwd + getest): tabellen `telegram_accounts` + `telegram_koppelcodes`, routes `/api/telegram/link`, `/api/telegram/webhook`, `/api/telegram/status`, en een "Telegram koppelen"-knop in het profielmenu.
+- **Fase 3+** (nog te doen) — globale aan/uit-voorkeur en de cron daadwerkelijk via Telegram laten sturen (i.p.v. browser-push).
 
 **Koppelen (na het aanmaken van de bot + env vars):** open het profielmenu → *Telegram koppelen* → de bot opent in Telegram → druk op **Start** → je krijgt een bevestigingsbericht en het profiel toont "gekoppeld".
 

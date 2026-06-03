@@ -1,6 +1,8 @@
 # 🤖 Telegram-reminders voor de agenda-app — Onderzoek & Fasering
 
-> Onderzoeks- en faseringsdocument. **Er is nog geen code geschreven.** Doel: betrouwbare pushmeldingen via een Telegram-bot toevoegen aan de bestaande agenda-app, naast de huidige e-mail- (Resend) en browser-push (web-push/VAPID) reminders.
+> Onderzoeks- en faseringsdocument. Doel: betrouwbare pushmeldingen via een Telegram-bot toevoegen aan de bestaande agenda-app, naast de huidige e-mail- (Resend) en browser-push (web-push/VAPID) reminders.
+>
+> **Voortgang:** Fase 1 (helper + webhook-script) en Fase 2 (koppelflow) zijn **gebouwd en end-to-end getest** — koppelen via de app levert een bevestigingsbericht in Telegram. Fase 3 (globale aan/uit-toggle) en Fase 4 (cron via Telegram) staan nog open.
 
 ---
 
@@ -173,7 +175,7 @@ De webhook eenmalig registreren bij Telegram via `setWebhook` (met `secret_token
 - **Bestanden/onderdelen:** nieuwe API-routes onder `app/api/telegram/*`, query-helpers (Supabase).
 - **Complexiteit:** **Middel** (koppelflow + beveiliging is het hart van de feature).
 - **Risico's:** codes die niet verlopen/herbruikbaar zijn (account-kaping); race bij dubbel `/start`; webhook niet geverifieerd.
-- **Klaar wanneer:** je kunt in de app "koppelen" starten, in Telegram de bot starten, en de app toont daarna "gekoppeld" — met een code die daarna ongeldig is.
+- **Klaar wanneer:** je kunt in de app "koppelen" starten, in Telegram de bot starten, en de app toont daarna "gekoppeld" — met een code die daarna ongeldig is. ✅ **Behaald** (getest: bot **HerinnerMij**, webhook op `https://agenda.jellebol.nl/api/telegram/webhook`, bevestigingsbericht ontvangen).
 
 ---
 
@@ -289,7 +291,7 @@ De eerder openstaande vragen zijn beantwoord en in dit document verwerkt:
 - [x] `scripts/setWebhook.mjs` om de webhook te registreren (met `secret_token`) — **Fase 1 gebouwd**.
 - [x] Tabellen `telegram_accounts` (incl. `actief`-vlag) + `telegram_koppelcodes` (+ RLS) — **Fase 2** (SQL door gebruiker te draaien). **Geen** `afspraken`-wijziging (kanaal is globaal).
 - [x] Routes: `/api/telegram/link`, `/api/telegram/status` (status + ontkoppelen), `/api/telegram/webhook` — **Fase 2 gebouwd**. (Toggle = Fase 3; `/api/telegram/test` optioneel, later.)
-- [x] Koppelflow end-to-end (code → deeplink → `/start` → koppelen → bevestiging) — **Fase 2 gebouwd**.
+- [x] Koppelflow end-to-end (code → deeplink → `/start` → koppelen → bevestiging) — **Fase 2 gebouwd + getest** (webhook live op productie, bevestigingsbericht ontvangen).
 - [~] `ProfielMenu`: koppelen/ontkoppelen — **Fase 2 (minimaal) gebouwd**. **Toggle "Telegram-reminders aan/uit"** = Fase 3; testbericht = later.
 - [ ] Cron: per gekoppelde+actieve gebruiker **Telegram i.p.v. web-push** + `claimReminder('…|telegram')` (claim-eerst); e-mail ongewijzigd.
 - [ ] **In-app 30s browser-push verwijderen** uit `AgendaApp.tsx` (web-push voorlopig alleen als fallback voor niet-gekoppelden).
