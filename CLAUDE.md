@@ -52,6 +52,7 @@ app/
     verjaardagen.ts               — VERJAARDAG_LABEL + genereerVerjaardagAfspraken() (virtuele all-day events) + reminder-helpers
     feestdagen.ts                 — FEESTDAG_LABEL + berekenPasen()/feestdagenVoorJaar()/genereerFeestdagAfspraken() (virtuele paarse all-day events)
     kleuren.ts                    — labelAchtergrond() kleurberekening
+    overlap.ts                    — berekenOverlap() kolomindeling voor overlappende getimede events
     useSwipe.ts                   — swipe-navigatie hook (mobiel)
     pushUtils.ts                  — subscribeerOpPush() voor Web Push abonnement
   api/
@@ -128,20 +129,30 @@ public/
   - `height 20–25px`: tekst zichtbaar, compacte stijl (font 10px, line-height 1.1, padding 2px/4px)
   - `height ≥ 26px`: normale stijl (font 12px, padding 7px)
   - Locatie alleen zichtbaar bij height ≥ 44px
+- **Overlappende events** — `berekenOverlap()` (`lib/overlap.ts`) deelt gelijktijdige/deels-overlappende getimede events op in kolommen (interval-packing); WeekWeergave/DagWeergave zetten per event `left`/`width` als percentage (`100/kolommen`) i.p.v. volle breedte. Subtiele witte scheidingsrand + zachte schaduw (`boxShadow: '0 0 0 1px #fff, …'`) en tint 0.22 voor contrast. All-day items (verjaardag/feestdag) niet betrokken (aparte hele-dag-rij).
 
 ### Mobiel / PWA
 - **Witte statusbalk en home indicator** — `viewport-fit: cover` in `layout.tsx`, `padding-top: env(safe-area-inset-top)` op body, `.safe-area-bottom` class op BottomBar
 - **`statusBarStyle: 'default'`** — donkere iconen op witte achtergrond (iOS)
 
 ### Reminders
-- **In-app check** elke 30 seconden; gebruikt `ServiceWorkerRegistration.showNotification()` (werkt op iOS PWA); fallback `new Notification()` op desktop
-- **Cron-endpoint** `/api/cron/reminders` — push + e-mail; draait elke minuut via cron-job.org
-- **E-mailreminders** via Resend — zelfde `herinnering_minuten` instelling als push; domein `jellebol.nl` geverifieerd; env vars ingesteld in Vercel
+- **In-app check** elke 30 seconden; gebruikt `ServiceWorkerRegistration.showNotification()` (werkt op iOS PWA); fallback `new Notification()` op desktop. Eigen dedup via `gevierdRef` (per sessie).
+- **Cron-endpoint** `/api/cron/reminders` — push + e-mail; draait elke minuut via cron-job.org. De "due"-check heeft een tolerantievenster van ~4 minuten → zonder dedup zou dezelfde mail 4× verstuurd worden.
+- **Idempotentie (dubbele mails voorkomen)** — `claimReminder(sleutel)` doet een atomische `insert` in tabel `verzonden_reminders` (PK `sleutel`). Events: `${id}|${datum}|${begin_tijd}|${herinnering_minuten}`; verjaardagen: `vj|${id}|${jaar}|${herinnering_minuten}`. `23505` (duplicate) → overslaan; ontbrekende tabel/andere fout → **fail-open** (verstuur toch). Alleen de eerste cron-run binnen het venster verstuurt. Markeringen > 60 dagen worden bij elke run opgeruimd. Logging met prefix `[reminders]` in Vercel-logs (due/dubbel-overgeslagen/verstuurd).
+- **E-mailreminders** via Resend — zelfde `herinnering_minuten` instelling als push; domein `jellebol.nl` geverifieerd; env vars ingesteld in Vercel.
 
 ### Database
 - Kolom `herhalingsgroep_id` handmatig toegevoegd aan bestaande Supabase `afspraken` tabel via SQL:
   ```sql
   alter table afspraken add column if not exists herhalingsgroep_id text;
+  ```
+- Tabel `verzonden_reminders` toevoegen (voorkomt dubbele reminder-mails; cron vangt afwezigheid fail-open op):
+  ```sql
+  create table if not exists verzonden_reminders (
+    sleutel text primary key,
+    verzonden_op timestamptz default now()
+  );
+  alter table verzonden_reminders enable row level security;
   ```
 - Tabel `verjaardagen` toevoegen (nodig vóór de verjaardagen-feature persistent werkt; client vangt afwezigheid netjes op):
   ```sql

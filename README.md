@@ -20,6 +20,7 @@ Persoonlijke agenda-app gebouwd met Next.js, Supabase en Tailwind CSS. Geïnspir
 - **Velden** — titel, datum, begin-/eindtijd, hele dag, locatie, notitie, label, herinnering
 - **Event-blok styling** — titel bovenaan, locatie eronder, compact bij korte tijdsloten
 - **Compacte weergave** — blokken ≥ 20px tonen tekst in compact formaat (10px); blokken ≥ 26px normaal (12px); blokken < 20px tonen alleen kleurblok
+- **Overlappende events** — gelijktijdige/deels-overlappende events worden **naast elkaar in kolommen** geplaatst (`lib/overlap.ts`) i.p.v. over elkaar; elk blok heeft een subtiele witte scheidingsrand en zachte schaduw zodat ze duidelijk los van elkaar leesbaar blijven (dag- en weekweergave, desktop en mobiel). All-day items (verjaardagen groen, feestdagen paars) staan in de aparte hele-dag-rij en blijven ongewijzigd.
 
 ### Labels
 - Onbeperkt kleur-labels per afspraak
@@ -57,6 +58,8 @@ Persoonlijke agenda-app gebouwd met Next.js, Supabase en Tailwind CSS. Geïnspir
 - **Server-side push**: cron-job stuurt Web Push (VAPID) via `/api/cron/reminders`
 - **E-mail**: zelfde cron stuurt ook e-mail via Resend naar het e-mailadres van de ingelogde gebruiker
 - **Status**: push-notificaties kunnen onbetrouwbaar zijn op iOS; e-mail is de betrouwbaardere fallback
+- **Geen dubbele mails (idempotent)**: de cron draait elke minuut en heeft een tolerantievenster van enkele minuten; om te voorkomen dat dezelfde reminder meerdere keren wordt verstuurd, claimt de cron elke reminder atomisch in de tabel `verzonden_reminders` (unieke `sleutel` = event-id + datum + tijd + offset). Alleen de eerste run binnen het venster verstuurt; de overige zien een duplicate-key en slaan over. Markeringen ouder dan 60 dagen worden automatisch opgeruimd. Bij het **bewerken** van een event verandert de sleutel (mag opnieuw één keer vuren), bij **verwijderen** verdwijnt het event uit de query (geen mail).
+- **Debuggen**: de cron logt met prefix `[reminders]` in de Vercel-functielogs — o.a. *event/verjaardag due* (id, sleutel, geplande tijd), *dubbel overgeslagen*, *e-mail verstuurd*. Zonder geheime waarden.
 
 ### PWA
 - Installeerbaar op Android en iOS als native app
@@ -156,6 +159,11 @@ create table push_subscriptions (
   unique(user_id, endpoint)
 );
 
+create table verzonden_reminders (
+  sleutel text primary key,
+  verzonden_op timestamptz default now()
+);
+
 create table verjaardagen (
   id text primary key,
   user_id uuid references auth.users not null,
@@ -175,6 +183,7 @@ alter table afspraken enable row level security;
 alter table labels enable row level security;
 alter table push_subscriptions enable row level security;
 alter table verjaardagen enable row level security;
+alter table verzonden_reminders enable row level security;  -- alleen de service-role cron schrijft; clients geen toegang
 
 create policy "eigen afspraken" on afspraken for all to authenticated
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
@@ -205,6 +214,16 @@ Het `geboortejaar`-veld is een **vrij tekstveld** geworden (jaar of leeftijd). Z
 
 ```sql
 alter table verjaardagen alter column geboortejaar type text using geboortejaar::text;
+```
+
+Voeg de dedup-tabel toe die dubbele reminder-mails voorkomt:
+
+```sql
+create table if not exists verzonden_reminders (
+  sleutel text primary key,
+  verzonden_op timestamptz default now()
+);
+alter table verzonden_reminders enable row level security;
 ```
 
 ### Starten

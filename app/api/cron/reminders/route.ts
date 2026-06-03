@@ -18,6 +18,21 @@ const supabaseAdmin = createClient(
   { auth: { persistSession: false, autoRefreshToken: false } }
 )
 
+// Claim een reminder atomisch via de unieke primary key van `verzonden_reminders`.
+// Geeft `true` als deze reminder nog niet eerder is verstuurd (mag nu versturen),
+// `false` bij een dubbele (al verstuurd → overslaan). Bij een ontbrekende tabel of
+// andere fout: fail-open (versturen) zodat reminders blijven werken.
+async function claimReminder(sleutel: string): Promise<boolean> {
+  const { error } = await supabaseAdmin.from('verzonden_reminders').insert({ sleutel })
+  if (!error) return true
+  if (error.code === '23505') {
+    console.log('[reminders] dubbel overgeslagen', { sleutel })
+    return false
+  }
+  console.error('[reminders] claim-fout (fail-open, verstuur toch):', { sleutel, code: error.code, message: error.message })
+  return true
+}
+
 export async function GET(req: NextRequest) {
   if (!process.env.CRON_SECRET || req.headers.get('x-cron-secret') !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -46,6 +61,13 @@ export async function GET(req: NextRequest) {
     console.warn('[reminders] RESEND_API_KEY of RESEND_FROM_EMAIL niet ingesteld — e-mailreminders worden overgeslagen')
   }
 
+  // Oude verzonden-markeringen opruimen (> 60 dagen) zodat de tabel klein blijft.
+  const grens = new Date(nu.getTime() - 60 * 24 * 3600_000).toISOString()
+  const { error: opschoonFout } = await supabaseAdmin.from('verzonden_reminders').delete().lt('verzonden_op', grens)
+  if (opschoonFout && opschoonFout.code !== '42P01') {
+    console.warn('[reminders] opschoning overgeslagen:', opschoonFout.code)
+  }
+
   const { data: afspraken, error } = await supabaseAdmin
     .from('afspraken')
     .select('id, user_id, titel, datum, begin_tijd, eind_tijd, locatie, herinnering_minuten')
@@ -68,6 +90,11 @@ export async function GET(req: NextRequest) {
 
     // Venster van 3 minuten (vangt kleine vertragingen van cron-job.org op)
     if (herinneringMin < nuMinuten - 1 || herinneringMin > nuMinuten + 2) continue
+
+    // Idempotentie: één firing = één verzending, ook bij herhaalde cron-runs.
+    const sleutel = `${afspraak.id}|${afspraak.datum}|${afspraak.begin_tijd}|${afspraak.herinnering_minuten}`
+    console.log('[reminders] event due', { eventId: afspraak.id, sleutel, geplandMin: herinneringMin, nuMinuten })
+    if (!(await claimReminder(sleutel))) continue
 
     const rm = afspraak.herinnering_minuten ?? 0
     const tijdTekst = rm === 0 ? 'Nu gepland'
@@ -189,6 +216,7 @@ export async function GET(req: NextRequest) {
       console.error('[reminders] E-mailherinnering mislukt:', resendFout)
     } else {
       emailVerstuurd++
+      console.log('[reminders] e-mail verstuurd', { eventId: afspraak.id, email, sleutel })
     }
   }
 
@@ -219,6 +247,11 @@ export async function GET(req: NextRequest) {
 
       if (remDatum !== vandaag) continue
       if (remMinuut < nuMinuten - 1 || remMinuut > nuMinuten + 2) continue
+
+      // Idempotentie (zoals bij events): voorkomt dubbele verjaardags-reminders.
+      const sleutel = `vj|${vj.id}|${jaar}|${vj.herinnering_minuten}`
+      console.log('[reminders] verjaardag due', { verjaardagId: vj.id, sleutel, jaar, remMinuut, nuMinuten })
+      if (!(await claimReminder(sleutel))) break
 
       const rmMin = vj.herinnering_minuten ?? 0
       const wanneer = rmMin >= 10080 ? 'over een week' : rmMin >= 1440 ? 'morgen' : 'vandaag'

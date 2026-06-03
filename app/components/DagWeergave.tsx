@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import WeekStrip from './WeekStrip'
 import { toISODatum, isVandaag, formatDagTitel, tijdNaarMinuten } from '@/lib/datum'
 import { labelAchtergrond } from '@/lib/kleuren'
+import { berekenOverlap } from '@/lib/overlap'
 import type { Afspraak, Label } from '@/types'
 
 const UURHOOGTE = 60
@@ -39,6 +40,7 @@ export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik
 
   const iso               = toISODatum(huidigeDatum)
   const dagAfspraken      = afspraken.filter(a => a.datum === iso && !a.heeldag)
+  const overlap           = berekenOverlap(dagAfspraken)
   const heeldagAfspraken  = afspraken.filter(a => a.datum === iso && a.heeldag)
   const nuMinuten         = nu.getHours() * 60 + nu.getMinutes()
   const toonTijdlijn      = isVandaag(huidigeDatum)
@@ -137,17 +139,22 @@ export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik
               const eindMin  = tijdNaarMinuten(afspraak.eindTijd)
               const top      = (beginMin / 60) * UURHOOGTE
               const height   = Math.max(((eindMin - beginMin) / 60) * UURHOOGTE, 24)
+              const { kolom, kolommen } = overlap[afspraak.id] ?? { kolom: 0, kolommen: 1 }
+              const breedte  = 100 / kolommen
 
               return (
                 <button
                   key={afspraak.id}
                   onClick={() => onAfspraakKlik(afspraak)}
                   onDoubleClick={e => e.stopPropagation()}
-                  className="absolute left-1 right-2 rounded-md overflow-hidden text-left hover:brightness-95 transition-all flex flex-col justify-start items-stretch"
+                  className="absolute rounded-md overflow-hidden text-left hover:brightness-95 transition-all flex flex-col justify-start items-stretch"
                   style={{
                     top, height,
-                    backgroundColor: labelAchtergrond(kleur, 0.18),
+                    left: `calc(${kolom * breedte}% + 4px)`,
+                    width: `calc(${breedte}% - 12px)`,
+                    backgroundColor: labelAchtergrond(kleur, 0.22),
                     borderLeft: `3px solid ${kleur}`,
+                    boxShadow: '0 0 0 1px #fff, 0 1px 2px rgba(0,0,0,0.06)',
                     padding: height < 26 ? '2px 5px' : 7,
                   }}
                 >
