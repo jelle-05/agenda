@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 import type { Afspraak, Label, Verjaardag } from '@/types'
-import { migreerDatumVelden } from './verjaardagen'
+import { migreerDatumVelden, parseGeboortejaar } from './verjaardagen'
 
 // ── Converters ───────────────────────────────────────────────────────────────
 
@@ -64,8 +64,8 @@ function rijNaarVerjaardag(rij: any): Verjaardag {
 
 function verjaardagNaarRij(v: Verjaardag, userId: string) {
   // `datum` blijft gevuld (kolom is NOT NULL) maar dag/maand/geboortejaar zijn
-  // leidend; het synthetische jaar (2000 als geboortejaar onbekend) doet er niet toe.
-  const jaar = v.geboortejaar ?? 2000
+  // leidend; het synthetische jaar (2000 als geen jaartal bekend) doet er niet toe.
+  const jaar = parseGeboortejaar(v.geboortejaar) ?? 2000
   const datum = `${jaar}-${String(v.maand).padStart(2, '0')}-${String(v.dag).padStart(2, '0')}`
   return {
     id:       v.id,

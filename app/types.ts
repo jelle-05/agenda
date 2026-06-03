@@ -25,7 +25,7 @@ export type Verjaardag = {
   naam: string
   dag: number        // 1-31, verplicht
   maand: number      // 1-12, verplicht
-  geboortejaar?: number   // optioneel; leeftijd wordt hieruit berekend
+  geboortejaar?: string   // optioneel, vrije tekst (bv. "1998", "onbekend", "ongeveer 30"); leeftijd wordt berekend als er een jaartal in staat
   notitie?: string
   herinneringMinuten?: number   // -1 = geen, 60 = 1 uur, 1440 = 1 dag, 10080 = 1 week van tevoren
   terugkomend: boolean          // elk jaar opnieuw op dezelfde maand/dag

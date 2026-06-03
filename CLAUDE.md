@@ -107,7 +107,8 @@ public/
 - **Real-time sync** — Supabase Realtime `postgres_changes` op `afspraken` en `labels`; Realtime moet aan staan in Supabase dashboard
 - **Profielmenu** — `ProfielMenu.tsx`, geöpend via avatar in TopBar
 - **Verjaardagen** — aparte structuur (tabel `verjaardagen` + localStorage-cache), geopend via taart-icoon in TopBar (zichtbaar op desktop én mobiel). Klik opent eerst `VerjaardagKeuze.tsx` (keuzestap: nieuwe toevoegen / huidige bekijken). Beheer via `VerjaardagenLijst.tsx` (tabel + paginatie, klikbare rijen) + `VerjaardagFormulier.tsx` (aanmaken/bewerken/verwijderen met bevestiging).
-  - **Datamodel**: `dag` + `maand` (verplicht), `geboortejaar` (optioneel) — géén opgeslagen `datum`/`leeftijd` meer. Leeftijd wordt berekend (`berekenLeeftijd()` in `lib/verjaardagen.ts`). `migreerDatumVelden()` leest zowel het nieuwe model als oude rijen (`datum`/`leeftijd`) in, gebruikt bij Supabase- én localStorage-load. Bij opslaan wordt `datum` gesynthetiseerd gevuld (kolom is NOT NULL bij bestaande installaties), maar dag/maand/geboortejaar zijn leidend.
+  - **Datamodel**: `dag` + `maand` (verplicht), `geboortejaar` (optioneel, **vrije tekst**: "1998", "onbekend", "ongeveer 30") — géén opgeslagen `datum`/`leeftijd` meer. Leeftijd wordt berekend met `berekenLeeftijd()` via `parseGeboortejaar()` (pakt een 4-cijferig jaartal uit de tekst; anders geen leeftijd). `migreerDatumVelden()` leest nieuw model én oude rijen (`datum`/`leeftijd`, integer-`geboortejaar`) in als string, gebruikt bij Supabase- én localStorage-load. Bij opslaan wordt `datum` gesynthetiseerd gevuld (kolom NOT NULL bij bestaande installaties; jaar via `parseGeboortejaar` ?? 2000), maar dag/maand/geboortejaar zijn leidend.
+  - **Import**: `scripts/importVerjaardagen.mjs` importeert `namen_en_verjaardagen.md` (formaat `Naam:` / `Verjaardag: DD-MM-YYYY`) via service-role naar Supabase. Idempotent (dedup op naam+dag+maand, deterministische id `imp-<slug>-<ddmm>`); `--dry-run` voor controle. Draaien: `node --env-file=.env.local scripts/importVerjaardagen.mjs`.
   - **Kalender**: getoond als **virtuele all-day events** via `genereerVerjaardagAfspraken()` (id `vj:<id>:<jaar>`, heeldag, groen virtueel label `VERJAARDAG_LABEL`), samen met de echte afspraken aan de views meegegeven — **geen view-component aangepast**. Klik op zo'n event opent de verjaardag-editor (`isVerjaardagEvent`). Terugkomend = instantie per jaar binnen een bereik rond nu.
   - **Reminders**: verankerd op **09:00**, opties geen / 1 uur / 1 dag / **1 week** (`herinneringMinuten` -1 / 60 / 1440 / 10080), zowel in-app (`AgendaApp` 30s-check) als via de cron (push + e-mail; kandidaat-jaren `[ditJaar, ditJaar+1]`, jaarlijks herberekend).
 - **Settings-tab verwijderd** — `InstellingenPanel` volledig verwijderd
@@ -161,6 +162,10 @@ public/
   alter table verjaardagen add column if not exists geboortejaar integer;
   ```
   Oude rijen (`datum`/`leeftijd`) worden bij inlezen automatisch geïnterpreteerd via `migreerDatumVelden()`; die kolommen blijven bestaan voor compatibiliteit.
+- `geboortejaar` omgezet naar vrij tekstveld — kolomtype aanpassen:
+  ```sql
+  alter table verjaardagen alter column geboortejaar type text using geboortejaar::text;
+  ```
 
 ---
 

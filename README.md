@@ -25,8 +25,9 @@ Persoonlijke agenda-app gebouwd met Next.js, Supabase en Tailwind CSS. Geïnspir
 ### Verjaardagen
 - **Apart beheer** — open via het taart-icoon rechtsboven (desktop én mobiel); dit toont eerst een **keuzestap**: *Nieuwe verjaardag toevoegen* of *Huidige verjaardagen bekijken*
 - **Overzicht** — nette tabel (naam · datum · leeftijd · herinnering) gesorteerd op eerstvolgende datum, met **paginatie** (8 per pagina) en nette empty state; rijen zijn klikbaar om te bewerken
-- **Velden** — naam (verplicht), **dag + maand** (verplicht), **geboortejaar** (optioneel), notitie, herinnering (geen / 1 uur / 1 dag / 1 week), elk jaar terugkomend (toggle)
-- **Leeftijd** — automatisch berekend zodra een geboortejaar is ingevuld (houdt rekening met of de verjaardag dit jaar al geweest is); zonder jaar: "Onbekend"
+- **Velden** — naam (verplicht), **dag + maand** (verplicht), **jaar / leeftijd** (optioneel, vrije tekst), notitie, herinnering (geen / 1 uur / 1 dag / 1 week), elk jaar terugkomend (toggle)
+- **Jaar / leeftijd** — vrij tekstveld: `1998`, `onbekend`, `ongeveer 30` of leeg mogen allemaal. Staat er een 4-cijferig jaartal in, dan wordt de **leeftijd automatisch berekend** (rekening houdend met of de verjaardag dit jaar al geweest is); anders toont het overzicht de ingevulde tekst of "Onbekend". Het veld blokkeert opslaan nooit.
+- **Importeren** — bulk-import van namen + verjaardagen uit een markdownbestand via een seed-script (zie *Verjaardagen importeren* hieronder)
 - **In de kalender** — verschijnen als groen all-day event bovenaan de dag (`🎂 Naam`), niet als tijdslot-event; terugkomende verjaardagen elk jaar opnieuw
 - **Reminders** — verankerd op 09:00; zowel in-app als via de cron (push + e-mail), jaarlijks voor terugkomende verjaardagen
 - **Bewerken/verwijderen** — tik op een verjaardag (in het overzicht of de kalender); verwijderen vraagt bevestiging
@@ -151,7 +152,7 @@ create table verjaardagen (
   naam text not null,
   dag integer not null,
   maand integer not null,
-  geboortejaar integer,
+  geboortejaar text,  -- vrije tekst (jaar of leeftijd), optioneel
   notitie text,
   herinnering_minuten integer default -1,
   terugkomend boolean default true,
@@ -190,6 +191,12 @@ alter table verjaardagen add column if not exists geboortejaar integer;
 
 Bestaande rijen worden bij het inlezen automatisch geïnterpreteerd (dag/maand uit `datum`, geboortejaar uit `datum`-jaar − `leeftijd`). De kolommen `datum`/`leeftijd` blijven bestaan voor compatibiliteit.
 
+Het `geboortejaar`-veld is een **vrij tekstveld** geworden (jaar of leeftijd). Zet een bestaande integer-kolom om naar tekst:
+
+```sql
+alter table verjaardagen alter column geboortejaar type text using geboortejaar::text;
+```
+
 ### Starten
 
 ```bash
@@ -213,6 +220,32 @@ De cron stuurt bij een verlopen herinneringstijd zowel een push-notificatie als 
 Voor e-mailreminders: maak een gratis account aan op [resend.com](https://resend.com), verifieer je domein en voeg de env vars toe in Vercel.
 
 ---
+
+## Verjaardagen importeren
+
+Namen + verjaardagen kunnen in bulk worden geïmporteerd uit een markdownbestand `namen_en_verjaardagen.md` in de projectroot. Verwacht formaat per persoon:
+
+```
+Naam: Jan Jansen
+Verjaardag: 26-06-2000
+```
+
+Een datum `Onbekend` (of een niet-parsebare regel) wordt **niet** geïmporteerd maar gerapporteerd. Draaien:
+
+```bash
+# Eerst (eenmalig) de tekst-migratie uit "Bestaande installatie migreren" draaien.
+node --env-file=.env.local scripts/importVerjaardagen.mjs
+```
+
+Het script (`scripts/importVerjaardagen.mjs`) gebruikt de service-role sleutel uit `.env.local`, koppelt de verjaardagen aan de gebruiker met e-mail `info@jellebol.nl` (override met `IMPORT_USER_EMAIL` of `IMPORT_USER_ID`), en is **idempotent**: bestaande verjaardagen (zelfde naam + dag + maand) worden overgeslagen en nieuwe krijgen een deterministische id — opnieuw draaien voegt dus geen duplicaten toe. Het print een samenvatting met toegevoegde, overgeslagen en niet-geïmporteerde regels.
+
+Eerst alleen controleren zonder iets te schrijven:
+
+```bash
+node scripts/importVerjaardagen.mjs --dry-run
+```
+
+> Het bestand `namen_en_verjaardagen.md` is alleen voor deze eenmalige import; het is geen onderdeel van de runtime van de app.
 
 ## Deployen
 

@@ -30,35 +30,48 @@ export function verjaardagIdUitEvent(eventId: string): string | null {
 // Leid dag/maand/geboortejaar af uit zowel het nieuwe model (dag/maand/
 // geboortejaar) als het oude model (datum 'YYYY-MM-DD' + leeftijd). Gebruikt
 // bij het inlezen vanuit Supabase én localStorage, zodat bestaande data blijft
-// werken zonder handmatige migratie.
+// werken zonder handmatige migratie. `geboortejaar` is vrije tekst.
 export function migreerDatumVelden(bron: {
   dag?: number | null
   maand?: number | null
-  geboortejaar?: number | null
+  geboortejaar?: number | string | null
   datum?: string | null
   leeftijd?: number | null
-}): { dag: number; maand: number; geboortejaar?: number } {
+}): { dag: number; maand: number; geboortejaar?: string } {
   if (bron.dag != null && bron.maand != null) {
-    return { dag: bron.dag, maand: bron.maand, geboortejaar: bron.geboortejaar ?? undefined }
+    return { dag: bron.dag, maand: bron.maand, geboortejaar: bron.geboortejaar != null ? String(bron.geboortejaar) : undefined }
   }
   if (bron.datum) {
     const [y, m, d] = bron.datum.split('-').map(Number)
-    return { dag: d, maand: m, geboortejaar: bron.leeftijd != null ? y - bron.leeftijd : undefined }
+    return { dag: d, maand: m, geboortejaar: bron.leeftijd != null ? String(y - bron.leeftijd) : undefined }
   }
   const nu = new Date()
   return { dag: nu.getDate(), maand: nu.getMonth() + 1 }
 }
 
+// Pak een 4-cijferig jaartal uit vrije tekst (bv. "1998", "geboren 1998").
+// Geeft null voor "onbekend", "ongeveer 30", lege tekst of jaren buiten bereik.
+export function parseGeboortejaar(tekst?: string | null): number | null {
+  if (!tekst) return null
+  const m = String(tekst).match(/\b(\d{4})\b/)
+  if (!m) return null
+  const jaar = Number(m[1])
+  if (jaar < 1900 || jaar > new Date().getFullYear()) return null
+  return jaar
+}
+
 // Leeftijd die iemand wordt in `jaar` (op de verjaardag in dat jaar).
 export function leeftijdInJaar(v: Verjaardag, jaar: number): number | null {
-  if (v.geboortejaar == null) return null
-  return jaar - v.geboortejaar
+  const geboortejaar = parseGeboortejaar(v.geboortejaar)
+  if (geboortejaar == null) return null
+  return jaar - geboortejaar
 }
 
 // Huidige leeftijd, rekening houdend met of de verjaardag dit jaar al geweest is.
 export function berekenLeeftijd(v: Verjaardag, ref = new Date()): number | null {
-  if (v.geboortejaar == null) return null
-  let leeftijd = ref.getFullYear() - v.geboortejaar
+  const geboortejaar = parseGeboortejaar(v.geboortejaar)
+  if (geboortejaar == null) return null
+  let leeftijd = ref.getFullYear() - geboortejaar
   const refMaand = ref.getMonth() + 1
   const nogNietGeweest = refMaand < v.maand || (refMaand === v.maand && ref.getDate() < v.dag)
   if (nogNietGeweest) leeftijd -= 1

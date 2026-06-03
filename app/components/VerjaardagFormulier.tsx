@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import type { Verjaardag } from '@/types'
-import { berekenLeeftijd, geldigeDag, dagenInMaand, MND_LANG } from '@/lib/verjaardagen'
+import { berekenLeeftijd, geldigeDag, dagenInMaand, parseGeboortejaar, MND_LANG } from '@/lib/verjaardagen'
 
 interface Props {
   open: boolean
@@ -31,18 +31,29 @@ export default function VerjaardagFormulier({ open, verjaardag, onOpslaan, onVer
   if (!open) return null
 
   const isNieuw  = !form.id
-  const geldig   = form.naam.trim().length > 0 && geldigeDag(form.dag, form.maand, form.geboortejaar)
+  const jaarNum  = parseGeboortejaar(form.geboortejaar) ?? undefined
+  const geldig   = form.naam.trim().length > 0 && geldigeDag(form.dag, form.maand, jaarNum)
   const leeftijd = berekenLeeftijd(form)
 
-  // Zet dag/maand/geboortejaar en klem de dag binnen het aantal dagen van de maand.
-  function setDatum(patch: { dag?: number; maand?: number; geboortejaar?: number | undefined; jaarLeeg?: boolean }) {
+  // Zet dag/maand en klem de dag binnen het aantal dagen van de maand.
+  function setDatum(patch: { dag?: number; maand?: number }) {
     setForm(f => {
       const maand = patch.maand ?? f.maand
-      const geboortejaar = patch.jaarLeeg ? undefined : (patch.geboortejaar ?? f.geboortejaar)
       let dag = patch.dag ?? f.dag
-      const max = dagenInMaand(maand, geboortejaar)
+      const max = dagenInMaand(maand, parseGeboortejaar(f.geboortejaar) ?? undefined)
       if (dag > max) dag = max
-      return { ...f, dag, maand, geboortejaar }
+      return { ...f, dag, maand }
+    })
+  }
+
+  // Vrij tekstveld voor jaar/leeftijd; klem de dag bij een eventueel schrikkeljaar-effect.
+  function setJaar(tekst: string) {
+    setForm(f => {
+      const geboortejaar = tekst || undefined
+      let dag = f.dag
+      const max = dagenInMaand(f.maand, parseGeboortejaar(geboortejaar) ?? undefined)
+      if (dag > max) dag = max
+      return { ...f, dag, geboortejaar }
     })
   }
 
@@ -104,7 +115,7 @@ export default function VerjaardagFormulier({ open, verjaardag, onOpslaan, onVer
                   className="text-[15px] text-[#007AFF] outline-none bg-gray-100 rounded-lg px-2 py-1"
                   aria-label="Dag"
                 >
-                  {Array.from({ length: dagenInMaand(form.maand, form.geboortejaar) }, (_, i) => i + 1).map(d => (
+                  {Array.from({ length: dagenInMaand(form.maand, jaarNum) }, (_, i) => i + 1).map(d => (
                     <option key={d} value={d}>{d}</option>
                   ))}
                 </select>
@@ -121,21 +132,15 @@ export default function VerjaardagFormulier({ open, verjaardag, onOpslaan, onVer
               </div>
             </div>
 
-            {/* Geboortejaar (optioneel) */}
-            <div className="flex items-center justify-between px-4 py-3">
-              <span className="text-[15px] text-gray-800">Geboortejaar <span className="text-gray-400 text-[13px]">(optioneel)</span></span>
+            {/* Jaar / leeftijd (optioneel, vrije tekst) */}
+            <div className="flex items-center justify-between px-4 py-3 gap-3">
+              <span className="text-[15px] text-gray-800 shrink-0">Jaar / leeftijd <span className="text-gray-400 text-[13px]">(optioneel)</span></span>
               <input
-                type="number"
-                min={1900}
-                max={new Date().getFullYear()}
+                type="text"
                 value={form.geboortejaar ?? ''}
-                onChange={e => {
-                  const v = e.target.value
-                  if (v === '') setDatum({ jaarLeeg: true })
-                  else setDatum({ geboortejaar: Math.max(1900, parseInt(v) || 1900) })
-                }}
-                placeholder="—"
-                className="w-24 text-[15px] text-[#007AFF] outline-none bg-gray-100 rounded-lg px-2 py-1 text-center placeholder:text-gray-300"
+                onChange={e => setJaar(e.target.value)}
+                placeholder="bijv. 1998 of onbekend"
+                className="flex-1 min-w-0 max-w-[180px] text-[15px] text-[#007AFF] outline-none bg-gray-100 rounded-lg px-2 py-1 text-right placeholder:text-gray-300"
               />
             </div>
 

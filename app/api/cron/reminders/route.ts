@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import webpush from 'web-push'
 import { Resend } from 'resend'
-import { migreerDatumVelden } from '@/lib/verjaardagen'
+import { migreerDatumVelden, parseGeboortejaar } from '@/lib/verjaardagen'
 
 export const runtime = 'nodejs'
 
@@ -222,8 +222,9 @@ export async function GET(req: NextRequest) {
 
       const rmMin = vj.herinnering_minuten ?? 0
       const wanneer = rmMin >= 10080 ? 'over een week' : rmMin >= 1440 ? 'morgen' : 'vandaag'
-      const leeftijdTekst = geboortejaar != null
-        ? ` en wordt ${occ.getFullYear() - geboortejaar}`
+      const geboortejaarNum = parseGeboortejaar(geboortejaar)
+      const leeftijdTekst = geboortejaarNum != null
+        ? ` en wordt ${occ.getFullYear() - geboortejaarNum}`
         : ''
 
       // ── Push ────────────────────────────────────────────────────────────────

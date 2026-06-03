@@ -44,8 +44,8 @@ Kleine wijzigingen met direct zichtbaar resultaat. Weinig backend-werk.
 ---
 
 ### ~~Verjaardagen-module~~ ✅ Geïmplementeerd (juni 2026)
-**Wat:** Apart verjaardagbeheer via taart-icoon → keuzestap (toevoegen / bekijken). Tabel met paginatie, klikbare rijen voor bewerken. Datamodel dag/maand (verplicht) + geboortejaar (optioneel) met automatisch berekende leeftijd; oude `datum`/`leeftijd`-rijen worden bij inlezen gemigreerd (`migreerDatumVelden`). Reminders 1 uur / 1 dag / 1 week van tevoren (09:00-anker), in-app + cron (push + e-mail). Getoond als groene all-day events in de kalender zonder de view-componenten aan te passen.
-**Bestanden:** `VerjaardagKeuze.tsx`, `VerjaardagenLijst.tsx`, `VerjaardagFormulier.tsx`, `lib/verjaardagen.ts`, `AgendaApp.tsx`, `api/cron/reminders/route.ts`, opslag-helpers.
+**Wat:** Apart verjaardagbeheer via taart-icoon → keuzestap (toevoegen / bekijken). Tabel met paginatie, klikbare rijen voor bewerken. Datamodel dag/maand (verplicht) + geboortejaar (optioneel, **vrij tekstveld**: jaar/leeftijd/"onbekend") met automatisch berekende leeftijd bij een jaartal; oude `datum`/`leeftijd`-rijen worden bij inlezen gemigreerd (`migreerDatumVelden`). Reminders 1 uur / 1 dag / 1 week van tevoren (09:00-anker), in-app + cron (push + e-mail). Getoond als groene all-day events in de kalender zonder de view-componenten aan te passen. **Bulk-import** uit `namen_en_verjaardagen.md` via `scripts/importVerjaardagen.mjs` (idempotent, `--dry-run`).
+**Bestanden:** `VerjaardagKeuze.tsx`, `VerjaardagenLijst.tsx`, `VerjaardagFormulier.tsx`, `lib/verjaardagen.ts`, `AgendaApp.tsx`, `api/cron/reminders/route.ts`, `scripts/importVerjaardagen.mjs`, opslag-helpers.
 **Nog open:** "deze en toekomstige" reminder-methode per kanaal; eigen kleur per verjaardag.
 
 ---

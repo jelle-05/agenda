@@ -81,6 +81,9 @@ export default function VerjaardagenLijst({ open, verjaardagen, onNieuw, onBewer
               <tbody>
                 {zichtbaar.map(v => {
                   const leeftijd = berekenLeeftijd(v, nu)
+                  const leeftijdLabel = leeftijd != null
+                    ? `${leeftijd} jaar`
+                    : (v.geboortejaar?.trim() || 'Onbekend')
                   const heeftReminder = (v.herinneringMinuten ?? -1) >= 0
                   return (
                     <tr
@@ -97,8 +100,8 @@ export default function VerjaardagenLijst({ open, verjaardagen, onNieuw, onBewer
                       <td className="px-2 py-3 text-[13px] text-gray-600 whitespace-nowrap">
                         {formatVerjaardagDatum(v.dag, v.maand)}
                       </td>
-                      <td className="px-2 py-3 text-[13px] text-gray-600 hidden sm:table-cell whitespace-nowrap">
-                        {leeftijd != null ? `${leeftijd} jaar` : 'Onbekend'}
+                      <td className="px-2 py-3 text-[13px] text-gray-600 hidden sm:table-cell whitespace-nowrap max-w-[140px] truncate">
+                        {leeftijdLabel}
                       </td>
                       <td className="px-4 py-3 text-right">
                         {heeftReminder ? (
