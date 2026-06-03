@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Bell, X } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 import type { WeergaveType, Afspraak, Label, Verjaardag, Filters } from '@/types'
@@ -39,7 +39,7 @@ import { slaVeelAfsprakenOpInSupabase } from '@/lib/supabaseOpslag'
 import { useSwipe } from '@/lib/useSwipe'
 import {
   VERJAARDAG_LABEL, genereerVerjaardagAfspraken, isVerjaardagEvent,
-  verjaardagIdUitEvent, eerstvolgendeVerjaardag,
+  verjaardagIdUitEvent,
 } from '@/lib/verjaardagen'
 import { FEESTDAG_LABEL, genereerFeestdagAfspraken, isFeestdagEvent } from '@/lib/feestdagen'
 
@@ -57,7 +57,6 @@ export default function AgendaApp() {
 
   // Notificatie banner
   const [toonNotifBanner, setToonNotifBanner]     = useState(false)
-  const gevierdRef                                = useRef(new Set<string>())
 
   // Modal state
   const [formulierOpen, setFormulierOpen]         = useState(false)
@@ -306,79 +305,12 @@ export default function AgendaApp() {
     })
   }, [gebruiker])
 
-  // Controleer elke 30 seconden op herinneringen die af moeten gaan
-  useEffect(() => {
-    if (!gebruiker) return
-
-    async function checkHerinneringen() {
-      if (!('Notification' in window) || Notification.permission !== 'granted') return
-
-      const nu = Date.now()
-
-      // Gebruik SW showNotification (werkt op iOS 16.4+ PWA én Android);
-      // val terug op new Notification() op desktop waar geen SW nodig is.
-      let swReg: ServiceWorkerRegistration | null = null
-      if ('serviceWorker' in navigator) {
-        try { swReg = await navigator.serviceWorker.ready } catch { /* ignore */ }
-      }
-
-      for (const a of afspraken) {
-        if ((a.herinneringMinuten ?? -1) < 0 || a.heeldag) continue
-        const [uur, min] = a.beginTijd.split(':').map(Number)
-        const [y, m, d] = a.datum.split('-').map(Number)
-        const afspraakMs = new Date(y, m - 1, d, uur, min).getTime()
-        const herinneringMs = afspraakMs - (a.herinneringMinuten ?? 0) * 60_000
-        const sleutel = `${a.id}-${herinneringMs}`
-
-        // Venster van 30 seconden rond de herinneringstijd
-        if (!gevierdRef.current.has(sleutel) && herinneringMs > nu - 30_000 && herinneringMs <= nu + 30_000) {
-          gevierdRef.current.add(sleutel)
-          const minuten = a.herinneringMinuten ?? 0
-          const tijdTekst = minuten === 0 ? 'Nu' : minuten < 60 ? `Over ${minuten} min` : `Over ${minuten / 60} uur`
-          const opties = { body: `${tijdTekst} — ${a.beginTijd}`, icon: '/icon-192.png', tag: sleutel }
-
-          try {
-            if (swReg) {
-              await swReg.showNotification(`📅 ${a.titel}`, opties)
-            } else {
-              new Notification(`📅 ${a.titel}`, opties)
-            }
-          } catch (err) {
-            console.error('Notificatie mislukt:', err)
-          }
-        }
-      }
-
-      // Verjaardags-herinneringen — verankerd op 09:00; werkt jaarlijks voor
-      // terugkomende verjaardagen via eerstvolgendeVerjaardag().
-      for (const v of verjaardagen) {
-        if ((v.herinneringMinuten ?? -1) < 0) continue
-        const occMs = eerstvolgendeVerjaardag(v, new Date(nu)).getTime()
-        const herinneringMs = occMs - (v.herinneringMinuten ?? 0) * 60_000
-        const sleutel = `vj-${v.id}-${herinneringMs}`
-
-        if (!gevierdRef.current.has(sleutel) && herinneringMs > nu - 30_000 && herinneringMs <= nu + 30_000) {
-          gevierdRef.current.add(sleutel)
-          const rm = v.herinneringMinuten ?? 0
-          const tekst = rm >= 10080 ? 'Over een week jarig' : rm >= 1440 ? 'Morgen jarig' : 'Bijna jarig'
-          const opties = { body: tekst, icon: '/icon-192.png', tag: sleutel }
-          try {
-            if (swReg) {
-              await swReg.showNotification(`🎂 ${v.naam}`, opties)
-            } else {
-              new Notification(`🎂 ${v.naam}`, opties)
-            }
-          } catch (err) {
-            console.error('Notificatie mislukt:', err)
-          }
-        }
-      }
-    }
-
-    const interval = setInterval(() => { void checkHerinneringen() }, 30_000)
-    void checkHerinneringen()
-    return () => clearInterval(interval)
-  }, [afspraken, verjaardagen, gebruiker]) // eslint-disable-line react-hooks/exhaustive-deps
+  // In-app 30s-reminderscheck is uitgefaseerd (Fase 5). Alle reminders lopen nu
+  // via de server-cron (/api/cron/reminders): Telegram voor gekoppelde+actieve
+  // gebruikers, anders web-push als fallback, en e-mail altijd. Zo vuurt er geen
+  // lokale browser-push meer náást Telegram (geen dubbele meldingen). De
+  // permission-banner + push-subscription hierboven blijven nodig voor die
+  // web-push-fallback.
 
   // ── Navigatie ───────────────────────────────────────────────────────────────
 

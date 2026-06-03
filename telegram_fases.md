@@ -2,7 +2,7 @@
 
 > Onderzoeks- en faseringsdocument. Doel: betrouwbare pushmeldingen via een Telegram-bot toevoegen aan de bestaande agenda-app, naast de huidige e-mail- (Resend) en browser-push (web-push/VAPID) reminders.
 >
-> **Voortgang:** Fase 1 (helper + webhook-script) en Fase 2 (koppelflow) zijn **gebouwd en end-to-end getest** — koppelen via de app levert een bevestigingsbericht in Telegram. **Fase 4 (cron verstuurt reminders via Telegram i.p.v. push) is gebouwd** in `app/api/cron/reminders/route.ts` (build + lint groen). Fase 3 (globale aan/uit-toggle in de UI) en Fase 5 (in-app 30s-push verwijderen) staan nog open.
+> **Voortgang:** Fase 1 (helper + webhook-script) en Fase 2 (koppelflow) zijn **gebouwd en end-to-end getest** — koppelen via de app levert een bevestigingsbericht in Telegram. **Fase 4 (cron verstuurt reminders via Telegram i.p.v. push) is gebouwd** in `app/api/cron/reminders/route.ts`. **Fase 5 (in-app 30s browser-push verwijderd) is gebouwd** in `app/components/AgendaApp.tsx` (build groen; geen nieuwe lint-problemen). Nog open: Fase 3 (globale aan/uit-toggle in de UI) en de optionele "testbericht"-knop.
 
 ---
 
@@ -224,6 +224,9 @@ De webhook eenmalig registreren bij Telegram via `setWebhook` (met `secret_token
 - **Complexiteit:** **Laag–Middel**.
 - **Risico's:** verwarrende status bij half-voltooide koppeling; per ongeluk én in-app push én Telegram (ondervangen door de in-app push te verwijderen); mobiele weergave.
 - **Klaar wanneer:** je kunt koppelen/ontkoppelen/togglen/testen vanuit het profiel, en er komt geen dubbele/lokale browser-push meer naast Telegram.
+- ✅ **Deels gebouwd — de kern (geen dubbele meldingen):** het in-app 30s-interval (`checkHerinneringen` + `setInterval`) is **volledig verwijderd** uit `AgendaApp.tsx`, samen met de nu ongebruikte `gevierdRef`-ref, de `useRef`-import en de `eerstvolgendeVerjaardag`-import. Alle reminders lopen nu uitsluitend via de server-cron (Fase 4). Behouden: de notificatie-permissiebanner (`vraagNotificatieToestemming`) en `subscribeerOpPush` — die blijven nodig zodat de **web-push-fallback** (voor niet-gekoppelde gebruikers) via de cron blijft werken.
+  - **Waarom dit dubbele meldingen voorkomt:** voorheen vuurde de in-app check een lokale melding *en* stuurde de cron web-push/Telegram → tot 2 meldingen. Nu is er één bron (de cron), dus een gekoppelde gebruiker krijgt alleen Telegram en een niet-gekoppelde alleen web-push.
+  - **Nog open (geen onderdeel van deze stap):** de **toggle "Telegram-reminders aan/uit"** (dat is Fase 3) en de optionele **"Stuur testbericht"-knop** in `ProfielMenu.tsx`. De koppel-/ontkoppel-UI uit Fase 2 staat er al.
 
 ---
 
@@ -298,7 +301,7 @@ De eerder openstaande vragen zijn beantwoord en in dit document verwerkt:
 - [x] Koppelflow end-to-end (code → deeplink → `/start` → koppelen → bevestiging) — **Fase 2 gebouwd + getest** (webhook live op productie, bevestigingsbericht ontvangen).
 - [~] `ProfielMenu`: koppelen/ontkoppelen — **Fase 2 (minimaal) gebouwd**. **Toggle "Telegram-reminders aan/uit"** = Fase 3; testbericht = later.
 - [x] Cron: per gekoppelde+actieve gebruiker **Telegram i.p.v. web-push** (e-mail ongewijzigd) — **Fase 4 gebouwd**. Idempotentie via de bestaande firing-claim (claim-eerst); aparte `…|telegram`-sleutel niet nodig (zie Fase 11).
-- [ ] **In-app 30s browser-push verwijderen** uit `AgendaApp.tsx` (web-push voorlopig alleen als fallback voor niet-gekoppelden).
+- [x] **In-app 30s browser-push verwijderen** uit `AgendaApp.tsx` — **Fase 5 gebouwd** (interval + `checkHerinneringen` + `gevierdRef` weg; permissiebanner + push-subscription behouden voor de web-push-fallback).
 - [x] Berichtopmaak (eventnaam/datum/tijd/locatie/remindertekst), geen gevoelige data — **Fase 4 gebouwd** (HTML + `escapeHtml`).
 - [ ] Edge cases afgevangen (geblokkeerd, geen chat_id, API-error, dubbele runs).
 - [ ] Testen op desktop + mobiel; idempotentie verifiëren.
