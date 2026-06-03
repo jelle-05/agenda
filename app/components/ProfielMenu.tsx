@@ -19,6 +19,8 @@ export default function ProfielMenu({ open, email, onUitloggen, onSluit }: Props
   const [tgUsername, setTgUsername] = useState<string | null>(null)
   const [tgBezig, setTgBezig] = useState(false)
   const [tgFout, setTgFout] = useState('')
+  const [tgTestStatus, setTgTestStatus] = useState<'idle' | 'laden' | 'ok' | 'fout'>('idle')
+  const [tgTestFout, setTgTestFout] = useState('')
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   async function token() {
@@ -80,9 +82,23 @@ export default function ProfielMenu({ open, email, onUitloggen, onSluit }: Props
     if (!t) return
     try {
       await fetch('/api/telegram/status', { method: 'DELETE', headers: { Authorization: `Bearer ${t}` } })
-      setTgStatus('niet'); setTgUsername(null)
+      setTgStatus('niet'); setTgUsername(null); setTgTestStatus('idle')
     } catch {
       setTgFout('Ontkoppelen mislukt')
+    }
+  }
+
+  async function stuurTestTelegram() {
+    setTgTestStatus('laden'); setTgTestFout('')
+    const t = await token()
+    if (!t) { setTgTestStatus('fout'); setTgTestFout('Niet ingelogd'); return }
+    try {
+      const res = await fetch('/api/telegram/test', { method: 'POST', headers: { Authorization: `Bearer ${t}` } })
+      const j = await res.json()
+      if (!res.ok) { setTgTestStatus('fout'); setTgTestFout(j.error ?? 'Versturen mislukt'); return }
+      setTgTestStatus('ok')
+    } catch {
+      setTgTestStatus('fout'); setTgTestFout('Netwerkfout')
     }
   }
 
@@ -160,6 +176,20 @@ export default function ProfielMenu({ open, email, onUitloggen, onSluit }: Props
                 <Send size={15} />
                 <span>Telegram gekoppeld{tgUsername ? ` (@${tgUsername})` : ''}</span>
               </div>
+              <button
+                onClick={stuurTestTelegram}
+                disabled={tgTestStatus === 'laden'}
+                className="w-full flex items-center justify-center gap-2 bg-gray-50 hover:bg-gray-100 disabled:opacity-50 text-gray-700 rounded-xl py-3 text-[15px] font-medium transition-colors"
+              >
+                <Send size={16} />
+                {tgTestStatus === 'laden' ? 'Versturen…' : 'Stuur testbericht'}
+              </button>
+              {tgTestStatus === 'ok' && (
+                <p className="text-[12px] text-green-600 text-center">Testbericht verstuurd naar Telegram</p>
+              )}
+              {tgTestStatus === 'fout' && (
+                <p className="text-[12px] text-red-500 text-center">{tgTestFout}</p>
+              )}
               <button
                 onClick={ontkoppel}
                 className="w-full flex items-center justify-center gap-2 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-xl py-3 text-[15px] font-medium transition-colors"
