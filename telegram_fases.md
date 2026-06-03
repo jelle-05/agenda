@@ -2,7 +2,7 @@
 
 > Onderzoeks- en faseringsdocument. Doel: betrouwbare pushmeldingen via een Telegram-bot toevoegen aan de bestaande agenda-app, naast de huidige e-mail- (Resend) en browser-push (web-push/VAPID) reminders.
 >
-> **Voortgang:** Fase 1 (helper + webhook-script) en Fase 2 (koppelflow) zijn **gebouwd en end-to-end getest** — koppelen via de app levert een bevestigingsbericht in Telegram. Fase 3 (globale aan/uit-toggle) en Fase 4 (cron via Telegram) staan nog open.
+> **Voortgang:** Fase 1 (helper + webhook-script) en Fase 2 (koppelflow) zijn **gebouwd en end-to-end getest** — koppelen via de app levert een bevestigingsbericht in Telegram. **Fase 4 (cron verstuurt reminders via Telegram i.p.v. push) is gebouwd** in `app/api/cron/reminders/route.ts` (build + lint groen). Fase 3 (globale aan/uit-toggle in de UI) en Fase 5 (in-app 30s-push verwijderen) staan nog open.
 
 ---
 
@@ -206,6 +206,10 @@ De webhook eenmalig registreren bij Telegram via `setWebhook` (met `secret_token
 - **Complexiteit:** **Middel** (kleine logica, maar idempotentie/kanaalkeuze/edge cases vragen aandacht).
 - **Risico's:** geblokkeerde bot / Telegram API-error (netjes opvangen, niet crashen); per ongeluk zowel push als Telegram sturen (voorkomen door de if/else).
 - **Klaar wanneer:** een reminder van een gekoppelde gebruiker levert exact één Telegram-bericht (en geen browser-push) op het juiste moment, ook bij meerdere cron-runs.
+- ✅ **Gebouwd** in `app/api/cron/reminders/route.ts` (events én verjaardagen). Per firing: helper `actieveTelegramChat(userId)` zoekt `telegram_accounts` (chat_id + `actief`); is die er → `verstuurTelegram(...)` en **géén** web-push; anders push als fallback. E-mail ongewijzigd.
+  - **Idempotentie:** hergebruikt de **bestaande** `claimReminder(sleutel)` (claim-eerst), die de hele firing al afdekt — push en Telegram sluiten elkaar binnen één firing uit, dus een aparte `…|telegram`-sleutel is overbodig (zou enkel een extra rij opleveren zonder extra garantie). Kleine, bewuste afwijking van het voorstel in §4.5.
+  - **Berichtopmaak:** HTML (`parse_mode: HTML`); gebruikersinvoer (titel/locatie/naam) wordt ge-escaped via `escapeHtml()` tegen opmaakbreuk/injectie. Event: titel · datum · tijd · (locatie) · starttekst. Verjaardag: naam + "is … jarig (en wordt N)".
+  - **Edge cases:** ontbrekend token → `verstuurTelegram` faalt soft (`false`, geen crash); ontbrekende `telegram_accounts`-tabel (`42P01`) → behandeld als niet-gekoppeld → push-fallback; mislukte Telegram-call wordt gelogd (`[reminders] telegram mislukt`) zonder gevoelige data. Nog **niet** gedaan: een geblokkeerde bot (403) automatisch `actief=false` zetten.
 
 ---
 
@@ -293,9 +297,9 @@ De eerder openstaande vragen zijn beantwoord en in dit document verwerkt:
 - [x] Routes: `/api/telegram/link`, `/api/telegram/status` (status + ontkoppelen), `/api/telegram/webhook` — **Fase 2 gebouwd**. (Toggle = Fase 3; `/api/telegram/test` optioneel, later.)
 - [x] Koppelflow end-to-end (code → deeplink → `/start` → koppelen → bevestiging) — **Fase 2 gebouwd + getest** (webhook live op productie, bevestigingsbericht ontvangen).
 - [~] `ProfielMenu`: koppelen/ontkoppelen — **Fase 2 (minimaal) gebouwd**. **Toggle "Telegram-reminders aan/uit"** = Fase 3; testbericht = later.
-- [ ] Cron: per gekoppelde+actieve gebruiker **Telegram i.p.v. web-push** + `claimReminder('…|telegram')` (claim-eerst); e-mail ongewijzigd.
+- [x] Cron: per gekoppelde+actieve gebruiker **Telegram i.p.v. web-push** (e-mail ongewijzigd) — **Fase 4 gebouwd**. Idempotentie via de bestaande firing-claim (claim-eerst); aparte `…|telegram`-sleutel niet nodig (zie Fase 11).
 - [ ] **In-app 30s browser-push verwijderen** uit `AgendaApp.tsx` (web-push voorlopig alleen als fallback voor niet-gekoppelden).
-- [ ] Berichtopmaak (eventnaam/datum/tijd/locatie/remindertekst), geen gevoelige data.
+- [x] Berichtopmaak (eventnaam/datum/tijd/locatie/remindertekst), geen gevoelige data — **Fase 4 gebouwd** (HTML + `escapeHtml`).
 - [ ] Edge cases afgevangen (geblokkeerd, geen chat_id, API-error, dubbele runs).
 - [ ] Testen op desktop + mobiel; idempotentie verifiëren.
 - [ ] `README.md`/`CLAUDE.md` bijwerken bij implementatie. Geen geheimen committen.

@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import webpush from 'web-push'
 import { Resend } from 'resend'
 import { migreerDatumVelden, parseGeboortejaar } from '@/lib/verjaardagen'
+import { verstuurTelegram } from '@/lib/telegram'
 
 export const runtime = 'nodejs'
 
@@ -31,6 +32,30 @@ async function claimReminder(sleutel: string): Promise<boolean> {
   }
   console.error('[reminders] claim-fout (fail-open, verstuur toch):', { sleutel, code: error.code, message: error.message })
   return true
+}
+
+// Escapet de tekens die Telegram's HTML-parse-mode aan zich trekt, zodat
+// gebruikersinvoer (titel/locatie/naam) nooit de opmaak breekt of injecteert.
+function escapeHtml(tekst: string): string {
+  return tekst.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+// Geeft de chat_id terug als de gebruiker Telegram gekoppeld én actief heeft;
+// anders null (→ val terug op browser-push). Een ontbrekende tabel (pre-migratie)
+// of andere fout telt als "niet gekoppeld" zodat reminders blijven werken.
+async function actieveTelegramChat(userId: string): Promise<string | null> {
+  const { data, error } = await supabaseAdmin
+    .from('telegram_accounts')
+    .select('chat_id, actief')
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (error) {
+    if (error.code !== '42P01') {
+      console.error('[reminders] telegram_accounts ophalen mislukt:', error.code)
+    }
+    return null
+  }
+  return data?.actief && data.chat_id ? String(data.chat_id) : null
 }
 
 export async function GET(req: NextRequest) {
@@ -77,8 +102,9 @@ export async function GET(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  let pushVerstuurd  = 0
-  let emailVerstuurd = 0
+  let pushVerstuurd     = 0
+  let emailVerstuurd    = 0
+  let telegramVerstuurd = 0
 
   for (const afspraak of afspraken ?? []) {
     if (!afspraak.begin_tijd) continue
@@ -102,44 +128,9 @@ export async function GET(req: NextRequest) {
       : `Over ${rm / 60} uur`
     const tijdstip = afspraak.begin_tijd.slice(0, 5)
 
-    // ── Push notificatie ────────────────────────────────────────────────────
-    const { data: subs } = await supabaseAdmin
-      .from('push_subscriptions')
-      .select('endpoint, p256dh, auth')
-      .eq('user_id', afspraak.user_id)
-
-    if (subs?.length) {
-      const payload = JSON.stringify({
-        titel:   `📅 ${afspraak.titel}`,
-        bericht: `${tijdTekst} — ${tijdstip}`,
-        id:      afspraak.id,
-      })
-
-      for (const sub of subs) {
-        try {
-          await webpush.sendNotification(
-            { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-            payload
-          )
-          pushVerstuurd++
-        } catch (err) {
-          if ((err as { statusCode?: number }).statusCode === 410) {
-            await supabaseAdmin.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
-          }
-        }
-      }
-    }
-
-    // ── E-mailherinnering ───────────────────────────────────────────────────
-    if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL) continue
-
-    const { data: userResult } = await supabaseAdmin.auth.admin.getUserById(afspraak.user_id)
-    const email = userResult?.user?.email
-    if (!email) continue
-
-    // Datum formatteren in het Nederlands (gebruik afspraak.datum, niet vandaag)
+    // Gedeelde opmaak (gebruikt door zowel Telegram als e-mail): datum/tijd/locatie/starttekst.
     const [dy, dm, dd] = afspraak.datum.split('-').map(Number)
-    const datumObj  = new Date(dy, dm - 1, dd)
+    const datumObj   = new Date(dy, dm - 1, dd)
     const datumTekst = datumObj.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })
     const datumLabel = datumTekst.charAt(0).toUpperCase() + datumTekst.slice(1)
 
@@ -152,6 +143,59 @@ export async function GET(req: NextRequest) {
       : rm < 60
         ? `Dit event begint over ${rm} minuten.`
         : `Dit event begint over ${rm / 60} uur.`
+
+    // ── Reminderkanaal: Telegram vervangt browser-push (globale voorkeur) ─────
+    // Gekoppeld + actief → Telegram; anders push als fallback. E-mail blijft los hieronder.
+    const tgChat = await actieveTelegramChat(afspraak.user_id)
+    if (tgChat) {
+      const regels = [
+        `📅 <b>${escapeHtml(afspraak.titel)}</b>`,
+        `🗓️ ${datumLabel} · ${tijdLabel}`,
+      ]
+      if (locatie) regels.push(`📍 ${escapeHtml(locatie)}`)
+      regels.push('', starttekst)
+      if (await verstuurTelegram(tgChat, regels.join('\n'))) {
+        telegramVerstuurd++
+        console.log('[reminders] telegram verstuurd', { eventId: afspraak.id, sleutel })
+      } else {
+        console.error('[reminders] telegram mislukt', { eventId: afspraak.id, sleutel })
+      }
+    } else {
+      // ── Push notificatie (fallback voor niet-gekoppelde gebruikers) ─────────
+      const { data: subs } = await supabaseAdmin
+        .from('push_subscriptions')
+        .select('endpoint, p256dh, auth')
+        .eq('user_id', afspraak.user_id)
+
+      if (subs?.length) {
+        const payload = JSON.stringify({
+          titel:   `📅 ${afspraak.titel}`,
+          bericht: `${tijdTekst} — ${tijdstip}`,
+          id:      afspraak.id,
+        })
+
+        for (const sub of subs) {
+          try {
+            await webpush.sendNotification(
+              { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+              payload
+            )
+            pushVerstuurd++
+          } catch (err) {
+            if ((err as { statusCode?: number }).statusCode === 410) {
+              await supabaseAdmin.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
+            }
+          }
+        }
+      }
+    }
+
+    // ── E-mailherinnering ───────────────────────────────────────────────────
+    if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL) continue
+
+    const { data: userResult } = await supabaseAdmin.auth.admin.getUserById(afspraak.user_id)
+    const email = userResult?.user?.email
+    if (!email) continue
 
     const rij = (label: string, waarde: string) => `
       <tr>
@@ -259,29 +303,42 @@ export async function GET(req: NextRequest) {
       const leeftijdTekst = geboortejaarNum != null
         ? ` en wordt ${occ.getFullYear() - geboortejaarNum}`
         : ''
+      const verjaardagRegel = `${vj.naam} is ${wanneer} jarig${leeftijdTekst}.`
 
-      // ── Push ────────────────────────────────────────────────────────────────
-      const { data: subs } = await supabaseAdmin
-        .from('push_subscriptions')
-        .select('endpoint, p256dh, auth')
-        .eq('user_id', vj.user_id)
+      // ── Reminderkanaal: Telegram vervangt browser-push (globale voorkeur) ───
+      const tgChat = await actieveTelegramChat(vj.user_id)
+      if (tgChat) {
+        const bericht = `🎂 <b>${escapeHtml(vj.naam)}</b>\n${escapeHtml(verjaardagRegel)}`
+        if (await verstuurTelegram(tgChat, bericht)) {
+          telegramVerstuurd++
+          console.log('[reminders] telegram verjaardag verstuurd', { verjaardagId: vj.id, sleutel })
+        } else {
+          console.error('[reminders] telegram verjaardag mislukt', { verjaardagId: vj.id, sleutel })
+        }
+      } else {
+        // ── Push (fallback voor niet-gekoppelde gebruikers) ───────────────────
+        const { data: subs } = await supabaseAdmin
+          .from('push_subscriptions')
+          .select('endpoint, p256dh, auth')
+          .eq('user_id', vj.user_id)
 
-      if (subs?.length) {
-        const payload = JSON.stringify({
-          titel:   `🎂 ${vj.naam}`,
-          bericht: `${vj.naam} is ${wanneer} jarig${leeftijdTekst}`,
-          id:      `vj-${vj.id}`,
-        })
-        for (const sub of subs) {
-          try {
-            await webpush.sendNotification(
-              { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-              payload
-            )
-            pushVerstuurd++
-          } catch (err) {
-            if ((err as { statusCode?: number }).statusCode === 410) {
-              await supabaseAdmin.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
+        if (subs?.length) {
+          const payload = JSON.stringify({
+            titel:   `🎂 ${vj.naam}`,
+            bericht: `${vj.naam} is ${wanneer} jarig${leeftijdTekst}`,
+            id:      `vj-${vj.id}`,
+          })
+          for (const sub of subs) {
+            try {
+              await webpush.sendNotification(
+                { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+                payload
+              )
+              pushVerstuurd++
+            } catch (err) {
+              if ((err as { statusCode?: number }).statusCode === 410) {
+                await supabaseAdmin.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
+              }
             }
           }
         }
@@ -293,7 +350,7 @@ export async function GET(req: NextRequest) {
         const email = userResult?.user?.email
         if (email) {
           const onderwerp = `🎂 ${vj.naam} is ${wanneer} jarig`
-          const tekstRegel = `${vj.naam} is ${wanneer} jarig${leeftijdTekst}.`
+          const tekstRegel = verjaardagRegel
           const resend = new Resend(process.env.RESEND_API_KEY)
           const { error: resendFout } = await resend.emails.send({
             from:    process.env.RESEND_FROM_EMAIL!,
@@ -328,6 +385,7 @@ export async function GET(req: NextRequest) {
     ok: true,
     pushVerstuurd,
     emailVerstuurd,
+    telegramVerstuurd,
     gecontroleerd: (afspraken?.length ?? 0) + (verjaardagen?.length ?? 0),
   })
 }
