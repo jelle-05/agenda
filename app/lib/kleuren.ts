@@ -24,6 +24,28 @@ export function eventKleuren(label?: Label, tintOpacity = 0.18): {
   return { accent, achtergrond, tekst }
 }
 
+// ── Transparantie-helpers (#RRGGBB ↔ #RRGGBBAA) ───────────────────────────────
+// De alpha wordt in de kleur-string zelf opgeslagen als 8-cijferig hex, zodat er
+// geen extra opslagveld nodig is en de waarde direct als CSS-kleur werkt.
+
+// Geeft het #RRGGBB-deel (zonder alpha), voor de native color-picker.
+export function hex6Van(hex?: string): string {
+  return (hex ?? '#000000').slice(0, 7)
+}
+
+// Geeft de alpha als 0..1 (1 als er geen alpha in de hex zit).
+export function alphaVan(hex?: string): number {
+  if (!hex || hex.length < 9) return 1
+  return parseInt(hex.slice(7, 9), 16) / 255
+}
+
+// Combineert een #RRGGBB met een alpha (0..1) tot #RRGGBB of #RRGGBBAA.
+export function metAlpha(hex6: string, alpha: number): string {
+  const basis = hex6.slice(0, 7)
+  const a = Math.round(Math.max(0, Math.min(1, alpha)) * 255)
+  return a >= 255 ? basis : basis + a.toString(16).padStart(2, '0')
+}
+
 // Relatieve luminantie van een #rrggbb-kleur (WCAG).
 function luminantie(hex: string): number {
   const c = [1, 3, 5].map(i => {

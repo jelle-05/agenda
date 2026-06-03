@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { ChevronRight, Plus } from 'lucide-react'
 import type { Label } from '@/types'
-import { eventKleuren, contrastRatio } from '@/lib/kleuren'
+import { eventKleuren, contrastRatio, hex6Van, alphaVan, metAlpha } from '@/lib/kleuren'
 
 const PRESET_KLEUREN = [
   '#FF3B30', '#FF6B00', '#FF9500', '#FFCC00',
@@ -179,27 +179,40 @@ export default function LabelBeheer({ open, labels, onOpslaan, onVerwijder, onSl
                 </div>
 
                 {eigenKleuren && (
-                  <div className="flex gap-3">
-                    <label className="flex-1 flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-gray-200">
-                      <span className="text-[13px] text-gray-600">Achtergrond</span>
-                      <input
-                        type="color"
-                        value={bewerk.achtergrondKleur || '#007AFF'}
-                        onChange={e => setBewerk(l => ({ ...l, achtergrondKleur: e.target.value }))}
-                        className="w-8 h-8 rounded cursor-pointer bg-transparent border-0 p-0"
-                        aria-label="Achtergrondkleur"
-                      />
-                    </label>
-                    <label className="flex-1 flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-gray-200">
-                      <span className="text-[13px] text-gray-600">Tekst</span>
-                      <input
-                        type="color"
-                        value={bewerk.tekstKleur || '#FFFFFF'}
-                        onChange={e => setBewerk(l => ({ ...l, tekstKleur: e.target.value }))}
-                        className="w-8 h-8 rounded cursor-pointer bg-transparent border-0 p-0"
-                        aria-label="Tekstkleur"
-                      />
-                    </label>
+                  <div className="space-y-3">
+                    {([
+                      { naam: 'Achtergrond', veld: 'achtergrondKleur' as const, standaard: '#007AFF' },
+                      { naam: 'Tekst',       veld: 'tekstKleur'       as const, standaard: '#FFFFFF' },
+                    ]).map(({ naam, veld, standaard }) => {
+                      const waarde = bewerk[veld] ?? standaard
+                      const alpha = alphaVan(waarde)
+                      return (
+                        <div key={veld} className="bg-white rounded-lg px-3 py-2 border border-gray-200">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[13px] text-gray-600">{naam}</span>
+                            <input
+                              type="color"
+                              value={hex6Van(waarde)}
+                              onChange={e => setBewerk(l => ({ ...l, [veld]: metAlpha(e.target.value, alphaVan(l[veld] ?? standaard)) }))}
+                              className="w-8 h-8 rounded cursor-pointer bg-transparent border-0 p-0"
+                              aria-label={`${naam}kleur`}
+                            />
+                          </div>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <input
+                              type="range"
+                              min={0}
+                              max={100}
+                              value={Math.round(alpha * 100)}
+                              onChange={e => setBewerk(l => ({ ...l, [veld]: metAlpha(hex6Van(l[veld] ?? standaard), Number(e.target.value) / 100) }))}
+                              className="flex-1 accent-[#007AFF] cursor-pointer"
+                              aria-label={`${naam} transparantie`}
+                            />
+                            <span className="text-[11px] text-gray-400 tabular-nums w-9 text-right">{Math.round(alpha * 100)}%</span>
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
 

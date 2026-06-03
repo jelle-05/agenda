@@ -156,19 +156,19 @@ export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik
                   }}
                 >
                   {height >= 20 && (
-                    <>
+                    <div className="flex items-baseline gap-1.5 min-w-0">
                       <p
-                        className="font-semibold truncate overflow-hidden whitespace-nowrap"
+                        className="font-semibold truncate"
                         style={{ color: tekst, fontSize: height < 26 ? 10 : 12, lineHeight: height < 26 ? 1.1 : 'normal' }}
                       >
                         {afspraak.titel}
                       </p>
-                      {afspraak.locatie && height >= 42 && (
-                        <p className="text-[11px] truncate leading-tight mt-0.5" style={{ color: tekst, opacity: 0.65 }}>
+                      {height >= 26 && afspraak.locatie && (
+                        <span className="text-[11px] truncate leading-tight" style={{ color: tekst, opacity: 0.6 }}>
                           {afspraak.locatie}
-                        </p>
+                        </span>
                       )}
-                    </>
+                    </div>
                   )}
                 </button>
               )
