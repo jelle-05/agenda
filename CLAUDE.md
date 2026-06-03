@@ -56,10 +56,16 @@ app/
     overlap.ts                    — stapelVolgorde() sorteert overlappende getimede events (korter bovenop)
     useSwipe.ts                   — swipe-navigatie hook (mobiel)
     pushUtils.ts                  — subscribeerOpPush() voor Web Push abonnement
+    telegram.ts                   — verstuurTelegram(): server-side Telegram Bot API helper (fail-soft)
   api/
-    cron/reminders/route.ts       — cron-endpoint: push + e-mail reminders versturen
+    cron/reminders/route.ts       — cron-endpoint: reminders versturen (Telegram óf push + e-mail)
     push/subscribe/route.ts       — push-abonnement opslaan in Supabase
     push/test/route.ts            — test push-notificatie versturen
+    email/test/route.ts           — test e-mailreminder versturen (Resend)
+    telegram/link/route.ts        — koppelcode + deeplink genereren (authed)
+    telegram/webhook/route.ts     — Telegram-updates: /start <code> → koppelen (secret-header)
+    telegram/status/route.ts      — koppelstatus ophalen / ontkoppelen (authed)
+    telegram/test/route.ts        — testbericht naar gekoppelde Telegram-chat (authed)
     auth/check-capacity/route.ts  — accountlimiet check bij registratie
 public/
   sw.js                           — service worker (cache, push-events, notificatieklik)
