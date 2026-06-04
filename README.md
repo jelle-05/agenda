@@ -47,8 +47,9 @@ Persoonlijke agenda-app gebouwd met Next.js, Supabase en Tailwind CSS. Geïnspir
 
 ### Auth & profiel
 - Inloggen met e-mail en wachtwoord via Supabase Auth
-- **Profielmenu** — klik op avatar-icoon rechtsboven: toont naam, e-mailadres en uitlogknop
-- Geen instellingen-tab (verwijderd), geen zoekicoon (verwijderd)
+- **Profielmenu** — klik op avatar-icoon rechtsboven: toont naam en e-mailadres, met knoppen naar **Instellingen** en uitloggen
+- **Instellingenpagina** — modal met tabstructuur (`InstellingenMenu`, tab "Notificaties"): test-e-mailreminder sturen en Telegram beheren (koppelen, testbericht, **reminders aan/uit**, ontkoppelen)
+- Geen zoekicoon (verwijderd)
 
 ### Sync & offline
 - Data gesynchroniseerd via Supabase
@@ -56,10 +57,10 @@ Persoonlijke agenda-app gebouwd met Next.js, Supabase en Tailwind CSS. Geïnspir
 - Offline beschikbaar via localStorage-cache
 
 ### Reminders
-- **In-app**: controle elke 30 seconden, notificatie via `ServiceWorkerRegistration.showNotification()` (werkt op iOS 16.4+ PWA, Android en desktop)
-- **Server-side push**: cron-job stuurt Web Push (VAPID) via `/api/cron/reminders`
-- **E-mail**: zelfde cron stuurt ook e-mail via Resend naar het e-mailadres van de ingelogde gebruiker
-- **Status**: push-notificaties kunnen onbetrouwbaar zijn op iOS; e-mail is de betrouwbaardere fallback
+- **Alles via de server-cron** — `/api/cron/reminders` (elke minuut) is de enige bron van reminders; de vroegere in-app 30s-check is verwijderd zodat er nooit dubbele meldingen ontstaan
+- **Kanaalkeuze per gebruiker**: Telegram gekoppeld én actief → **Telegram-bericht** (geen browser-push); niet gekoppeld of uitgezet → **Web Push (VAPID)** als fallback; **e-mail (Resend)** wordt altijd verstuurd
+- **Telegram aan/uit**: toggle "Telegram-reminders" in Instellingen → Notificaties (zichtbaar als Telegram gekoppeld is); uit = terug naar browser-push
+- **Status**: browser-push kan onbetrouwbaar zijn op iOS; Telegram en e-mail zijn de betrouwbare kanalen
 - **Geen dubbele mails (idempotent)**: de cron draait elke minuut en heeft een tolerantievenster van enkele minuten; om te voorkomen dat dezelfde reminder meerdere keren wordt verstuurd, claimt de cron elke reminder atomisch in de tabel `verzonden_reminders` (unieke `sleutel` = event-id + datum + tijd + offset). Alleen de eerste run binnen het venster verstuurt; de overige zien een duplicate-key en slaan over. Markeringen ouder dan 60 dagen worden automatisch opgeruimd. Bij het **bewerken** van een event verandert de sleutel (mag opnieuw één keer vuren), bij **verwijderen** verdwijnt het event uit de query (geen mail).
 - **Debuggen**: de cron logt met prefix `[reminders]` in de Vercel-functielogs — o.a. *event/verjaardag due* (id, sleutel, geplande tijd), *dubbel overgeslagen*, *e-mail verstuurd*. Zonder geheime waarden.
 
@@ -298,15 +299,17 @@ Voor e-mailreminders: maak een gratis account aan op [resend.com](https://resend
 
 ---
 
-## Telegram-reminders (in opbouw)
+## Telegram-reminders
 
-Telegram wordt als betrouwbaarder pushkanaal toegevoegd (zie het faseringsdocument `telegram_fases.md`).
+Telegram is als betrouwbaarder pushkanaal toegevoegd (zie het faseringsdocument `telegram_fases.md`). Alle fases zijn gebouwd:
 
 - **Fase 1** ✅ — technische basis: server-side verzendhelper (`app/lib/telegram.ts`) + webhook-registratiescript (`scripts/setWebhook.mjs`).
-- **Fase 2** ✅ — veilige koppelflow (gebouwd + getest): tabellen `telegram_accounts` + `telegram_koppelcodes`, routes `/api/telegram/link`, `/api/telegram/webhook`, `/api/telegram/status`, en een "Telegram koppelen"-knop in het profielmenu.
-- **Fase 3+** (nog te doen) — globale aan/uit-voorkeur en de cron daadwerkelijk via Telegram laten sturen (i.p.v. browser-push).
+- **Fase 2** ✅ — veilige koppelflow (gebouwd + getest): tabellen `telegram_accounts` + `telegram_koppelcodes`, routes `/api/telegram/link`, `/api/telegram/webhook`, `/api/telegram/status`, en koppelen/ontkoppelen in de instellingen.
+- **Fase 3** ✅ — globale aan/uit-voorkeur: toggle "Telegram-reminders" in Instellingen → Notificaties (`PATCH /api/telegram/status` zet `telegram_accounts.actief`).
+- **Fase 4** ✅ — de cron stuurt reminders via Telegram i.p.v. browser-push voor gekoppelde+actieve gebruikers (e-mail blijft); idempotent via `verzonden_reminders`.
+- **Fase 5** ✅ — in-app 30s browser-push verwijderd; één reminderbron (de cron), dus geen dubbele meldingen. Plus een "Stuur testbericht"-knop (`POST /api/telegram/test`).
 
-**Koppelen (na het aanmaken van de bot + env vars):** open het profielmenu → *Telegram koppelen* → de bot opent in Telegram → druk op **Start** → je krijgt een bevestigingsbericht en het profiel toont "gekoppeld".
+**Koppelen (na het aanmaken van de bot + env vars):** open het profielmenu → *Instellingen* → tab *Notificaties* → *Telegram koppelen* → de bot opent in Telegram → druk op **Start** → je krijgt een bevestigingsbericht en de instellingen tonen "gekoppeld". Daar staan ook de toggle, de testbericht-knop en ontkoppelen.
 
 De webhook registreren bij Telegram (herhaalbaar bij URL- of secret-wijziging):
 

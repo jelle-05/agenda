@@ -2,7 +2,7 @@
 
 > Onderzoeks- en faseringsdocument. Doel: betrouwbare pushmeldingen via een Telegram-bot toevoegen aan de bestaande agenda-app, naast de huidige e-mail- (Resend) en browser-push (web-push/VAPID) reminders.
 >
-> **Voortgang:** Fase 1 (helper + webhook-script) en Fase 2 (koppelflow) zijn **gebouwd en end-to-end getest** — koppelen via de app levert een bevestigingsbericht in Telegram. **Fase 4 (cron verstuurt reminders via Telegram i.p.v. push) is gebouwd** in `app/api/cron/reminders/route.ts`. **Fase 5 (in-app 30s browser-push verwijderd) is gebouwd** in `app/components/AgendaApp.tsx`. De optionele **"Stuur testbericht"-knop** (`POST /api/telegram/test`) is óók gebouwd. De test-e-mail- en Telegram-knoppen zijn verplaatst naar een nieuwe **instellingenpagina met tabs** (`InstellingenMenu.tsx`, tab "Notificaties"), bereikbaar via het profielmenu. De Telegram-reminderberichten zijn **emoji-vrij** gemaakt (zie §4.6). Nog open: Fase 3 (globale aan/uit-toggle in de UI).
+> **Voortgang: alle fases gebouwd.** Fase 1 (helper + webhook-script) en Fase 2 (koppelflow) zijn **gebouwd en end-to-end getest** — koppelen via de app levert een bevestigingsbericht in Telegram. **Fase 3 (globale aan/uit-toggle) is gebouwd**: `PATCH /api/telegram/status` + toggle "Telegram-reminders" in `InstellingenMenu.tsx`. **Fase 4 (cron verstuurt reminders via Telegram i.p.v. push) is gebouwd** in `app/api/cron/reminders/route.ts`. **Fase 5 (in-app 30s browser-push verwijderd) is gebouwd** in `app/components/AgendaApp.tsx`. De optionele **"Stuur testbericht"-knop** (`POST /api/telegram/test`) is óók gebouwd. De test-e-mail- en Telegram-knoppen zijn verplaatst naar een nieuwe **instellingenpagina met tabs** (`InstellingenMenu.tsx`, tab "Notificaties"), bereikbaar via het profielmenu. De Telegram-reminderberichten zijn **emoji-vrij** gemaakt (zie §4.6).
 
 ---
 
@@ -191,6 +191,7 @@ De webhook eenmalig registreren bij Telegram via `setWebhook` (met `secret_token
 - **Complexiteit:** **Laag** (één voorkeur-vlag + toggle; geen event-schemawijziging).
 - **Risico's:** duidelijk communiceren dat "aan" betekent dat browser-push vervangen wordt.
 - **Klaar wanneer:** je kunt in het profiel Telegram-reminders aan/uit zetten en dat wordt opgeslagen.
+- ✅ **Gebouwd** (juni 2026), met twee kleine afwijkingen van het voorstel: de toggle staat in de **instellingenpagina** (`InstellingenMenu.tsx`, tab "Notificaties" — de Telegram-UI was daarheen verplaatst) i.p.v. `ProfielMenu.tsx`, en het wijzigen loopt via een nieuwe **`PATCH /api/telegram/status`** (authed, body `{ actief: boolean }`, user-scoped RLS-update; 404 als niet gekoppeld). De toggle gebruikt het iOS-switch-patroon uit `FilterMenu`, werkt optimistisch met rollback + foutmelding, en is disabled tijdens het opslaan. `GET /api/telegram/status` gaf `actief` al terug; de cron (Fase 4) las de vlag al — uit = web-push-fallback, e-mail blijft altijd.
 
 ---
 
@@ -228,7 +229,7 @@ De webhook eenmalig registreren bij Telegram via `setWebhook` (met `secret_token
 - ✅ **Deels gebouwd — de kern (geen dubbele meldingen):** het in-app 30s-interval (`checkHerinneringen` + `setInterval`) is **volledig verwijderd** uit `AgendaApp.tsx`, samen met de nu ongebruikte `gevierdRef`-ref, de `useRef`-import en de `eerstvolgendeVerjaardag`-import. Alle reminders lopen nu uitsluitend via de server-cron (Fase 4). Behouden: de notificatie-permissiebanner (`vraagNotificatieToestemming`) en `subscribeerOpPush` — die blijven nodig zodat de **web-push-fallback** (voor niet-gekoppelde gebruikers) via de cron blijft werken.
   - **Waarom dit dubbele meldingen voorkomt:** voorheen vuurde de in-app check een lokale melding *en* stuurde de cron web-push/Telegram → tot 2 meldingen. Nu is er één bron (de cron), dus een gekoppelde gebruiker krijgt alleen Telegram en een niet-gekoppelde alleen web-push.
   - **"Stuur testbericht"-knop gebouwd:** `POST /api/telegram/test` (authed; leest de eigen `chat_id` server-side via RLS, stuurt een testbericht via `verstuurTelegram`; nette fouten bij niet-gekoppeld / mislukte verzending) + een knop in de gekoppeld-sectie van `ProfielMenu.tsx`. Zo verifieer je de koppeling zonder op een echt event te wachten.
-  - **Nog open (Fase 3):** de **toggle "Telegram-reminders aan/uit"** (`telegram_accounts.actief` via de UI). De koppel-/ontkoppel-UI uit Fase 2 staat er al.
+  - **Inmiddels ook gebouwd (Fase 3):** de **toggle "Telegram-reminders aan/uit"** (`telegram_accounts.actief` via `PATCH /api/telegram/status` + toggle in `InstellingenMenu.tsx`). De koppel-/ontkoppel-UI uit Fase 2 staat er al.
 
 ---
 
@@ -301,7 +302,7 @@ De eerder openstaande vragen zijn beantwoord en in dit document verwerkt:
 - [x] Tabellen `telegram_accounts` (incl. `actief`-vlag) + `telegram_koppelcodes` (+ RLS) — **Fase 2** (SQL door gebruiker te draaien). **Geen** `afspraken`-wijziging (kanaal is globaal).
 - [x] Routes: `/api/telegram/link`, `/api/telegram/status` (status + ontkoppelen), `/api/telegram/webhook` — **Fase 2 gebouwd**; `/api/telegram/test` (testbericht) **gebouwd**. (Toggle = Fase 3.)
 - [x] Koppelflow end-to-end (code → deeplink → `/start` → koppelen → bevestiging) — **Fase 2 gebouwd + getest** (webhook live op productie, bevestigingsbericht ontvangen).
-- [~] `ProfielMenu`: koppelen/ontkoppelen — **Fase 2 (minimaal) gebouwd**. **Toggle "Telegram-reminders aan/uit"** = Fase 3; testbericht = later.
+- [x] Koppelen/ontkoppelen-UI — **Fase 2 gebouwd** (inmiddels verhuisd naar `InstellingenMenu.tsx`). **Toggle "Telegram-reminders aan/uit"** — **Fase 3 gebouwd** (`PATCH /api/telegram/status` + toggle in de gekoppeld-sectie); testbericht gebouwd.
 - [x] Cron: per gekoppelde+actieve gebruiker **Telegram i.p.v. web-push** (e-mail ongewijzigd) — **Fase 4 gebouwd**. Idempotentie via de bestaande firing-claim (claim-eerst); aparte `…|telegram`-sleutel niet nodig (zie Fase 11).
 - [x] **In-app 30s browser-push verwijderen** uit `AgendaApp.tsx` — **Fase 5 gebouwd** (interval + `checkHerinneringen` + `gevierdRef` weg; permissiebanner + push-subscription behouden voor de web-push-fallback).
 - [x] Berichtopmaak (eventnaam/datum/tijd/locatie/remindertekst), geen gevoelige data — **Fase 4 gebouwd** (HTML + `escapeHtml`).

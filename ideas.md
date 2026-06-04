@@ -278,11 +278,18 @@ Kleine wijzigingen met direct zichtbaar resultaat. Weinig backend-werk.
 
 ---
 
-### Error boundary toevoegen
+### ~~Error boundary toevoegen~~ ✅ Geïmplementeerd (juni 2026)
 **Wat:** Componenten omhullen met een React error boundary zodat crashes netjes worden opgevangen.
-**Waarom:** Nu crasht de volledige app bij een onverwachte fout.
-**Complexiteit:** Laag
-**Bestanden:** Nieuw `ErrorBoundary.tsx`, `app/layout.tsx`
+**Geïmplementeerd:** `ErrorBoundary.tsx` (class component met NL-foutmelding + "Herlaad de app"-knop) gewrapt om `{children}` in `app/layout.tsx`. Logt alleen de foutmelding, geen gebruikersdata.
+**Bestanden:** `ErrorBoundary.tsx` (nieuw), `app/layout.tsx`
+
+---
+
+### Telegram: geblokkeerde bot automatisch uitzetten (403)
+**Wat:** Als de Telegram API een `403` geeft (gebruiker heeft de bot geblokkeerd), de koppeling automatisch op `actief=false` zetten zodat de cron terugvalt op web-push.
+**Waarom:** Nu logt de cron alleen "telegram mislukt" en blijft elke run opnieuw proberen; de gebruiker krijgt ondertussen geen reminders via push.
+**Complexiteit:** Laag–Middel — vereist dat `verstuurTelegram()` de HTTP-status teruggeeft i.p.v. alleen een boolean (returncontract wijzigt op meerdere call-sites: cron, webhook, testroute).
+**Bestanden:** `lib/telegram.ts`, `api/cron/reminders/route.ts`
 
 ---
 
