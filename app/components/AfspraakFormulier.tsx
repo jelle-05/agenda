@@ -35,6 +35,9 @@ export default function AfspraakFormulier({ open, afspraak, labels, initiaalDatu
 
   useEffect(() => {
     if (open) {
+      // Bewuste form-reset bij het openen van de modal; de component blijft gemount
+      // (key-based reset zou het open/dicht-gedrag veranderen).
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm(afspraak ? { ...afspraak } : leeg(toISODatum(initiaalDatum), initiaalTijd))
       setHerhaling(HERHALING_LEEG)
       setBewerkScope('enkel')

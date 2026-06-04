@@ -1,5 +1,5 @@
 import type { Afspraak, HerhalingConfig } from '@/types'
-import { toISODatum, getWeekStart, getDagIndex } from './datum'
+import { toISODatum, getWeekStart } from './datum'
 
 export function genereerHerhalingen(basis: Afspraak, config: HerhalingConfig): Afspraak[] {
   if (config.type === 'nooit') {

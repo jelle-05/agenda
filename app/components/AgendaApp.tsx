@@ -109,6 +109,9 @@ export default function AgendaApp() {
   const labelsVoorWeergave = useMemo(() => [...labels, FEESTDAG_LABEL, VERJAARDAG_LABEL], [labels])
 
   // Laad opgeslagen filtervoorkeuren bij opstarten (client-only, SSR-veilig).
+  // localStorage is pas op de client beschikbaar; een lazy useState-init zou een
+  // hydration-mismatch geven met de statisch geprerenderde HTML.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setFilters(laadFilters()) }, [])
 
   function wijzigFilter(key: keyof Filters) {
@@ -157,7 +160,7 @@ export default function AgendaApp() {
     })
 
     return () => subscription.unsubscribe()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])  
 
   // ── Android back-gesture blokkeren ────────────────────────────────────────────
   // Single-page app op '/': de systeem-back-swipe zou de app verlaten en een
@@ -175,6 +178,8 @@ export default function AgendaApp() {
   // 640px) eenmaal upgraden naar 'week'. Draait één keer → springt niet terug
   // tijdens gebruik en resizen verandert de keuze niet.
   useEffect(() => {
+    // matchMedia bestaat alleen op de client; bewuste eenmalige mount-upgrade (SSR-veilig).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (window.matchMedia('(min-width: 640px)').matches) setWeergave('week')
   }, [])
 
@@ -240,7 +245,7 @@ export default function AgendaApp() {
       .subscribe()
 
     return () => { supabase.removeChannel(kanaal) }
-  }, [gebruiker]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [gebruiker])  
 
   // Volledige initialisatie voor eerste login (upload lokale data als Supabase leeg is)
   async function initialiseerData(userId: string) {
@@ -284,6 +289,8 @@ export default function AgendaApp() {
 
   useEffect(() => {
     if (gebruiker && 'Notification' in window && Notification.permission === 'default') {
+      // Leest de externe browser-API Notification.permission — kan niet tijdens render.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setToonNotifBanner(true)
     }
   }, [gebruiker])

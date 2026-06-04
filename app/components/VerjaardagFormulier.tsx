@@ -23,6 +23,9 @@ export default function VerjaardagFormulier({ open, verjaardag, onOpslaan, onVer
 
   useEffect(() => {
     if (open) {
+      // Bewuste form-reset bij het openen van de modal; de component blijft gemount
+      // (key-based reset zou het open/dicht-gedrag veranderen).
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm(verjaardag ? { ...verjaardag } : leeg())
       setBevestigVerwijder(false)
     }
