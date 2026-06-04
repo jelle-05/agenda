@@ -24,6 +24,8 @@ export default function InstellingenMenu({ open, email, onSluit }: Props) {
 
   const [tgStatus, setTgStatus] = useState<'laden' | 'niet' | 'gekoppeld'>('laden')
   const [tgUsername, setTgUsername] = useState<string | null>(null)
+  const [tgActief, setTgActief] = useState(true)
+  const [tgActiefBezig, setTgActiefBezig] = useState(false)
   const [tgBezig, setTgBezig] = useState(false)
   const [tgFout, setTgFout] = useState('')
   const [tgTestStatus, setTgTestStatus] = useState<'idle' | 'laden' | 'ok' | 'fout'>('idle')
@@ -42,7 +44,10 @@ export default function InstellingenMenu({ open, email, onSluit }: Props) {
     try {
       const res = await fetch('/api/telegram/status', { headers: { Authorization: `Bearer ${t}` } })
       const j = await res.json()
-      if (res.ok && j.gekoppeld) { setTgStatus('gekoppeld'); setTgUsername(j.telegramUsername); return true }
+      if (res.ok && j.gekoppeld) {
+        setTgStatus('gekoppeld'); setTgUsername(j.telegramUsername); setTgActief(j.actief ?? true)
+        return true
+      }
       setTgStatus('niet'); setTgUsername(null); return false
     } catch {
       setTgStatus('niet'); return false
@@ -80,6 +85,28 @@ export default function InstellingenMenu({ open, email, onSluit }: Props) {
       }, 3000)
     } catch {
       setTgBezig(false); setTgFout('Netwerkfout')
+    }
+  }
+
+  // Globale voorkeur: Telegram-reminders aan/uit (Fase 3). Bij fout draait de UI terug.
+  async function wijzigTgActief() {
+    if (tgActiefBezig) return
+    const nieuw = !tgActief
+    setTgFout(''); setTgActiefBezig(true); setTgActief(nieuw)
+    const t = await token()
+    if (!t) { setTgActief(!nieuw); setTgActiefBezig(false); setTgFout('Niet ingelogd'); return }
+    try {
+      const res = await fetch('/api/telegram/status', {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${t}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ actief: nieuw }),
+      })
+      const j = await res.json()
+      if (!res.ok) { setTgActief(!nieuw); setTgFout(j.error ?? 'Opslaan mislukt') }
+    } catch {
+      setTgActief(!nieuw); setTgFout('Netwerkfout')
+    } finally {
+      setTgActiefBezig(false)
     }
   }
 
@@ -189,6 +216,24 @@ export default function InstellingenMenu({ open, email, onSluit }: Props) {
                       <Send size={15} />
                       <span>Telegram gekoppeld{tgUsername ? ` (@${tgUsername})` : ''}</span>
                     </div>
+                    <div className="bg-gray-50 rounded-xl px-4 py-3 flex items-center justify-between">
+                      <span className="text-[15px] text-gray-800">Telegram-reminders</span>
+                      <button
+                        onClick={wijzigTgActief}
+                        disabled={tgActiefBezig}
+                        className={[
+                          'relative w-12 h-7 rounded-full transition-colors disabled:opacity-50',
+                          tgActief ? 'bg-[#34C759]' : 'bg-gray-300',
+                        ].join(' ')}
+                        aria-label="Telegram-reminders"
+                        aria-pressed={tgActief}
+                      >
+                        <span className={['absolute top-[3px] w-[22px] h-[22px] bg-white rounded-full shadow transition-all', tgActief ? 'left-[26px]' : 'left-[3px]'].join(' ')} />
+                      </button>
+                    </div>
+                    <p className="text-[12px] text-gray-400 px-1">
+                      Uit = reminders via browser-push in plaats van Telegram; e-mail blijft altijd.
+                    </p>
                     <button
                       onClick={stuurTestTelegram}
                       disabled={tgTestStatus === 'laden'}

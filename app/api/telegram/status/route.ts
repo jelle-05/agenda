@@ -43,6 +43,38 @@ export async function GET(req: NextRequest) {
   })
 }
 
+// Globale voorkeur (Fase 3): Telegram-reminders aan/uit zetten.
+export async function PATCH(req: NextRequest) {
+  const { supabase, user, error } = await gebruikerUit(req)
+  if (error) return error
+
+  let actief: unknown
+  try {
+    ({ actief } = await req.json())
+  } catch {
+    return NextResponse.json({ error: 'Ongeldige aanvraag' }, { status: 400 })
+  }
+  if (typeof actief !== 'boolean') {
+    return NextResponse.json({ error: 'Ongeldige aanvraag' }, { status: 400 })
+  }
+
+  const { data, error: updErr } = await supabase
+    .from('telegram_accounts')
+    .update({ actief })
+    .eq('user_id', user.id)
+    .select('actief')
+    .maybeSingle()
+
+  if (updErr) {
+    console.error('[telegram] voorkeur opslaan mislukt:', updErr.code, updErr.message)
+    return NextResponse.json({ error: 'Opslaan mislukt' }, { status: 500 })
+  }
+  if (!data) {
+    return NextResponse.json({ error: 'Telegram is niet gekoppeld' }, { status: 404 })
+  }
+  return NextResponse.json({ ok: true, actief: data.actief })
+}
+
 // Ontkoppelen: verwijdert de chat_id-koppeling van de ingelogde gebruiker.
 export async function DELETE(req: NextRequest) {
   const { supabase, user, error } = await gebruikerUit(req)
