@@ -568,7 +568,10 @@ export default function AgendaApp() {
         </div>
       )}
 
-      <main className="flex-1 overflow-hidden" {...swipeHandlers}>
+      {/* touch-pan-y: Android Chrome (TWA) claimt touch-drags anders voor native scroll
+          en vuurt pointercancel — dan komt pointerup nooit en rondt de swipe nooit af.
+          Met pan-y blijft verticaal scrollen native; horizontale swipes blijven bij useSwipe. */}
+      <main className="flex-1 overflow-hidden touch-pan-y" {...swipeHandlers}>
         {weergave === 'maand' && (
           <MaandWeergave
             huidigeDatum={huidigeDatum}

@@ -160,9 +160,6 @@ export async function GET(req: NextRequest) {
     if (!(await claimReminder(sleutel))) continue
 
     const rm = afspraak.herinnering_minuten ?? 0
-    const tijdTekst = rm === 0 ? 'Nu gepland'
-      : rm < 60 ? `Over ${rm} min`
-      : `Over ${rm / 60} uur`
     const tijdstip = afspraak.begin_tijd.slice(0, 5)
 
     // Gedeelde opmaak (gebruikt door zowel Telegram als e-mail): datum/tijd/locatie/starttekst.
@@ -199,9 +196,10 @@ export async function GET(req: NextRequest) {
       }
     } else {
       // ── Push notificatie (fallback voor niet-gekoppelde gebruikers) ─────────
+      // Bewust zonder emoji's en kort: titel "Herinnering", body "Titel om HH:MM".
       const payload = JSON.stringify({
-        titel:   `📅 ${afspraak.titel}`,
-        bericht: `${tijdTekst} — ${tijdstip}`,
+        titel:   'Herinnering',
+        bericht: `${afspraak.titel} om ${tijdstip}`,
         id:      afspraak.id,
       })
       const res = await stuurPushNaarGebruiker(afspraak.user_id, payload)
@@ -336,8 +334,9 @@ export async function GET(req: NextRequest) {
         }
       } else {
         // ── Push (fallback voor niet-gekoppelde gebruikers) ───────────────────
+        // Bewust zonder emoji's: titel "Verjaardag", body de bestaande regel.
         const payload = JSON.stringify({
-          titel:   `🎂 ${vj.naam}`,
+          titel:   'Verjaardag',
           bericht: `${vj.naam} is ${wanneer} jarig${leeftijdTekst}`,
           id:      `vj-${vj.id}`,
         })

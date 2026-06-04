@@ -15,6 +15,7 @@
 - [ ] Controleer **standalone**-gedrag: geen browser-UI/adresbalk, witte statusbalk, eigen app-venster in recents.
 - [ ] Controleer dat **inloggen** werkt (Supabase e-mail/wachtwoord) en de sessie blijft na app-herstart.
 - [ ] Controleer dat **Instellingen** werkt (profielavatar → Instellingen → tab Notificaties opent).
+- [ ] **Swipe-navigatie**: veeg links/rechts in dag-, week- én maandweergave → volgende/vorige periode; verticaal scrollen blijft werken; de pijlknoppen vorige/volgende blijven ook werken.
 
 ## 2. Lighthouse op productie (fase 1-restpunt)
 
@@ -40,7 +41,7 @@ Uitgewerkte versie van de checklist uit `twa_fases.md` fase 3.
 
 1. [ ] Log in op `https://agenda.jellebol.nl` in Android Chrome → controleer dat de service worker actief is (desktop-DevTools via USB-debugging, of `chrome://serviceworker-internals` op het toestel).
 2. [ ] Instellingen → Notificaties → sectie **Meldingen** → "Meldingen aanzetten" → Android 13+ toont de permissieprompt → accepteer → status wordt **"aan"** (groen).
-3. [ ] Verstuur een **testpush** via de bestaande testflow (`POST /api/push/test` met Bearer-token) óf maak een echt event met reminder (bv. +5 min) → notificatie komt op tijd binnen als **systeemnotificatie**.
+3. [ ] Verstuur een **testpush** via de bestaande testflow (`POST /api/push/test` met Bearer-token) óf maak een echt event met reminder (bv. +5 min) → notificatie komt op tijd binnen als **systeemnotificatie**. Verwachte stijl (emoji-vrij): test = "Testmelding — Pushmeldingen werken op dit apparaat"; event = "Herinnering — {titel} om {HH:MM}"; verjaardag = "Verjaardag — {naam} is {wanneer} jarig".
 4. [ ] Tik op de notificatie → de app **opent/focust** op de juiste route.
 5. [ ] Telegram-toggle **aan** (Instellingen → Notificaties → "Telegram-reminders") → zelfde remindertest → **géén** browserpush, **wél** Telegram-bericht (push wordt bewust vervangen).
 6. [ ] Telegram-toggle **uit** → zelfde test → browserpush komt **weer** binnen.

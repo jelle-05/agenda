@@ -52,7 +52,7 @@ self.addEventListener('push', (e) => {
   try { data = e.data.json() } catch { data = { titel: 'Agenda', bericht: e.data.text() } }
 
   e.waitUntil(
-    self.registration.showNotification(data.titel ?? 'Agenda herinnering', {
+    self.registration.showNotification(data.titel ?? 'Agenda', {
       body:  data.bericht ?? '',
       icon:  '/icon-192.png',
       badge: '/icon-192.png',

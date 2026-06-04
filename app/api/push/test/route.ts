@@ -35,9 +35,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Geen abonnementen gevonden. Zet meldingen aan in de app.' }, { status: 404 })
   }
 
+  // Bewust zonder emoji's, conform de reminder-pushstijl ("Herinnering"/"Verjaardag").
   const payload = JSON.stringify({
-    titel:   '📅 Test melding',
-    bericht: 'Push notificaties werken! ✓',
+    titel:   'Testmelding',
+    bericht: 'Pushmeldingen werken op dit apparaat',
     id:      `test-${Date.now()}`,
   })
 
