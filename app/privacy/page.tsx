@@ -103,6 +103,9 @@ export default function PrivacyPagina() {
 
           <section>
             <h2 className="text-[17px] font-semibold text-gray-900 mb-2">Je rechten en contact</h2>
+            {/* TODO (vóór Play Store-indiening, zie twa_fases.md "Eerst regelen vóór fase 4"):
+                placeholder vervangen door het aparte supportadres zodra dat bestaat — géén
+                privé-mailadres; hetzelfde adres ook in de Play Console-listing gebruiken. */}
             <p>
               Je kunt inzage, correctie of verwijdering van je gegevens (of je hele account) vragen
               via de beheerder. Contact: <strong className="text-gray-900">[supportadres invullen]</strong>.

@@ -2,7 +2,7 @@
 
 > Onderzoeks- en faseringsdocument. Doel: de bestaande agenda-PWA als **Trusted Web Activity (TWA)** verpakken en publiceren in de **Google Play Store**, in eerste instantie via een **interne/gesloten testtrack**. Er is nog geen Android/TWA-project — dit document is de roadmap.
 >
-> **Voortgang:** **Fase 1 (PWA-basis) is gebouwd** — manifest aangevuld met `id`/`scope`, echte maskable icon met safe zone (80% op vol-vlak `#007AFF`) + `icon-play.png` voor de latere Console-upload. **Fase 2 (productie/deployment + privacybasis) is gebouwd** — productie-checks uitgevoerd en groen (HTTPS, manifest met `id`/`scope` live, alle PWA-assets bereikbaar, HSTS actief), privacypagina `/privacy` toegevoegd met links op de loginpagina en in Instellingen. **Fase 3 (push robuust) is gebouwd** — 404/410-opschoning van dode subscriptions in cron + testroute (veilige logs zonder endpoints), VAPID-wisseldetectie + stale-subscription-herstel in `pushUtils`, en een sectie "Meldingen" in Instellingen (status / aanzetten / uitzetten per apparaat / uitleg bij geblokkeerd). Restpunten (vereisen productie/toestel/extern): Lighthouse-audit, de handmatige Android-pushtestchecklist (zie fase 3), en het supportadres (apart adres, nog aan te maken — placeholder op de privacypagina).
+> **Voortgang:** **Fase 1 (PWA-basis) is gebouwd** — manifest aangevuld met `id`/`scope`, echte maskable icon met safe zone (80% op vol-vlak `#007AFF`) + `icon-play.png` voor de latere Console-upload. **Fase 2 (productie/deployment + privacybasis) is gebouwd** — productie-checks uitgevoerd en groen (HTTPS, manifest met `id`/`scope` live, alle PWA-assets bereikbaar, HSTS actief), privacypagina `/privacy` toegevoegd met links op de loginpagina en in Instellingen. **Fase 3 (push robuust) is gebouwd** — 404/410-opschoning van dode subscriptions in cron + testroute (veilige logs zonder endpoints), VAPID-wisseldetectie + stale-subscription-herstel in `pushUtils`, en een sectie "Meldingen" in Instellingen (status / aanzetten / uitzetten per apparaat / uitleg bij geblokkeerd). Restpunten (vereisen productie/toestel/extern): Lighthouse-audit, de handmatige Android-pushtestchecklist (zie fase 3), en het supportadres (apart adres, nog aan te maken — placeholder op de privacypagina). **Fase-0-voorbereiding uitgewerkt (juni 2026):** gate-sectie **"Eerst regelen vóór fase 4"** (onder fase 3), praktische checklists in **`play_store_checklist.md`** (Developer-account + Console) en **`toestel_tests.md`** (handmatige Android-testsessie fase 1–3), en `.gitignore` voorbereid op keystore/signing-artifacts. Fase 4 is bewust nog niet gestart.
 >
 > Zelfde opzet als `telegram_fases.md` en `fases-mail.md`: per fase doel, technische stappen, complexiteit, risico's en een "klaar wanneer". Geen geheime waarden, keystores of persoonsgegevens in dit document of in de repo.
 
@@ -135,10 +135,10 @@ Volgorde: ① Android Chrome (browsertab) → ② geïnstalleerde PWA → ③ TW
 - **Doel:** alle randvoorwaarden geregeld voordat er gebouwd wordt.
 - **Al besloten:** doel = interne/gesloten test · appnaam = **Agenda** · package = **`nl.jellebol.agenda`** · push = bestaande Web Push · tooling = **Bubblewrap CLI** · privacybeleid = pagina in de app · nieuw icoon-ontwerp gewenst.
 - **Nog te doen:**
-  - [ ] Google Play Developer-account aanmaken + identiteitsverificatie (kan dagen duren — vroeg starten).
-  - [ ] Nieuw app-icoon ontwerpen (vector/SVG; werkt op wit én in een rond masker).
-  - [ ] Testerlijst bepalen (e-mailadressen; voor een evt. latere productierelease: ≥12).
-  - [ ] Support-e-mailadres kiezen voor de listing.
+  - [ ] Google Play Developer-account aanmaken + identiteitsverificatie (kan dagen duren — vroeg starten). → stappen in `play_store_checklist.md` §1.
+  - [ ] Nieuw app-icoon ontwerpen (vector/SVG; werkt op wit én in een rond masker). → verwerkingsproces: zie "Eerst regelen vóór fase 4".
+  - [ ] Testerlijst bepalen (e-mailadressen; voor een evt. latere productierelease: ≥12). Pas echt nodig bij fase 5 — zie `play_store_checklist.md` §3.
+  - [ ] Support-e-mailadres kiezen voor de listing (apart adres, géén privé-mailadres; consistent op `/privacy` + listing) — zie `play_store_checklist.md` §3.
 - **Complexiteit:** Laag (vooral regelen/wachten). **Risico:** verificatie-doorlooptijd.
 - **Klaar wanneer:** account actief, icoon-ontwerp gekozen, testers + supportadres bekend.
 
@@ -193,13 +193,40 @@ Volgorde: ① Android Chrome (browsertab) → ② geïnstalleerde PWA → ③ TW
   9. [ ] Vliegtuigmodus → app toont offline-pagina; daarna online → reminders hervatten.
   10. [ ] Logs controleren: nergens endpoints/sleutels, alleen statuscodes.
 
+  De uitgewerkte testsessie (incl. installability, Lighthouse en offline) staat in **`toestel_tests.md`** — die versie gebruiken op het toestel.
+
+### Eerst regelen vóór fase 4 ⛔
+
+> **Gate:** fase 4 (Bubblewrap) start pas als onderstaande punten klaar zijn of **bewust geaccepteerd** zijn als restpunt. Tot die tijd: **geen** Bubblewrap-init, **geen** Android-project, **geen** keystore, en `public/.well-known/assetlinks.json` wordt **niet** aangemaakt zonder de échte SHA-256-fingerprint (geen placeholders).
+
+- [ ] **Google Play Developer-account** aanmaken + identiteitsverificatie starten — langste doorlooptijd, dus eerst. Praktische stappen: **`play_store_checklist.md`** §1.
+- [ ] **Nieuw icoon-ontwerp** afronden en verwerken (zie procesblok hieronder) — gewenst vóór de Bubblewrap-init, omdat die het manifest-icoon overneemt.
+- [ ] **Supportadres** kiezen/aanmaken (apart adres, géén privé-mailadres) → placeholder `[supportadres invullen]` op `/privacy` (`app/privacy/page.tsx`) vervangen + hetzelfde adres voor de Play-listing aanhouden. Nodig vóór de Store-indiening (fase 5); zie `play_store_checklist.md` §3.
+- [ ] **Android-testtoestel** klaarleggen (Chrome up-to-date, batterijbeheer op "niet beperken").
+- [ ] **Handmatige PWA/push-tests** draaien: de testsessie in **`toestel_tests.md`** (installability, Lighthouse, offline, 10-staps pushchecklist) — uiterlijk vóór fase 5 als bewust geaccepteerd restpunt.
+- [ ] **Locatie Android/TWA-project** beslissen — voorstel: aparte map **`D:\jelle\agenda-twa`** (buiten deze repo; in deze repo komt later alleen `assetlinks.json`).
+- [x] `.gitignore` voorbereid op signing-artifacts (`*.keystore`, `*.jks`, `keystore.properties`, `**/key.properties`) — al toegevoegd, zodat keystores nooit per ongeluk gecommit kunnen worden.
+
+**Pas daarna:** `bubblewrap init` (fase 4).
+
+**Icoon-proces** — zodra het nieuwe ontwerp (vector/SVG) er is:
+
+1. [ ] `public/icon.svg` vervangen door het nieuwe ontwerp.
+2. [ ] `node scripts/generate-icons.mjs` draaien.
+3. [ ] Gegenereerde bestanden controleren: `public/icon-192.png`, `public/icon-512.png`, `public/icon-maskable.png`, `public/icon-play.png`.
+4. [ ] Visueel controleren dat `icon-maskable.png` safe-zone-padding heeft (content op 80% op vol-vlak `#007AFF`; niets wordt afgesneden in een rond masker).
+5. [ ] `npm run lint` + `npm run build` draaien.
+6. [ ] Pushen → Vercel-deploy afwachten.
+7. [ ] Live controleren: `/manifest.webmanifest` + icons bereikbaar, nieuw beeld zichtbaar.
+8. [ ] **Pas daarna** de Bubblewrap-init (fase 4).
+
 ### Fase 4 — TWA Android-project (Bubblewrap)
 
 - **Doel:** een ondertekende, lokaal geteste Android-app die de site zonder browser-UI toont.
 - **Stappen:**
   - [ ] Vereisten installeren: Node + `@bubblewrap/cli` (via `npx`), JDK + Android SDK (Bubblewrap kan deze zelf ophalen).
   - [ ] `bubblewrap init --manifest https://agenda.jellebol.nl/manifest.webmanifest` — package `nl.jellebol.agenda`, naam "Agenda", kleuren uit het manifest, maskable icon als bron.
-  - [ ] Keystore: door Bubblewrap laten genereren; wachtwoorden in wachtwoordmanager; bestand buiten de repo (en `*.keystore`/`*.jks` preventief in `.gitignore`).
+  - [ ] Keystore: door Bubblewrap laten genereren; wachtwoorden in wachtwoordmanager; bestand buiten de repo (✅ `*.keystore`/`*.jks`/`keystore.properties`/`**/key.properties` staan al preventief in `.gitignore`).
   - [ ] Het Android-project in een **aparte map/repo** houden (bv. `D:\jelle\agenda-twa`) — niet in deze Next.js-repo.
   - [ ] `bubblewrap build` → AAB + (test-)APK; APK op toestel installeren.
   - [ ] **Digital Asset Links**: `public/.well-known/assetlinks.json` toevoegen met relation `delegate_permission/common.handle_all_urls`, package `nl.jellebol.agenda` en de SHA-256 van de upload-key (uit `bubblewrap fingerprint` / keytool). Na de eerste Play-upload de **Play App Signing-fingerprint** uit de Console als tweede entry toevoegen. Verifiëren dat Vercel het bestand servet met `Content-Type: application/json`.

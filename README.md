@@ -350,6 +350,14 @@ node scripts/importVerjaardagen.mjs --dry-run
 
 > Het bestand `namen_en_verjaardagen.md` is alleen voor deze eenmalige import; het is geen onderdeel van de runtime van de app.
 
+## Google Play / TWA (in voorbereiding)
+
+De app wordt voorbereid op publicatie in de Google Play Store als Trusted Web Activity (gesloten testtrack). Documentatie:
+
+- `twa_fases.md` — roadmap en fasering (incl. de gate "Eerst regelen vóór fase 4")
+- `play_store_checklist.md` — checklist Play Developer-account + Console-voorbereiding
+- `toestel_tests.md` — handmatige Android/PWA-testsessie (installability, Lighthouse, offline, push)
+
 ## Deployen
 
 Het project is verbonden met Vercel via GitHub. Elke push naar `main` triggert automatisch een nieuwe deploy.

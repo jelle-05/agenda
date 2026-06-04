@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# android signing (TWA fase 4 — keystore/signing secrets nooit committen)
+*.keystore
+*.jks
+keystore.properties
+**/key.properties
