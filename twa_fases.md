@@ -1,6 +1,8 @@
 # 📱 TWA & Google Play Store — Onderzoek & Fasering
 
-> Onderzoeks- en faseringsdocument. Doel: de bestaande agenda-PWA als **Trusted Web Activity (TWA)** verpakken en publiceren in de **Google Play Store**, in eerste instantie via een **interne/gesloten testtrack**. **Er is nog geen TWA-code geschreven** — dit document is de roadmap.
+> Onderzoeks- en faseringsdocument. Doel: de bestaande agenda-PWA als **Trusted Web Activity (TWA)** verpakken en publiceren in de **Google Play Store**, in eerste instantie via een **interne/gesloten testtrack**. Er is nog geen Android/TWA-project — dit document is de roadmap.
+>
+> **Voortgang:** **Fase 1 (PWA-basis) is gebouwd** — manifest aangevuld met `id`/`scope`, echte maskable icon met safe zone (80% op vol-vlak `#007AFF`) + `icon-play.png` voor de latere Console-upload. Restpunten van fase 1 (vereisen productie/toestel): Lighthouse-audit en installability-test op een echt Android-toestel.
 >
 > Zelfde opzet als `telegram_fases.md` en `fases-mail.md`: per fase doel, technische stappen, complexiteit, risico's en een "klaar wanneer". Geen geheime waarden, keystores of persoonsgegevens in dit document of in de repo.
 
@@ -40,8 +42,8 @@ Een ondertekende Android-app (AAB) met package **`nl.jellebol.agenda`**, appnaam
 
 | Onderdeel | Status | Waar |
 |---|---|---|
-| PWA-manifest | ✅ aanwezig, ⚠️ incompleet | `app/manifest.ts` → `/manifest.webmanifest`. Heeft `name`/`short_name` "Agenda", `description`, `start_url: '/'`, `display: standalone`, `orientation: portrait`, `background_color`/`theme_color` `#ffffff`, 4 icons. **Mist `scope` en `id`.** |
-| App-icons | ⚠️ deels | `public/icon.svg`, `icon-192.png`, `icon-512.png`, `icon-maskable.png`; pipeline in `scripts/generate-icons.mjs`. **De maskable is byte-identiek aan icon-512 — geen safe-zone-padding**, dus op Android wordt het icoon afgesneden in ronde maskers. Nieuw icoon-ontwerp is gewenst (beslissing fase 0). |
+| PWA-manifest | ✅ compleet (fase 1) | `app/manifest.ts` → `/manifest.webmanifest`. `name`/`short_name` "Agenda", `description`, `id: '/'`, `start_url: '/'`, `scope: '/'`, `display: standalone`, `orientation: portrait`, `background_color`/`theme_color` `#ffffff`, 4 icons. |
+| App-icons | ✅ technisch op orde (fase 1) | `public/icon.svg`, `icon-192.png`, `icon-512.png`, `icon-maskable.png` (echte safe zone: content op 80% op vol-vlak `#007AFF`), `icon-play.png` (512×512 voor de Play Console, niet in het manifest); pipeline in `scripts/generate-icons.mjs`. ⚠️ Kanttekening: gebaseerd op het **huidige** ontwerp — het gewenste nieuwe icoon-ontwerp (fase 0) staat nog open; script is herdraaibaar zodra dat er is. |
 | Service worker | ✅ | `public/sw.js` (cache `agenda-v3`): offline-fallback `public/offline.html`, cache-first voor `/_next/static/`, push-handler + notificatieklik (opent/focust de app). Registratie via `app/components/SwRegistratie.tsx` (scope `/`). |
 | Web Push | ✅ compleet | `app/lib/pushUtils.ts` (`subscribeerOpPush`) → `POST /api/push/subscribe` → Supabase-tabel `push_subscriptions` (per `user_id`, RLS). VAPID-keys via env (`NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`). Permissiebanner in `AgendaApp.tsx`; testroute `POST /api/push/test`. Verzending via de cron `app/api/cron/reminders/route.ts`. |
 | Notificatielogica | ✅ | Alles via de server-cron (elke minuut, cron-job.org): Telegram gekoppeld+actief → Telegram; anders web-push; e-mail altijd. Idempotent via `verzonden_reminders`. |
@@ -57,10 +59,10 @@ Een ondertekende Android-app (AAB) met package **`nl.jellebol.agenda`**, appnaam
 ## 3. Must-haves voor Google Play Store-publicatie (checklist)
 
 ### Web-app (PWA-kwaliteit)
-- [ ] Manifest aanvullen: `scope: '/'` en `id` toevoegen in `app/manifest.ts`.
+- [x] Manifest aanvullen: `scope: '/'` en `id: '/'` toegevoegd in `app/manifest.ts` — **fase 1 gebouwd**.
 - [ ] Nieuw app-icoon ontwerpen (beslissing fase 0) en doorvoeren in `public/icon.svg`.
-- [ ] **Echte maskable icon** genereren: icoon op ~80% binnen een gevuld achtergrondvlak (`scripts/generate-icons.mjs` uitbreiden).
-- [ ] 512×512 Play Store-icoon afleiden van het nieuwe ontwerp.
+- [x] **Echte maskable icon** genereren: icoon op 80% (410px) op vol-vlak `#007AFF` 512×512-canvas (`scripts/generate-icons.mjs`) — **fase 1 gebouwd**.
+- [x] 512×512 Play Store-icoon (`public/icon-play.png`) — **fase 1 gebouwd** o.b.v. het huidige ontwerp; herdraaien zodra het nieuwe ontwerp er is.
 - [ ] `theme_color`/`background_color` consistent (nu wit — ook de splash van de TWA wordt hiervan afgeleid).
 - [ ] HTTPS actief op productiedomein (✅ al in orde via Vercel).
 - [ ] `start_url` en `scope` verifiëren op productie (geen redirects buiten scope).
@@ -141,13 +143,14 @@ Volgorde: ① Android Chrome (browsertab) → ② geïnstalleerde PWA → ③ TW
 
 - **Doel:** de web-app voldoet aantoonbaar aan alle PWA-eisen waarop de TWA leunt.
 - **Stappen:**
-  - [ ] `app/manifest.ts`: `scope: '/'` en `id` toevoegen.
-  - [ ] Nieuw icoon → `public/icon.svg`; `scripts/generate-icons.mjs` uitbreiden zodat de **maskable** variant het icoon op ~80% in een gevuld vlak zet (i.p.v. de huidige 1-op-1 kopie); extra output: 512×512 Play-icoon.
-  - [ ] Lighthouse-audit (installability, manifest, SW) op productie; blockers fixen.
-  - [ ] Installability-test: Android Chrome toont de install-prompt; geïnstalleerde PWA start standalone.
-- **Bestanden:** `app/manifest.ts`, `public/icon*.{svg,png}`, `scripts/generate-icons.mjs`.
-- **Complexiteit:** Laag. **Risico:** maskable-safe-zone verkeerd → afgesneden icoon op Android.
+  - [x] `app/manifest.ts`: `scope: '/'` en `id: '/'` toegevoegd.
+  - [x] `scripts/generate-icons.mjs` uitgebreid: maskable = icoon op 80% (410px) gecentreerd op een vol-vlak `#007AFF` 512×512-canvas (sharp `create` + `composite`; de afgeronde hoeken van het bron-icoon vallen weg tegen dezelfde achtergrondkleur). Extra output: `icon-play.png` (zelfde beeld, voor de Console-upload in fase 5, niet in het manifest). Iconen opnieuw gegenereerd; maskable is niet langer byte-identiek aan icon-512 en visueel gecontroleerd (content ruim binnen de safe zone).
+  - [ ] Lighthouse-audit (installability, manifest, SW) op productie; blockers fixen — **restpunt, na deploy**.
+  - [ ] Installability-test: Android Chrome toont de install-prompt; geïnstalleerde PWA start standalone — **restpunt, vereist echt toestel**.
+- **Bestanden:** `app/manifest.ts`, `scripts/generate-icons.mjs`, `public/icon-maskable.png` + `public/icon-play.png` (gegenereerd).
+- **Complexiteit:** Laag. **Risico:** maskable-safe-zone verkeerd → afgesneden icoon op Android (ondervangen: 80%-schaling + visuele controle).
 - **Klaar wanneer:** Lighthouse PWA-checks groen en het icoon staat netjes in een rond masker.
+- ✅ **Gebouwd** (juni 2026) op de twee restpunten na (Lighthouse op productie + toestel-test). Kanttekening: gebaseerd op het huidige icoon-ontwerp; komt er een nieuw ontwerp (fase 0), dan volstaat `public/icon.svg` vervangen + `node scripts/generate-icons.mjs` herdraaien. SW/push-flow ongewijzigd (`public/sw.js`, `SwRegistratie.tsx`, `pushUtils.ts` — gecontroleerd, geen regressie: manifest/icons raken die keten niet en `/icon-192.png` blijft bestaan voor notificaties).
 
 ### Fase 2 — Productiedomein, privacy & deployment
 
