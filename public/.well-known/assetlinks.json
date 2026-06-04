@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "nl.jellebol.agenda",
+      "sha256_cert_fingerprints": [
+        "8D:12:0B:3C:64:AC:C8:91:4A:97:48:C4:D5:36:93:82:21:A2:BA:9E:03:B5:EB:AA:85:9E:5E:AF:DB:3C:9C:CE"
+      ]
+    }
+  }
+]

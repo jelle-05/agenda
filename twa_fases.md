@@ -2,7 +2,7 @@
 
 > Onderzoeks- en faseringsdocument. Doel: de bestaande agenda-PWA als **Trusted Web Activity (TWA)** verpakken en publiceren in de **Google Play Store**, in eerste instantie via een **interne/gesloten testtrack**. Er is nog geen Android/TWA-project — dit document is de roadmap.
 >
-> **Voortgang:** **Fase 1 (PWA-basis) is gebouwd** — manifest aangevuld met `id`/`scope`, echte maskable icon met safe zone (80% op vol-vlak `#007AFF`) + `icon-play.png` voor de latere Console-upload. **Fase 2 (productie/deployment + privacybasis) is gebouwd** — productie-checks uitgevoerd en groen (HTTPS, manifest met `id`/`scope` live, alle PWA-assets bereikbaar, HSTS actief), privacypagina `/privacy` toegevoegd met links op de loginpagina en in Instellingen. **Fase 3 (push robuust) is gebouwd** — 404/410-opschoning van dode subscriptions in cron + testroute (veilige logs zonder endpoints), VAPID-wisseldetectie + stale-subscription-herstel in `pushUtils`, en een sectie "Meldingen" in Instellingen (status / aanzetten / uitzetten per apparaat / uitleg bij geblokkeerd). Restpunten (vereisen productie/toestel/extern): Lighthouse-audit, de handmatige Android-pushtestchecklist (zie fase 3), en het supportadres (apart adres, nog aan te maken — placeholder op de privacypagina). **Fase-0-voorbereiding uitgewerkt (juni 2026):** gate-sectie **"Eerst regelen vóór fase 4"** (onder fase 3), praktische checklists in **`play_store_checklist.md`** (Developer-account + Console) en **`toestel_tests.md`** (handmatige Android-testsessie fase 1–3), en `.gitignore` voorbereid op keystore/signing-artifacts. Fase 4 is bewust nog niet gestart.
+> **Voortgang:** **Fase 1 (PWA-basis) is gebouwd** — manifest aangevuld met `id`/`scope`, echte maskable icon met safe zone (80% op vol-vlak `#007AFF`) + `icon-play.png` voor de latere Console-upload. **Fase 2 (productie/deployment + privacybasis) is gebouwd** — productie-checks uitgevoerd en groen (HTTPS, manifest met `id`/`scope` live, alle PWA-assets bereikbaar, HSTS actief), privacypagina `/privacy` toegevoegd met links op de loginpagina en in Instellingen. **Fase 3 (push robuust) is gebouwd** — 404/410-opschoning van dode subscriptions in cron + testroute (veilige logs zonder endpoints), VAPID-wisseldetectie + stale-subscription-herstel in `pushUtils`, en een sectie "Meldingen" in Instellingen (status / aanzetten / uitzetten per apparaat / uitleg bij geblokkeerd). Restpunten (vereisen productie/toestel/extern): Lighthouse-audit, de handmatige Android-pushtestchecklist (zie fase 3), en het supportadres (apart adres, nog aan te maken — placeholder op de privacypagina). **Fase-0-voorbereiding uitgewerkt (juni 2026):** gate-sectie **"Eerst regelen vóór fase 4"** (onder fase 3), praktische checklists in **`play_store_checklist.md`** (Developer-account + Console) en **`toestel_tests.md`** (handmatige Android-testsessie fase 1–3), en `.gitignore` voorbereid op keystore/signing-artifacts. **Fase 4 (Bubblewrap) is gebouwd (juni 2026)** via de **sideload-route** (bewuste routewijziging: lokale APK zonder Play-account; Play-traject = fase 5, later): project in `D:\jelle\agenda-twa`, eigen keystore, `app-release-signed.apk` + AAB, en `public/.well-known/assetlinks.json` met de échte fingerprint. Restpunt fase 4: APK sideloaden + testen op het toestel (incl. URL-balk-check na de assetlinks-deploy).
 >
 > Zelfde opzet als `telegram_fases.md` en `fases-mail.md`: per fase doel, technische stappen, complexiteit, risico's en een "klaar wanneer". Geen geheime waarden, keystores of persoonsgegevens in dit document of in de repo.
 
@@ -49,9 +49,9 @@ Een ondertekende Android-app (AAB) met package **`nl.jellebol.agenda`**, appnaam
 | Notificatielogica | ✅ | Alles via de server-cron (elke minuut, cron-job.org): Telegram gekoppeld+actief → Telegram; anders web-push; e-mail altijd. Idempotent via `verzonden_reminders`. |
 | Auth & user data | ✅ | Supabase e-mail/wachtwoord, alles RLS per `user_id`; accountlimiet 10 (`/api/auth/check-capacity`). Geen externe OAuth-redirects → TWA-vriendelijke loginflow. |
 | Deployment | ✅ | GitHub → Vercel auto-deploy op `main`; env vars in Vercel. |
-| Digital Asset Links | ❌ | Geen `public/.well-known/assetlinks.json`. |
+| Digital Asset Links | ✅ (fase 4) | `public/.well-known/assetlinks.json` met de échte SHA-256 van de eigen signing-key (package `nl.jellebol.agenda`). Play App Signing-fingerprint volgt pas bij een evt. Play-upload. |
 | Privacybeleid / support | ✅ pagina (fase 2), ⚠️ supportadres open | `app/privacy/page.tsx` → `agenda.jellebol.nl/privacy` (statisch, NL, beschrijft de echte verwerking: Supabase, Resend, Telegram, push, cache, logs, bewaartermijnen, rechten). Links: loginpagina-footer + onderaan Instellingen. ⚠️ Supportadres is nog een placeholder `[supportadres invullen]` — apart adres wordt later aangemaakt (open vraag 3). |
-| Android-project | ❌ | Geen Android-codebase; keuze = **Bubblewrap CLI**. |
+| Android-project | ✅ (fase 4) | Bubblewrap-project in `D:\jelle\agenda-twa` (buiten deze repo): `twa-manifest.json`, eigen keystore (PKCS12, alias `android`, wachtwoord in wachtwoordmanager), `app-release-signed.apk` + `app-release-bundle.aab`. Route: eerst sideload, Play later. |
 | Play-account & assets | ❌ | Geen Google Play Developer-account; geen feature graphic/screenshots/beschrijvingen. |
 
 ---
@@ -195,9 +195,9 @@ Volgorde: ① Android Chrome (browsertab) → ② geïnstalleerde PWA → ③ TW
 
   De uitgewerkte testsessie (incl. installability, Lighthouse en offline) staat in **`toestel_tests.md`** — die versie gebruiken op het toestel.
 
-### Eerst regelen vóór fase 4 ⛔
+### Eerst regelen vóór fase 4 ⛔ → nu: vóór fase 5 (Play-traject)
 
-> **Gate:** fase 4 (Bubblewrap) start pas als onderstaande punten klaar zijn of **bewust geaccepteerd** zijn als restpunt. Tot die tijd: **geen** Bubblewrap-init, **geen** Android-project, **geen** keystore, en `public/.well-known/assetlinks.json` wordt **niet** aangemaakt zonder de échte SHA-256-fingerprint (geen placeholders).
+> **Gate (bijgewerkt juni 2026):** door de routewijziging (eerst lokale APK/sideload, zie fase 4) is fase 4 al uitgevoerd zónder Play-account; de punten hieronder gelden nu als voorwaarden voor het **Play-traject (fase 5)**. De punten "testtoestel" en "toestel-tests" blijven óók voor de sideload-route relevant.
 
 - [ ] **Google Play Developer-account** aanmaken + identiteitsverificatie starten — langste doorlooptijd, dus eerst. Praktische stappen: **`play_store_checklist.md`** §1.
 - [ ] **Nieuw icoon-ontwerp** afronden en verwerken (zie procesblok hieronder) — gewenst vóór de Bubblewrap-init, omdat die het manifest-icoon overneemt.
@@ -222,15 +222,17 @@ Volgorde: ① Android Chrome (browsertab) → ② geïnstalleerde PWA → ③ TW
 
 ### Fase 4 — TWA Android-project (Bubblewrap)
 
+> **Routewijziging (juni 2026):** bewust gekozen voor **eerst een lokale APK (sideload)** zonder Play-account — het Play-traject (account, listing, testtrack) schuift op naar later en de gate hierboven geldt nu vooral voor fase 5. De keystore die hier is aangemaakt kan later als upload-key dienen.
+
 - **Doel:** een ondertekende, lokaal geteste Android-app die de site zonder browser-UI toont.
 - **Stappen:**
-  - [ ] Vereisten installeren: Node + `@bubblewrap/cli` (via `npx`), JDK + Android SDK (Bubblewrap kan deze zelf ophalen).
-  - [ ] `bubblewrap init --manifest https://agenda.jellebol.nl/manifest.webmanifest` — package `nl.jellebol.agenda`, naam "Agenda", kleuren uit het manifest, maskable icon als bron.
-  - [ ] Keystore: door Bubblewrap laten genereren; wachtwoorden in wachtwoordmanager; bestand buiten de repo (✅ `*.keystore`/`*.jks`/`keystore.properties`/`**/key.properties` staan al preventief in `.gitignore`).
-  - [ ] Het Android-project in een **aparte map/repo** houden (bv. `D:\jelle\agenda-twa`) — niet in deze Next.js-repo.
-  - [ ] `bubblewrap build` → AAB + (test-)APK; APK op toestel installeren.
-  - [ ] **Digital Asset Links**: `public/.well-known/assetlinks.json` toevoegen met relation `delegate_permission/common.handle_all_urls`, package `nl.jellebol.agenda` en de SHA-256 van de upload-key (uit `bubblewrap fingerprint` / keytool). Na de eerste Play-upload de **Play App Signing-fingerprint** uit de Console als tweede entry toevoegen. Verifiëren dat Vercel het bestand servet met `Content-Type: application/json`.
-  - [ ] Lokale build testen: app opent zonder URL-balk (asset links OK), navigatie/login/offline werken.
+  - [x] Vereisten geïnstalleerd: Node v20 + `@bubblewrap/cli` via `npx`; Bubblewrap heeft zelf JDK 17 + Android SDK opgehaald (`C:\Users\info\.bubblewrap\`).
+  - [x] `bubblewrap init --manifest https://agenda.jellebol.nl/manifest.webmanifest` — package **`nl.jellebol.agenda`** (default `…agenda.twa` bewust overschreven), naam "Agenda", kleuren/icons uit het manifest. ⚠️ De init crashte op Windows tijdens "Generating Android Project" (`The session has been destroyed`); opgelost met `bubblewrap update` (regenereert uit `twa-manifest.json` — daardoor staat de versie op 2/2).
+  - [x] Keystore aangemaakt met keytool (JDK 17, PKCS12 → één wachtwoord): `android.keystore`, alias `android`, RSA 2048, 10000 dagen geldig. Wachtwoord in wachtwoordmanager; bestand buiten de repo + back-up (✅ `*.keystore`/`*.jks`/`keystore.properties`/`**/key.properties` staan al preventief in `.gitignore`).
+  - [x] Android-project in aparte map: **`D:\jelle\agenda-twa`** (geen git-repo; niet in deze Next.js-repo).
+  - [x] `bubblewrap build` → `app-release-signed.apk` (~1 MB) + `app-release-bundle.aab` (bewaard voor een evt. latere Play-upload).
+  - [x] **Digital Asset Links**: `public/.well-known/assetlinks.json` toegevoegd met relation `delegate_permission/common.handle_all_urls`, package `nl.jellebol.agenda` en de échte SHA-256 van de eigen key (uitgelezen uit de APK met `apksigner verify --print-certs` — geen wachtwoord nodig). De **Play App Signing-fingerprint** als tweede entry volgt pas bij een evt. eerste Play-upload (fase 5). Nog verifiëren dat Vercel het bestand servet met een JSON-content-type — **na deploy**.
+  - [ ] Lokale build testen: APK sideloaden op het toestel ("onbekende bronnen" eenmalig toestaan), app opent zonder URL-balk (asset links OK), navigatie/login/offline/push werken (zie `toestel_tests.md`).
 - **Bestanden (deze repo):** alleen `public/.well-known/assetlinks.json` + `.gitignore`-regel.
 - **Complexiteit:** Middel. **Risico:** fingerprint-mismatch (URL-balk blijft zichtbaar); keystore kwijt = nieuwe upload-key-procedure via Google.
 - **Klaar wanneer:** de geïnstalleerde TWA opent fullscreen zonder URL-balk en de AAB is klaar voor upload.
