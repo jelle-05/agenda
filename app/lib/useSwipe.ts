@@ -1,9 +1,15 @@
 import { useRef } from 'react'
-import type { PointerEvent, MouseEvent } from 'react'
+import type { TouchEvent, MouseEvent } from 'react'
 
 const DREMPEL = 60   // minimale horizontale verplaatsing in px
 const RATIO   = 1.5  // horizontaal moet minstens 1.5× groter zijn dan verticaal
 
+// Bewust touch-events i.p.v. pointer-events: Android Chrome (browser én TWA) vuurt
+// pointercancel zodra het een touch-drag voor native scroll claimt, waardoor
+// pointerup — en dus de swipe-evaluatie — nooit komt. Touch-events lopen tijdens
+// native scroll gewoon door (touchend vuurt altijd bij loslaten), dus die zijn
+// betrouwbaar op zowel Android als iOS. Muisgebruik vuurt geen touch-events,
+// waardoor desktop vanzelf buiten schot blijft.
 export function useSwipe(
   onLinks: () => void,    // swipe naar links  → volgende
   onRechts: () => void,   // swipe naar rechts → vorige
@@ -16,25 +22,27 @@ export function useSwipe(
   // click (op een event-button) onderdrukt kan worden.
   const swipeGedaan = useRef(false)
 
-  function onPointerDown(e: PointerEvent) {
-    if (!enabled || e.pointerType !== 'touch') return
+  function onTouchStart(e: TouchEvent) {
+    if (!enabled || e.touches.length !== 1) return
     // Form-elementen moeten native blijven werken; event-buttons mogen wél swipen.
     if ((e.target as HTMLElement).closest('input, select, textarea, a')) return
-    startX.current = e.clientX
-    startY.current = e.clientY
+    startX.current = e.touches[0].clientX
+    startY.current = e.touches[0].clientY
     actief.current = true
     swipeGedaan.current = false
   }
 
-  function onPointerCancel() {
+  function onTouchCancel() {
     actief.current = false
   }
 
-  function onPointerUp(e: PointerEvent) {
+  function onTouchEnd(e: TouchEvent) {
     if (!actief.current) return
     actief.current = false
-    const dx = e.clientX - startX.current
-    const dy = e.clientY - startY.current
+    const t = e.changedTouches[0]
+    if (!t) return
+    const dx = t.clientX - startX.current
+    const dy = t.clientY - startY.current
     if (Math.abs(dx) < DREMPEL) return
     if (Math.abs(dx) < Math.abs(dy) * RATIO) return
     swipeGedaan.current = true
@@ -52,5 +60,5 @@ export function useSwipe(
     }
   }
 
-  return { onPointerDown, onPointerUp, onPointerCancel, onClickCapture }
+  return { onTouchStart, onTouchEnd, onTouchCancel, onClickCapture }
 }
