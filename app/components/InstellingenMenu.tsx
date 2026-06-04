@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { Mail, Send, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -267,6 +268,13 @@ export default function InstellingenMenu({ open, email, onSluit }: Props) {
                 )}
                 {tgFout && <p className="text-[12px] text-red-500 text-center">{tgFout}</p>}
               </section>
+
+              {/* Privacybeleid */}
+              <p className="text-center pt-1">
+                <Link href="/privacy" className="text-[12px] text-gray-400 hover:text-gray-600 transition-colors">
+                  Privacybeleid
+                </Link>
+              </p>
             </div>
           )}
         </div>

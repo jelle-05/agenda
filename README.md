@@ -49,6 +49,7 @@ Persoonlijke agenda-app gebouwd met Next.js, Supabase en Tailwind CSS. Geïnspir
 - Inloggen met e-mail en wachtwoord via Supabase Auth
 - **Profielmenu** — klik op avatar-icoon rechtsboven: toont naam en e-mailadres, met knoppen naar **Instellingen** en uitloggen
 - **Instellingenpagina** — modal met tabstructuur (`InstellingenMenu`, tab "Notificaties"): test-e-mailreminder sturen en Telegram beheren (koppelen, testbericht, **reminders aan/uit**, ontkoppelen)
+- **Privacybeleid** — statische pagina op `/privacy` (beschrijft welke gegevens de app verwerkt en waarvoor); bereikbaar via de loginpagina en de instellingen
 - Geen zoekicoon (verwijderd)
 
 ### Sync & offline

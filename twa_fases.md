@@ -2,7 +2,7 @@
 
 > Onderzoeks- en faseringsdocument. Doel: de bestaande agenda-PWA als **Trusted Web Activity (TWA)** verpakken en publiceren in de **Google Play Store**, in eerste instantie via een **interne/gesloten testtrack**. Er is nog geen Android/TWA-project — dit document is de roadmap.
 >
-> **Voortgang:** **Fase 1 (PWA-basis) is gebouwd** — manifest aangevuld met `id`/`scope`, echte maskable icon met safe zone (80% op vol-vlak `#007AFF`) + `icon-play.png` voor de latere Console-upload. Restpunten van fase 1 (vereisen productie/toestel): Lighthouse-audit en installability-test op een echt Android-toestel.
+> **Voortgang:** **Fase 1 (PWA-basis) is gebouwd** — manifest aangevuld met `id`/`scope`, echte maskable icon met safe zone (80% op vol-vlak `#007AFF`) + `icon-play.png` voor de latere Console-upload. **Fase 2 (productie/deployment + privacybasis) is gebouwd** — productie-checks uitgevoerd en groen (HTTPS, manifest met `id`/`scope` live, alle PWA-assets bereikbaar, HSTS actief), privacypagina `/privacy` toegevoegd met links op de loginpagina en in Instellingen. Restpunten (vereisen productie/toestel/extern): Lighthouse-audit, installability-test op een echt Android-toestel, en het supportadres (apart adres, nog aan te maken — placeholder op de privacypagina).
 >
 > Zelfde opzet als `telegram_fases.md` en `fases-mail.md`: per fase doel, technische stappen, complexiteit, risico's en een "klaar wanneer". Geen geheime waarden, keystores of persoonsgegevens in dit document of in de repo.
 
@@ -50,7 +50,7 @@ Een ondertekende Android-app (AAB) met package **`nl.jellebol.agenda`**, appnaam
 | Auth & user data | ✅ | Supabase e-mail/wachtwoord, alles RLS per `user_id`; accountlimiet 10 (`/api/auth/check-capacity`). Geen externe OAuth-redirects → TWA-vriendelijke loginflow. |
 | Deployment | ✅ | GitHub → Vercel auto-deploy op `main`; env vars in Vercel. |
 | Digital Asset Links | ❌ | Geen `public/.well-known/assetlinks.json`. |
-| Privacybeleid / support | ❌ | Geen privacypagina of supportvermelding (vereist voor Play, ook voor testtracks). |
+| Privacybeleid / support | ✅ pagina (fase 2), ⚠️ supportadres open | `app/privacy/page.tsx` → `agenda.jellebol.nl/privacy` (statisch, NL, beschrijft de echte verwerking: Supabase, Resend, Telegram, push, cache, logs, bewaartermijnen, rechten). Links: loginpagina-footer + onderaan Instellingen. ⚠️ Supportadres is nog een placeholder `[supportadres invullen]` — apart adres wordt later aangemaakt (open vraag 3). |
 | Android-project | ❌ | Geen Android-codebase; keuze = **Bubblewrap CLI**. |
 | Play-account & assets | ❌ | Geen Google Play Developer-account; geen feature graphic/screenshots/beschrijvingen. |
 
@@ -79,8 +79,8 @@ Een ondertekende Android-app (AAB) met package **`nl.jellebol.agenda`**, appnaam
 ### Play Console & beleid
 - [ ] Google Play Developer-account aanmaken (eenmalig $25 + identiteitsverificatie). ⚠️ Persoonlijk account (na nov 2023): **gesloten test met ≥12 testers gedurende 14 dagen is verplicht vóór een productierelease** — voor ons doel (gesloten test) geen blocker, wel relevant als het later publiek moet.
 - [ ] App aanmaken in de Console: naam **"Agenda"**, app-categorie (Productiviteit), gratis.
-- [ ] **Privacybeleid-URL** — nieuwe statische pagina in de app (bv. `agenda.jellebol.nl/privacy`): welke data (account-e-mail, events/verjaardagen in Supabase, push-endpoints, optioneel Telegram chat-id), waarvoor, hoe lang, contact.
-- [ ] Support/contactinformatie (e-mailadres) in de listing en op/bij de privacypagina.
+- [x] **Privacybeleid-URL** — `agenda.jellebol.nl/privacy` (`app/privacy/page.tsx`) — **fase 2 gebouwd**: beschrijft de echte verwerking (account, agenda-inhoud, push-endpoints, Telegram-koppeling, cache, logs), doelen, bewaartermijnen en rechten. ⚠️ Contact is nog een placeholder.
+- [ ] Support/contactinformatie (e-mailadres) in de listing en op de privacypagina — **wacht op het aparte supportadres** (open vraag 3); daarna de placeholder op `/privacy` vervangen.
 - [ ] Listing-assets: korte beschrijving (≤80 tekens), lange beschrijving, **feature graphic 1024×500**, **≥2 telefoon-screenshots** (16:9 of 9:16, mobiele weergave: dag/week + instellingen bv.).
 - [ ] **Content rating**-vragenlijst invullen (agenda-app zonder UGC/advertenties → "Iedereen").
 - [ ] **Data safety**-formulier — moet exact kloppen met de echte verwerking: persoonlijke info (e-mailadres), app-activiteit (events/verjaardagen), verzameld + versleuteld in transit, niet gedeeld met derden voor advertenties; verwerkers: Supabase, Resend, Telegram (alleen indien gekoppeld), Vercel.
@@ -156,14 +156,15 @@ Volgorde: ① Android Chrome (browsertab) → ② geïnstalleerde PWA → ③ TW
 
 - **Doel:** productie-omgeving en beleidspagina's klaar voor de Store.
 - **Stappen:**
-  - [ ] HTTPS/redirect-gedrag verifiëren (`agenda.jellebol.nl`, geen mixed content; ✅ verwacht via Vercel).
-  - [ ] Loginflow controleren: alles binnen scope `/` (Supabase-auth zonder externe redirects — ✅ verwacht).
-  - [ ] Offline-gedrag hertesten (vliegtuigmodus → `offline.html`).
-  - [ ] **Privacypagina bouwen**: statische route `/privacy` in de app (NL, conform §3-checklist), link in `LoginPagina` of `InstellingenMenu`-voettekst + supportadres.
-  - [ ] Env vars ongewijzigd; geen nieuwe secrets nodig voor de TWA zelf.
-- **Bestanden:** nieuw `app/privacy/page.tsx` (statisch), kleine linktoevoeging.
+  - [x] HTTPS geverifieerd op productie: alle PWA-assets bereikbaar over HTTPS met status 200 (`/`, `/manifest.webmanifest` als `application/manifest+json`, `/sw.js`, `/icon-192.png`, `/icon-512.png`, `/icon-maskable.png`, `/offline.html`); **HSTS actief** (`Strict-Transport-Security: max-age=63072000`); manifest bevat live `id: '/'`, `start_url: '/'`, `scope: '/'` (start_url binnen scope) en de nieuwe maskable is gedeployd (bestandsgrootte wijkt af van icon-512).
+  - [x] Deploymentconfig gecontroleerd: Vercel met framework-defaults (geen `vercel.json`, geen middleware, geen custom redirects/rewrites) — niets dat manifest/SW/icons in de weg zit. Loginflow volledig client-side binnen scope `/` (Supabase-auth zonder externe redirects). Bevinding: geen `.env.example` in de repo; alle env-namen + doel staan in `README.md` (volstaat, geen blocker).
+  - [ ] Offline-gedrag hertesten op een toestel (vliegtuigmodus → `offline.html`) — **restpunt, samen met de installability-test**.
+  - [x] **Privacypagina gebouwd**: statische route `app/privacy/page.tsx` (server component, eigen scroll-container — de app-shell-body heeft `overflow-hidden`). Beschrijft de werkelijke verwerking (account, agenda-inhoud, push-abonnementen, Telegram-koppeling, localStorage-cache, logs), doelen, verwerkers (Vercel/Supabase/Resend/Telegram), bewaartermijnen (account-gebonden; dedupmarkeringen ±60 dagen; koppelcodes ±10 min), notificatie-opt-in/uit en rechten. Links: loginpagina-footer + onderaan Instellingen → Notificaties. ⚠️ Contact = placeholder `[supportadres invullen]` tot het aparte supportadres er is.
+  - [x] Env vars ongewijzigd; geen nieuwe secrets nodig.
+- **Bestanden:** `app/privacy/page.tsx` (nieuw), `LoginPagina.tsx` + `InstellingenMenu.tsx` (privacylink).
 - **Complexiteit:** Laag. **Risico:** privacytekst die niet klopt met de echte verwerking → afwijzing/data-safety-conflict.
 - **Klaar wanneer:** `https://agenda.jellebol.nl/privacy` live en inhoudelijk juist.
+- ✅ **Gebouwd** (juni 2026) op drie restpunten na: ① supportadres invullen zodra het aparte adres bestaat, ② Lighthouse-audit op productie (Chrome DevTools → Lighthouse → categorie "Progressive Web App" op `https://agenda.jellebol.nl`, of `npx lighthouse https://agenda.jellebol.nl --view`), ③ installability + offline-test op een echt Android-toestel (Chrome → menu → "App installeren"; daarna vliegtuigmodus → offline-pagina). Deze drie blokkeren fase 3 niet.
 
 ### Fase 3 — Pushmeldingen valideren & opschonen
 
@@ -262,7 +263,7 @@ Volgorde: ① Android Chrome (browsertab) → ② geïnstalleerde PWA → ③ TW
 
 1. **Icoon-ontwerp** — hoe moet het nieuwe icoon eruitzien (stijl/kleur/vorm)? Beslissing nodig vóór fase 1; de hele icon-set en de Bubblewrap-init hangen ervan af.
 2. **Testers** — welke e-mailadressen komen op de gesloten-testlijst (en zijn er ooit ≥12 beschikbaar voor een evt. productiepad)?
-3. **Support-e-mailadres** — welk adres komt in de Play-listing en op de privacypagina?
+3. **Support-e-mailadres** — besloten: er komt een **apart supportadres** (nog aan te maken). Tot die tijd staat er een placeholder `[supportadres invullen]` op `/privacy`; zodra het adres bestaat: placeholder vervangen + adres in de Play-listing gebruiken.
 4. **Publieke release later?** — zo ja: accountlimiet/registratiebeleid heroverwegen en het 12-testers/14-dagen-traject inplannen.
 5. **Versiebeleid AAB** — wanneer hogen we de Android-versie op (alleen bij manifest-/wrapper-wijzigingen, of periodiek)? Voorstel: alleen bij wrapper-relevante wijzigingen.
 

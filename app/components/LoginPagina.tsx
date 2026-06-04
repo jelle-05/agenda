@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
 interface Props {
@@ -143,6 +144,13 @@ export default function LoginPagina({ onIngelogd }: Props) {
               </button>
             </>
           )}
+        </p>
+
+        {/* Privacybeleid */}
+        <p className="text-center mt-4">
+          <Link href="/privacy" className="text-[12px] text-gray-400 hover:text-gray-600 transition-colors">
+            Privacybeleid
+          </Link>
         </p>
       </div>
     </div>
