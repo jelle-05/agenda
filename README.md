@@ -35,7 +35,7 @@ Persoonlijke agenda-app gebouwd met Next.js, Supabase en Tailwind CSS. Geïnspir
 - **Jaar / leeftijd** — vrij tekstveld: `1998`, `onbekend`, `ongeveer 30` of leeg mogen allemaal. Staat er een 4-cijferig jaartal in, dan wordt de **leeftijd automatisch berekend** (rekening houdend met of de verjaardag dit jaar al geweest is); anders toont het overzicht de ingevulde tekst of "Onbekend". Het veld blokkeert opslaan nooit.
 - **Importeren** — bulk-import van namen + verjaardagen uit een markdownbestand via een seed-script (zie *Verjaardagen importeren* hieronder)
 - **In de kalender** — verschijnen als groen all-day event bovenaan de dag (`🎂 Naam`), niet als tijdslot-event; terugkomende verjaardagen elk jaar opnieuw
-- **Reminders** — verankerd op 09:00; zowel in-app als via de cron (push + e-mail), jaarlijks voor terugkomende verjaardagen
+- **Reminders** — verankerd op 09:00; via de server-cron (Telegram of push, plus e-mail), jaarlijks voor terugkomende verjaardagen
 - **Bewerken/verwijderen** — tik op een verjaardag (in het overzicht of de kalender); verwijderen vraagt bevestiging
 
 ### Feestdagen
@@ -67,10 +67,12 @@ Persoonlijke agenda-app gebouwd met Next.js, Supabase en Tailwind CSS. Geïnspir
 - **Geen dubbele mails (idempotent)**: de cron draait elke minuut en heeft een tolerantievenster van enkele minuten; om te voorkomen dat dezelfde reminder meerdere keren wordt verstuurd, claimt de cron elke reminder atomisch in de tabel `verzonden_reminders` (unieke `sleutel` = event-id + datum + tijd + offset). Alleen de eerste run binnen het venster verstuurt; de overige zien een duplicate-key en slaan over. Markeringen ouder dan 60 dagen worden automatisch opgeruimd. Bij het **bewerken** van een event verandert de sleutel (mag opnieuw één keer vuren), bij **verwijderen** verdwijnt het event uit de query (geen mail).
 - **Debuggen**: de cron logt met prefix `[reminders]` in de Vercel-functielogs — o.a. *event/verjaardag due* (id, sleutel, geplande tijd), *dubbel overgeslagen*, *e-mail verstuurd*. Zonder geheime waarden.
 
-### PWA
+### PWA & Android-app
 - Installeerbaar op Android en iOS als native app
+- Op Android ook als **echte app (TWA)** — zie *Android-app (TWA)* hieronder
 - Witte statusbalk en home-indicator via `viewport-fit=cover` en safe-area CSS
 - Service worker met offline-fallback
+- Pushnotificaties strak en emoji-vrij ("Herinnering — {titel} om {tijd}")
 
 ---
 
@@ -350,13 +352,17 @@ node scripts/importVerjaardagen.mjs --dry-run
 
 > Het bestand `namen_en_verjaardagen.md` is alleen voor deze eenmalige import; het is geen onderdeel van de runtime van de app.
 
-## Google Play / TWA (in voorbereiding)
+## Android-app (TWA)
 
-De app wordt voorbereid op publicatie in de Google Play Store als Trusted Web Activity (gesloten testtrack). Documentatie:
+De app draait op Android als **Trusted Web Activity** (Bubblewrap, package `nl.jellebol.agenda`): een echte geïnstalleerde app — fullscreen zonder URL-balk — die gewoon de live site toont. Elke Vercel-deploy is dus direct zichtbaar in de app, zonder nieuwe APK. Geïnstalleerd via **sideload** (geen Play Store nodig); het Android-project + keystore leven in een aparte map buiten deze repo. In deze repo hoort alleen `public/.well-known/assetlinks.json` (Digital Asset Links met de echte signing-fingerprint — vereist voor de URL-balk-vrije weergave).
 
-- `twa_fases.md` — roadmap en fasering (incl. de gate "Eerst regelen vóór fase 4")
-- `play_store_checklist.md` — checklist Play Developer-account + Console-voorbereiding
-- `toestel_tests.md` — handmatige Android/PWA-testsessie (installability, Lighthouse, offline, push)
+Een nieuwe APK is alleen nodig bij wrapper-wijzigingen (appnaam, icoon, kleuren): `bubblewrap update` + `bubblewrap build` in de TWA-map.
+
+Documentatie:
+
+- `twa_fases.md` — roadmap en fasering (fase 1–4 gebouwd; fase 5/6 = optioneel Play Store-traject)
+- `play_store_checklist.md` — checklist Play Developer-account + Console (voor het latere Play-traject)
+- `toestel_tests.md` — handmatige Android-testsessie (installability, Lighthouse, offline, push)
 
 ## Deployen
 

@@ -3,6 +3,8 @@
 > Afvinkbare checklist voor de openstaande handmatige tests uit `twa_fases.md` fase 1–3 (Lighthouse, installability, offline, push). Uitvoeren op een **echt Android-toestel** met Android Chrome, **vóór fase 4** (of uiterlijk vóór fase 5 als bewust geaccepteerd restpunt). Later herhalen in de TWA-build (fase 6).
 >
 > ⚠️ Vooraf: OEM-batterijbeheer (Xiaomi/Samsung e.d.) voor Chrome op **"niet beperken"** zetten — agressief batterijbeheer vertekent pushresultaten. Geen endpoints, sleutels of persoonsgegevens noteren in testverslagen.
+>
+> **Status (juni 2026, in de TWA bevestigd):** installatie (sideload-APK), fullscreen zonder URL-balk, login, pushmeldingen aanzetten + testmelding (emoji-vrije stijl), en swipe-navigatie (na de touch-events-fix). **Nog open:** Lighthouse (blok 2), offlinegedrag (blok 3) en de volledige 10-staps pushchecklist (blok 4 — o.a. Telegram-wissel, opt-out, 410-opruiming, logcontrole).
 
 ---
 

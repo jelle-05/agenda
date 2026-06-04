@@ -8,9 +8,8 @@
 
 ⚠️ Identiteitsverificatie kan dagen tot weken duren — **dit is het langst lopende restpunt, dus vroeg starten.**
 
-- [ ] Accounttype kiezen: **persoonlijk** of **organisatie**.
-  - ⚠️ Persoonlijk account (aangemaakt na nov 2023): een **productierelease** vereist eerst een gesloten test met **≥12 testers gedurende 14 dagen**. Voor ons doel (gesloten testtrack) is dat géén blocker — wel relevant als de app later publiek moet.
-  - Organisatie-account vereist een ingeschreven organisatie (KvK/D-U-N-S) — alleen relevant als die er is.
+- [x] Accounttype gekozen: **persoonlijk** (besloten juni 2026).
+  - ⚠️ Persoonlijk account (aangemaakt na nov 2023): een **productierelease** vereist eerst een gesloten test met **≥12 testers gedurende 14 dagen**. Voor ons doel (gesloten testtrack) géén blocker — geaccepteerd; wel relevant als de app later publiek moet.
 - [ ] Registreren op [play.google.com/console](https://play.google.com/console) met een Google-account.
 - [ ] Eenmalige registratiekosten betalen (**$25**, creditcard/betaalmethode nodig).
 - [ ] **Identiteitsverificatie** doorlopen (geldig identiteitsbewijs; bij persoonlijk account ook adresverificatie). Status afwachten — kan dagen duren.
