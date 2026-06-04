@@ -2,7 +2,7 @@
 
 > Onderzoeks- en faseringsdocument. Doel: de bestaande agenda-PWA als **Trusted Web Activity (TWA)** verpakken en publiceren in de **Google Play Store**, in eerste instantie via een **interne/gesloten testtrack**. Er is nog geen Android/TWA-project — dit document is de roadmap.
 >
-> **Voortgang:** **Fase 1 (PWA-basis) is gebouwd** — manifest aangevuld met `id`/`scope`, echte maskable icon met safe zone (80% op vol-vlak `#007AFF`) + `icon-play.png` voor de latere Console-upload. **Fase 2 (productie/deployment + privacybasis) is gebouwd** — productie-checks uitgevoerd en groen (HTTPS, manifest met `id`/`scope` live, alle PWA-assets bereikbaar, HSTS actief), privacypagina `/privacy` toegevoegd met links op de loginpagina en in Instellingen. Restpunten (vereisen productie/toestel/extern): Lighthouse-audit, installability-test op een echt Android-toestel, en het supportadres (apart adres, nog aan te maken — placeholder op de privacypagina).
+> **Voortgang:** **Fase 1 (PWA-basis) is gebouwd** — manifest aangevuld met `id`/`scope`, echte maskable icon met safe zone (80% op vol-vlak `#007AFF`) + `icon-play.png` voor de latere Console-upload. **Fase 2 (productie/deployment + privacybasis) is gebouwd** — productie-checks uitgevoerd en groen (HTTPS, manifest met `id`/`scope` live, alle PWA-assets bereikbaar, HSTS actief), privacypagina `/privacy` toegevoegd met links op de loginpagina en in Instellingen. **Fase 3 (push robuust) is gebouwd** — 404/410-opschoning van dode subscriptions in cron + testroute (veilige logs zonder endpoints), VAPID-wisseldetectie + stale-subscription-herstel in `pushUtils`, en een sectie "Meldingen" in Instellingen (status / aanzetten / uitzetten per apparaat / uitleg bij geblokkeerd). Restpunten (vereisen productie/toestel/extern): Lighthouse-audit, de handmatige Android-pushtestchecklist (zie fase 3), en het supportadres (apart adres, nog aan te maken — placeholder op de privacypagina).
 >
 > Zelfde opzet als `telegram_fases.md` en `fases-mail.md`: per fase doel, technische stappen, complexiteit, risico's en een "klaar wanneer". Geen geheime waarden, keystores of persoonsgegevens in dit document of in de repo.
 
@@ -107,10 +107,12 @@ Een TWA draait op de Chrome-engine; de bestaande **Web Push (VAPID)**-keten werk
 - **Timezone:** de cron rekent in `Europe/Amsterdam` (hardcoded); het toestel toont de notificatie direct bij ontvangst. Bestaand aandachtspunt (zie `CLAUDE.md`), geen TWA-specifiek werk.
 - **FCM is bewust niet gekozen:** het zou een Firebase-project, token-opslag en een nieuw server-sendpad vergen zonder functionele winst binnen een TWA. Beperking die we accepteren: geen FCM-extra's (topics, analytics).
 
-### Foutafhandeling & opschoning (verbeterpunt, fase 3)
+### Foutafhandeling & opschoning — ✅ gebouwd (fase 3)
 
-- **Onderzoeken:** wat doet de cron nu bij een mislukte web-push (`410 Gone`/`404` = verlopen subscription)? Indien er nog geen opschoning is: bij `410`/`404` de betreffende rij uit `push_subscriptions` verwijderen (service-role), met `[reminders]`-logging zonder endpoint-URL's. Voorkomt eindeloos sturen naar dode endpoints na herinstallatie van de TWA.
+- **Bevinding:** de cron ruimde alleen `410` op, stil en zonder logging; de testroute logde het volledige endpoint en ruimde niets op; het verzendblok was 3× gedupliceerd.
+- **Gebouwd:** helper `stuurPushNaarGebruiker(userId, payload)` in `app/api/cron/reminders/route.ts` (gebruikt door de event- én verjaardagstak): bij `404`/`410` wordt de subscription-rij verwijderd (service-role) met compacte log `[reminders] dode push-subscription opgeruimd` (alleen de statuscode, **nooit het endpoint**); andere fouten worden gelogd als transient en de subscription blijft staan. Eén kapotte subscription stopt de rest niet (per-sub try/catch). De cron-response bevat nu `pushOpgeruimd`. Zelfde gedrag in `api/push/test` (user-scoped via RLS, prefix `[push-test]`).
 - Transient fouten (5xx/timeout): bestaand claim-eerst-beleid — geaccepteerd dat een zeldzame firing verloren gaat; geen retries.
+- **Client-herstel:** `subscribeerOpPush` detecteert nu een VAPID-sleutelwissel (oude subscription wordt opgezegd en vervangen) en probeert bij een subscribe-fout eenmalig opnieuw na opruimen van een achtergebleven subscription. `afmeldenVanPush` (nieuw) regelt opt-out per apparaat: browser-unsubscribe + `DELETE /api/push/subscribe`.
 
 ### Testen op echte apparaten
 
@@ -120,7 +122,8 @@ Volgorde: ① Android Chrome (browsertab) → ② geïnstalleerde PWA → ③ TW
 
 - Web-push vereist de Chrome-engine; op toestellen zonder (recente) Chrome valt de TWA terug op een andere browser met mogelijk afwijkend gedrag — voor persoonlijk gebruik verwaarloosbaar.
 - Agressief batterijbeheer (Xiaomi/Samsung e.d.) kan ontvangst vertragen; Telegram blijft daarom het primaire kanaal.
-- Subscriptions verlopen stilletjes; zonder de 410-opschoning groeit de tabel en logt de cron blijvend fouten.
+- ~~Subscriptions verlopen stilletjes; zonder de 410-opschoning groeit de tabel en logt de cron blijvend fouten.~~ **Opgelost in fase 3** (404/410-cleanup in cron + testroute).
+- Bekende beperking (geaccepteerd, single-user-app): wisselt een tweede account op hetzelfde apparaat, dan kan hetzelfde browser-endpoint onder twee `user_id`'s in `push_subscriptions` staan (`unique(user_id, endpoint)`) — beide accounts ontvangen dan meldingen op dat apparaat tot één ervan uitzet of de subscription verloopt.
 - iOS blijft buiten scope: daar blijft de bestaande PWA (Safari/Home Screen) de route.
 
 ---
@@ -170,12 +173,25 @@ Volgorde: ① Android Chrome (browsertab) → ② geïnstalleerde PWA → ③ TW
 
 - **Doel:** push aantoonbaar werkend op Android en robuust tegen verlopen subscriptions.
 - **Stappen:**
-  - [ ] End-to-end push-test op een echt Android-toestel (browser + geïnstalleerde PWA): permissie, testpush, echte reminder, notificatieklik.
-  - [ ] Telegram-interactie testen: toggle uit → push-fallback vuurt; toggle aan → alleen Telegram.
-  - [ ] Cron-gedrag bij `410 Gone`/`404` onderzoeken in `app/api/cron/reminders/route.ts`; opschoning van dode subscriptions toevoegen indien afwezig (zie §4).
-- **Bestanden:** `app/api/cron/reminders/route.ts` (mogelijk), verder geen.
+  - [x] Cron-gedrag bij `410`/`404` onderzocht en opschoning gebouwd (zie §4): helper `stuurPushNaarGebruiker` in de cron (events + verjaardagen), zelfde cleanup in `api/push/test`, veilige logs zonder endpoints, response-veld `pushOpgeruimd`.
+  - [x] Clientflow robuuster: VAPID-wisseldetectie + eenmalige retry in `subscribeerOpPush`; nieuw `afmeldenVanPush` + `DELETE /api/push/subscribe` (user-scoped, RLS) voor opt-out per apparaat.
+  - [x] Instellingen-UI: sectie **"Meldingen"** in Instellingen → Notificaties met vier states — niet ondersteund (uitleg), geblokkeerd (uitleg: via site-instellingen aanzetten; geen zinloze herhaalprompt), uit ("Meldingen aanzetten" → permissie + subscribe), aan (groene status + "Uitzetten op dit apparaat"). Laden/fout-states conform bestaande knoppen.
+  - [ ] End-to-end push-test op een echt Android-toestel — **restpunt, zie checklist hieronder**.
+- **Bestanden:** `app/api/cron/reminders/route.ts`, `app/api/push/test/route.ts`, `app/api/push/subscribe/route.ts` (DELETE), `app/lib/pushUtils.ts`, `app/components/InstellingenMenu.tsx`.
+- **Database:** géén migratie nodig — cleanup gebruikt de bestaande service-role (cron) en RLS-policies (test/subscribe-routes).
 - **Complexiteit:** Laag–Middel. **Risico:** OEM-batterijbeheer vertekent testresultaten — testen met app op "niet beperken".
 - **Klaar wanneer:** reminder-push komt betrouwbaar aan op Android en dode endpoints worden opgeruimd.
+- ✅ **Gebouwd** (juni 2026) op de toestel-test na. **Handmatige Android-testchecklist** (na deploy, Android Chrome — later herhalen in de TWA, fase 6):
+  1. [ ] Inloggen op `https://agenda.jellebol.nl` → DevTools/`chrome://serviceworker-internals`: SW actief.
+  2. [ ] Instellingen → Notificaties → "Meldingen aanzetten" → Android 13+ toont de permissieprompt → status wordt "aan".
+  3. [ ] Echt event met reminder (bv. +5 min) aanmaken → notificatie komt op tijd binnen als systeemnotificatie. (Sneltest zonder wachten: `POST /api/push/test` met Bearer-token.)
+  4. [ ] Tik op de notificatie → app opent/focust.
+  5. [ ] Telegram-toggle **aan** → zelfde test → géén browser-melding, wel Telegram.
+  6. [ ] Telegram-toggle **uit** → browser-melding komt weer.
+  7. [ ] "Uitzetten op dit apparaat" → geen meldingen meer; rij verdwenen (geen `[reminders] push mislukt` in Vercel-logs).
+  8. [ ] 410-opruiming: app-site-data wissen zonder uit te zetten → volgende reminder → Vercel-log toont `dode push-subscription opgeruimd`.
+  9. [ ] Vliegtuigmodus → app toont offline-pagina; daarna online → reminders hervatten.
+  10. [ ] Logs controleren: nergens endpoints/sleutels, alleen statuscodes.
 
 ### Fase 4 — TWA Android-project (Bubblewrap)
 

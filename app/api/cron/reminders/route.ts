@@ -40,6 +40,42 @@ function escapeHtml(tekst: string): string {
   return tekst.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
+// Verstuurt een push-payload naar alle subscriptions van een gebruiker.
+// Dode subscriptions (404/410 = permanent verlopen of verwijderd) worden direct
+// opgeruimd; andere fouten zijn transient en laten de subscription staan.
+// Logt nooit endpoints of sleutels. Eén kapotte subscription stopt de rest niet.
+async function stuurPushNaarGebruiker(
+  userId: string,
+  payload: string,
+): Promise<{ verstuurd: number; opgeruimd: number }> {
+  const { data: subs } = await supabaseAdmin
+    .from('push_subscriptions')
+    .select('endpoint, p256dh, auth')
+    .eq('user_id', userId)
+
+  let verstuurd = 0
+  let opgeruimd = 0
+  for (const sub of subs ?? []) {
+    try {
+      await webpush.sendNotification(
+        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+        payload
+      )
+      verstuurd++
+    } catch (err) {
+      const status = (err as { statusCode?: number }).statusCode
+      if (status === 404 || status === 410) {
+        await supabaseAdmin.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
+        opgeruimd++
+        console.log('[reminders] dode push-subscription opgeruimd', { status })
+      } else {
+        console.error('[reminders] push mislukt', { status })
+      }
+    }
+  }
+  return { verstuurd, opgeruimd }
+}
+
 // Geeft de chat_id terug als de gebruiker Telegram gekoppeld én actief heeft;
 // anders null (→ val terug op browser-push). Een ontbrekende tabel (pre-migratie)
 // of andere fout telt als "niet gekoppeld" zodat reminders blijven werken.
@@ -103,6 +139,7 @@ export async function GET(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   let pushVerstuurd     = 0
+  let pushOpgeruimd     = 0
   let emailVerstuurd    = 0
   let telegramVerstuurd = 0
 
@@ -162,32 +199,14 @@ export async function GET(req: NextRequest) {
       }
     } else {
       // ── Push notificatie (fallback voor niet-gekoppelde gebruikers) ─────────
-      const { data: subs } = await supabaseAdmin
-        .from('push_subscriptions')
-        .select('endpoint, p256dh, auth')
-        .eq('user_id', afspraak.user_id)
-
-      if (subs?.length) {
-        const payload = JSON.stringify({
-          titel:   `📅 ${afspraak.titel}`,
-          bericht: `${tijdTekst} — ${tijdstip}`,
-          id:      afspraak.id,
-        })
-
-        for (const sub of subs) {
-          try {
-            await webpush.sendNotification(
-              { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-              payload
-            )
-            pushVerstuurd++
-          } catch (err) {
-            if ((err as { statusCode?: number }).statusCode === 410) {
-              await supabaseAdmin.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
-            }
-          }
-        }
-      }
+      const payload = JSON.stringify({
+        titel:   `📅 ${afspraak.titel}`,
+        bericht: `${tijdTekst} — ${tijdstip}`,
+        id:      afspraak.id,
+      })
+      const res = await stuurPushNaarGebruiker(afspraak.user_id, payload)
+      pushVerstuurd += res.verstuurd
+      pushOpgeruimd += res.opgeruimd
     }
 
     // ── E-mailherinnering ───────────────────────────────────────────────────
@@ -317,31 +336,14 @@ export async function GET(req: NextRequest) {
         }
       } else {
         // ── Push (fallback voor niet-gekoppelde gebruikers) ───────────────────
-        const { data: subs } = await supabaseAdmin
-          .from('push_subscriptions')
-          .select('endpoint, p256dh, auth')
-          .eq('user_id', vj.user_id)
-
-        if (subs?.length) {
-          const payload = JSON.stringify({
-            titel:   `🎂 ${vj.naam}`,
-            bericht: `${vj.naam} is ${wanneer} jarig${leeftijdTekst}`,
-            id:      `vj-${vj.id}`,
-          })
-          for (const sub of subs) {
-            try {
-              await webpush.sendNotification(
-                { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-                payload
-              )
-              pushVerstuurd++
-            } catch (err) {
-              if ((err as { statusCode?: number }).statusCode === 410) {
-                await supabaseAdmin.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
-              }
-            }
-          }
-        }
+        const payload = JSON.stringify({
+          titel:   `🎂 ${vj.naam}`,
+          bericht: `${vj.naam} is ${wanneer} jarig${leeftijdTekst}`,
+          id:      `vj-${vj.id}`,
+        })
+        const res = await stuurPushNaarGebruiker(vj.user_id, payload)
+        pushVerstuurd += res.verstuurd
+        pushOpgeruimd += res.opgeruimd
       }
 
       // ── E-mail ──────────────────────────────────────────────────────────────
@@ -384,6 +386,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     pushVerstuurd,
+    pushOpgeruimd,
     emailVerstuurd,
     telegramVerstuurd,
     gecontroleerd: (afspraken?.length ?? 0) + (verjaardagen?.length ?? 0),

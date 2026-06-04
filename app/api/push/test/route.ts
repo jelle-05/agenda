@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
   })
 
   let verstuurd = 0
+  let opgeruimd = 0
   for (const sub of subs) {
     try {
       await webpush.sendNotification(
@@ -50,9 +51,20 @@ export async function POST(req: NextRequest) {
       )
       verstuurd++
     } catch (err) {
-      console.error('Push sturen mislukt voor endpoint:', sub.endpoint, err)
+      const status = (err as { statusCode?: number }).statusCode
+      if (status === 404 || status === 410) {
+        // Permanent verlopen abonnement → opruimen (user-scoped, RLS).
+        // Bewust geen endpoint in de log.
+        await supabase.from('push_subscriptions').delete()
+          .eq('user_id', user.id).eq('endpoint', sub.endpoint)
+        opgeruimd++
+        console.log('[push-test] dode push-subscription opgeruimd', { status })
+      } else {
+        // Transient (netwerk/5xx): subscription behouden.
+        console.error('[push-test] push mislukt', { status })
+      }
     }
   }
 
-  return NextResponse.json({ verstuurd })
+  return NextResponse.json({ verstuurd, opgeruimd })
 }

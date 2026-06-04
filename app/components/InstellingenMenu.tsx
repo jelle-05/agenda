@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Mail, Send, X } from 'lucide-react'
+import { Bell, Mail, Send, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { subscribeerOpPush, afmeldenVanPush } from '@/lib/pushUtils'
 
 interface Props {
   open: boolean
@@ -22,6 +23,10 @@ export default function InstellingenMenu({ open, email, onSluit }: Props) {
 
   const [emailTestStatus, setEmailTestStatus] = useState<'idle' | 'laden' | 'ok' | 'fout'>('idle')
   const [emailTestFout, setEmailTestFout] = useState('')
+
+  const [pushStatus, setPushStatus] = useState<'laden' | 'niet-ondersteund' | 'geblokkeerd' | 'uit' | 'aan'>('laden')
+  const [pushBezig, setPushBezig] = useState(false)
+  const [pushFout, setPushFout] = useState('')
 
   const [tgStatus, setTgStatus] = useState<'laden' | 'niet' | 'gekoppeld'>('laden')
   const [tgUsername, setTgUsername] = useState<string | null>(null)
@@ -55,14 +60,66 @@ export default function InstellingenMenu({ open, email, onSluit }: Props) {
     }
   }
 
+  // Bepaalt de browser-meldingenstatus: ondersteund → permissie → actieve subscription.
+  async function bepaalPushStatus() {
+    if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+      setPushStatus('niet-ondersteund')
+      return
+    }
+    if (Notification.permission === 'denied') { setPushStatus('geblokkeerd'); return }
+    if (Notification.permission === 'granted') {
+      try {
+        const reg = await navigator.serviceWorker.getRegistration()
+        const sub = reg ? await reg.pushManager.getSubscription() : null
+        setPushStatus(sub ? 'aan' : 'uit')
+        return
+      } catch {
+        // val door naar 'uit' — aanzetten maakt dan een nieuwe subscription
+      }
+    }
+    setPushStatus('uit')
+  }
+
   // Bij openen status ophalen; bij sluiten een lopende poll netjes stoppen.
   useEffect(() => {
     // setState gebeurt pas ná de fetch (async), niet synchroon in de effect-body.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (open) haalTgStatus()
+    if (open) { haalTgStatus(); bepaalPushStatus() }
     return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null } }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
+
+  // Meldingen aanzetten: permissie vragen (alleen vanuit 'uit', dus geen
+  // herhaalde prompt bij 'geblokkeerd') en daarna subscriben + opslaan.
+  async function zetMeldingenAan() {
+    setPushFout(''); setPushBezig(true)
+    try {
+      const perm = await Notification.requestPermission()
+      if (perm !== 'granted') {
+        setPushStatus(perm === 'denied' ? 'geblokkeerd' : 'uit')
+        return
+      }
+      const t = await token()
+      if (!t) { setPushFout('Niet ingelogd'); return }
+      if (await subscribeerOpPush(t)) setPushStatus('aan')
+      else setPushFout('Meldingen aanzetten mislukt')
+    } finally {
+      setPushBezig(false)
+    }
+  }
+
+  // Opt-out per apparaat: browser-subscription opzeggen + serverrij verwijderen.
+  async function zetMeldingenUit() {
+    setPushFout(''); setPushBezig(true)
+    try {
+      const t = await token()
+      if (!t) { setPushFout('Niet ingelogd'); return }
+      if (await afmeldenVanPush(t)) setPushStatus('uit')
+      else setPushFout('Uitzetten mislukt')
+    } finally {
+      setPushBezig(false)
+    }
+  }
 
   async function startKoppelen() {
     setTgFout(''); setTgBezig(true)
@@ -189,6 +246,58 @@ export default function InstellingenMenu({ open, email, onSluit }: Props) {
         <div className="overflow-y-auto flex-1 p-4">
           {actieveTab === 'notificaties' && (
             <div className="flex flex-col gap-4">
+              {/* Browser-meldingen (web-push) */}
+              <section className="flex flex-col gap-2">
+                <h3 className="text-[12px] font-semibold uppercase tracking-wide text-gray-400">Meldingen</h3>
+
+                {pushStatus === 'niet-ondersteund' && (
+                  <p className="text-[13px] text-gray-400 text-center px-2">
+                    Browser-meldingen worden op dit apparaat niet ondersteund.
+                  </p>
+                )}
+
+                {pushStatus === 'geblokkeerd' && (
+                  <p className="text-[13px] text-gray-500 text-center px-2">
+                    Meldingen zijn geblokkeerd voor deze site. Zet ze aan via de
+                    site-instellingen van je browser en open dit menu opnieuw.
+                  </p>
+                )}
+
+                {(pushStatus === 'uit' || pushStatus === 'laden') && (
+                  <button
+                    onClick={zetMeldingenAan}
+                    disabled={pushBezig || pushStatus === 'laden'}
+                    className="w-full flex items-center justify-center gap-2 bg-gray-50 hover:bg-gray-100 disabled:opacity-50 text-gray-700 rounded-xl py-3 text-[15px] font-medium transition-colors"
+                  >
+                    <Bell size={16} />
+                    {pushBezig ? 'Bezig…' : 'Meldingen aanzetten'}
+                  </button>
+                )}
+
+                {pushStatus === 'aan' && (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-center gap-2 text-[13px] text-green-600">
+                      <Bell size={15} />
+                      <span>Meldingen staan aan op dit apparaat</span>
+                    </div>
+                    <button
+                      onClick={zetMeldingenUit}
+                      disabled={pushBezig}
+                      className="w-full flex items-center justify-center gap-2 bg-gray-50 hover:bg-gray-100 disabled:opacity-50 text-gray-700 rounded-xl py-3 text-[15px] font-medium transition-colors"
+                    >
+                      {pushBezig ? 'Bezig…' : 'Uitzetten op dit apparaat'}
+                    </button>
+                  </div>
+                )}
+
+                {pushFout && <p className="text-[12px] text-red-500 text-center">{pushFout}</p>}
+
+                <p className="text-[12px] text-gray-400 px-1">
+                  Reminders komen als browser-melding binnen zolang Telegram niet
+                  actief is; staat Telegram aan, dan vervangt Telegram de melding.
+                </p>
+              </section>
+
               {/* E-mailreminders */}
               <section className="flex flex-col gap-2">
                 <h3 className="text-[12px] font-semibold uppercase tracking-wide text-gray-400">E-mail</h3>
