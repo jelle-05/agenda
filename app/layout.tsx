@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Geist } from 'next/font/google'
 import SwRegistratie from '@/components/SwRegistratie'
+import ErrorBoundary from '@/components/ErrorBoundary'
 import './globals.css'
 
 const geist = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
@@ -28,7 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="nl" className={`${geist.variable} h-full`} style={{ backgroundColor: '#ffffff', colorScheme: 'light' }}>
       <body className="h-full overflow-hidden" style={{ backgroundColor: '#ffffff' }}>
         <SwRegistratie />
-        {children}
+        <ErrorBoundary>{children}</ErrorBoundary>
       </body>
     </html>
   )
