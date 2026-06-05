@@ -2,6 +2,7 @@
 
 import { Calendar, CalendarDays, Clock, List } from 'lucide-react'
 import type { WeergaveType } from '@/types'
+import Avatar from './Avatar'
 
 const TABS: { key: WeergaveType; label: string; icon: React.ComponentType<{ size?: number; className?: string }> }[] = [
   { key: 'maand',  label: 'Maand',  icon: Calendar },
@@ -13,10 +14,12 @@ const TABS: { key: WeergaveType; label: string; icon: React.ComponentType<{ size
 interface Props {
   weergave: WeergaveType
   onWeergaveChange: (w: WeergaveType) => void
-  onVandaag: () => void
+  onProfielMenu: () => void
+  email: string
+  avatarUrl?: string | null
 }
 
-export default function BottomBar({ weergave, onWeergaveChange, onVandaag }: Props) {
+export default function BottomBar({ weergave, onWeergaveChange, onProfielMenu, email, avatarUrl }: Props) {
   return (
     <nav className="sm:hidden flex items-stretch border-t border-gray-200 bg-white shrink-0 safe-area-bottom">
       {TABS.map(({ key, label, icon: Icon }) => {
@@ -36,15 +39,14 @@ export default function BottomBar({ weergave, onWeergaveChange, onVandaag }: Pro
         )
       })}
 
-      {/* Vandaag knop */}
+      {/* Profiel — vandaag-navigatie zit op mobiel in de tikbare TopBar-titel */}
       <button
-        onClick={onVandaag}
-        className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-[10px] font-medium text-[#007AFF]"
+        onClick={onProfielMenu}
+        aria-label="Profiel"
+        className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-[10px] font-medium text-gray-400"
       >
-        <span className="w-[22px] h-[22px] flex items-center justify-center rounded-full bg-[#FF3B30] text-white text-[11px] font-bold">
-          {new Date().getDate()}
-        </span>
-        Vandaag
+        <Avatar email={email} avatarUrl={avatarUrl} className="w-[22px] h-[22px]" tekstKlasse="text-[11px]" />
+        Profiel
       </button>
     </nav>
   )

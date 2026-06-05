@@ -2,23 +2,27 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Bell, Mail, Send, X } from 'lucide-react'
+import { Bell, Camera, Mail, Send, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { subscribeerOpPush, afmeldenVanPush } from '@/lib/pushUtils'
+import { verkleinNaarVierkantDataUrl } from '@/lib/afbeelding'
+import Avatar from './Avatar'
 
 interface Props {
   open: boolean
   email: string
+  avatarUrl?: string | null
   onSluit: () => void
 }
 
 // Tabs staan in een array zodat er later eenvoudig instellingstabjes bij kunnen.
 const TABS = [
   { id: 'notificaties', label: 'Notificaties' },
+  { id: 'profielfoto',  label: 'Profielfoto' },
 ] as const
 type TabId = (typeof TABS)[number]['id']
 
-export default function InstellingenMenu({ open, email, onSluit }: Props) {
+export default function InstellingenMenu({ open, email, avatarUrl, onSluit }: Props) {
   const [actieveTab, setActieveTab] = useState<TabId>('notificaties')
 
   const [emailTestStatus, setEmailTestStatus] = useState<'idle' | 'laden' | 'ok' | 'fout'>('idle')
@@ -37,6 +41,10 @@ export default function InstellingenMenu({ open, email, onSluit }: Props) {
   const [tgTestStatus, setTgTestStatus] = useState<'idle' | 'laden' | 'ok' | 'fout'>('idle')
   const [tgTestFout, setTgTestFout] = useState('')
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const [fotoStatus, setFotoStatus] = useState<'idle' | 'laden' | 'ok' | 'fout'>('idle')
+  const [fotoFout, setFotoFout] = useState('')
+  const fotoInputRef = useRef<HTMLInputElement | null>(null)
 
   async function token() {
     const { data: { session } } = await supabase.auth.getSession()
@@ -80,11 +88,12 @@ export default function InstellingenMenu({ open, email, onSluit }: Props) {
     setPushStatus('uit')
   }
 
-  // Bij openen status ophalen; bij sluiten een lopende poll netjes stoppen.
+  // Bij openen status ophalen en oude fotofeedback wissen; bij sluiten een
+  // lopende poll netjes stoppen.
   useEffect(() => {
-    // setState gebeurt pas ná de fetch (async), niet synchroon in de effect-body.
+    // Bewuste reset bij openen (modal-open-conventie); tg/push-setState gebeurt pas ná de fetch.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (open) { haalTgStatus(); bepaalPushStatus() }
+    if (open) { haalTgStatus(); bepaalPushStatus(); setFotoStatus('idle'); setFotoFout('') }
     return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null } }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
@@ -206,6 +215,33 @@ export default function InstellingenMenu({ open, email, onSluit }: Props) {
     } catch {
       setEmailTestStatus('fout'); setEmailTestFout('Netwerkfout')
     }
+  }
+
+  // Profielfoto: client-side verkleinen naar 256×256 JPEG en als data-URL in
+  // user_metadata opslaan. USER_UPDATED → AgendaApp ververst de avatarUrl-prop.
+  async function kiesFoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''   // reset zodat dezelfde foto opnieuw kiesbaar is
+    if (!file) return
+    setFotoStatus('laden'); setFotoFout('')
+    try {
+      const dataUrl = await verkleinNaarVierkantDataUrl(file, 256)
+      const { error } = await supabase.auth.updateUser({ data: { avatar_data_url: dataUrl } })
+      if (error) { setFotoStatus('fout'); setFotoFout('Opslaan mislukt. Probeer opnieuw.'); return }
+      setFotoStatus('ok')
+    } catch (err) {
+      setFotoStatus('fout')
+      setFotoFout(err instanceof Error ? err.message : 'Er ging iets mis.')
+    }
+  }
+
+  // updateUser doet een shallow merge op user_metadata: de sleutel expliciet
+  // op null zetten verwijdert de foto zonder andere metadata te raken.
+  async function verwijderFoto() {
+    setFotoStatus('laden'); setFotoFout('')
+    const { error } = await supabase.auth.updateUser({ data: { avatar_data_url: null } })
+    if (error) { setFotoStatus('fout'); setFotoFout('Verwijderen mislukt.'); return }
+    setFotoStatus('ok')
   }
 
   if (!open) return null
@@ -384,6 +420,49 @@ export default function InstellingenMenu({ open, email, onSluit }: Props) {
                   Privacybeleid
                 </Link>
               </p>
+            </div>
+          )}
+
+          {actieveTab === 'profielfoto' && (
+            <div className="flex flex-col gap-4">
+              <section className="flex flex-col items-center gap-3">
+                <h3 className="text-[12px] font-semibold uppercase tracking-wide text-gray-400 self-start">Profielfoto</h3>
+
+                {/* Preview — foto of initiaal-fallback */}
+                <Avatar email={email} avatarUrl={avatarUrl} className="w-24 h-24" tekstKlasse="text-3xl" />
+
+                <input ref={fotoInputRef} type="file" accept="image/*" className="hidden" onChange={kiesFoto} />
+
+                <button
+                  onClick={() => fotoInputRef.current?.click()}
+                  disabled={fotoStatus === 'laden'}
+                  className="w-full flex items-center justify-center gap-2 bg-gray-50 hover:bg-gray-100 disabled:opacity-50 text-gray-700 rounded-xl py-3 text-[15px] font-medium transition-colors"
+                >
+                  <Camera size={16} />
+                  {fotoStatus === 'laden' ? 'Bezig…' : 'Foto kiezen'}
+                </button>
+
+                {avatarUrl && (
+                  <button
+                    onClick={verwijderFoto}
+                    disabled={fotoStatus === 'laden'}
+                    className="w-full flex items-center justify-center gap-2 bg-gray-50 hover:bg-gray-100 disabled:opacity-50 text-gray-700 rounded-xl py-3 text-[15px] font-medium transition-colors"
+                  >
+                    Foto verwijderen
+                  </button>
+                )}
+
+                {fotoStatus === 'ok' && (
+                  <p className="text-[12px] text-green-600 text-center">Profielfoto bijgewerkt</p>
+                )}
+                {fotoStatus === 'fout' && (
+                  <p className="text-[12px] text-red-500 text-center">{fotoFout}</p>
+                )}
+
+                <p className="text-[12px] text-gray-400 px-1 text-center">
+                  De foto wordt vierkant bijgesneden en verkleind (max 10 MB). JPG of PNG werkt het best.
+                </p>
+              </section>
             </div>
           )}
         </div>

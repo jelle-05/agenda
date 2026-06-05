@@ -2,6 +2,7 @@
 
 import { ChevronLeft, ChevronRight, Plus, Menu } from 'lucide-react'
 import type { WeergaveType } from '@/types'
+import Avatar from './Avatar'
 
 const WEERGAVEN: { key: WeergaveType; label: string }[] = [
   { key: 'dag',    label: 'Dag'    },
@@ -21,31 +22,17 @@ interface Props {
   onMenu: () => void
   onProfielMenu: () => void
   gebruikerEmail?: string
+  avatarUrl?: string | null
 }
-
-// Zonder display-utility: de instanties zetten zelf `flex sm:hidden` (mobiel) of `hidden sm:flex` (desktop)
-const avatarKlasse =
-  'w-7 h-7 rounded-full bg-[#007AFF] items-center justify-center text-white text-[11px] font-bold hover:bg-blue-600 transition-colors shrink-0'
 
 export default function TopBar({
   weergave, onWeergaveChange, titel, onVorige, onVolgende, onVandaag,
-  onNieuw, onMenu, onProfielMenu, gebruikerEmail,
+  onNieuw, onMenu, onProfielMenu, gebruikerEmail, avatarUrl,
 }: Props) {
-  const initiaal = gebruikerEmail?.[0]?.toUpperCase() ?? '?'
-
   return (
     <header className="flex items-center justify-between px-3 h-12 border-b border-gray-200 bg-white shrink-0 gap-2">
-      {/* Navigatie */}
+      {/* Navigatie — hugt op mobiel links (titel groeit niet meer mee) */}
       <div className="flex items-center gap-1 min-w-0 flex-1 sm:flex-none">
-        {/* Avatar — alleen mobiel links (desktop: rechts in de acties-groep) */}
-        <button
-          onClick={onProfielMenu}
-          title={gebruikerEmail}
-          aria-label="Profiel"
-          className={`flex sm:hidden mr-1 ${avatarKlasse}`}
-        >
-          {initiaal}
-        </button>
         <button
           onClick={onVandaag}
           className="hidden sm:block text-[13px] font-medium text-[#007AFF] hover:opacity-70 transition-opacity px-1 shrink-0"
@@ -55,9 +42,15 @@ export default function TopBar({
         <button onClick={onVorige} className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-500 shrink-0">
           <ChevronLeft size={18} />
         </button>
-        <span className="text-[15px] font-semibold text-gray-900 px-1 text-center truncate flex-1 sm:flex-none sm:w-[200px]">
+        {/* Titel: op mobiel tikbaar = naar vandaag; op desktop puur tekst
+            (klik uit via sm:pointer-events-none — daar is de Vandaag-knop) */}
+        <button
+          onClick={onVandaag}
+          aria-label="Ga naar vandaag"
+          className="text-[15px] font-semibold text-gray-900 px-1 truncate text-left max-w-[160px] sm:max-w-none sm:text-center sm:w-[200px] sm:pointer-events-none sm:cursor-default"
+        >
           {titel}
-        </span>
+        </button>
         <button onClick={onVolgende} className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-500 shrink-0">
           <ChevronRight size={18} />
         </button>
@@ -91,24 +84,25 @@ export default function TopBar({
           <Plus size={18} />
         </button>
 
-        {/* Avatar — opent profielmenu (alleen desktop; mobiel staat hij links) */}
+        {/* Avatar — opent profielmenu (alleen desktop; mobiel zit hij in de BottomBar) */}
         <button
           onClick={onProfielMenu}
           title={gebruikerEmail}
           aria-label="Profiel"
-          className={`hidden sm:flex ml-1 ${avatarKlasse}`}
+          className="hidden sm:flex ml-1 shrink-0 hover:opacity-90 transition-opacity"
         >
-          {initiaal}
+          <Avatar email={gebruikerEmail ?? ''} avatarUrl={avatarUrl} className="w-7 h-7" tekstKlasse="text-[11px]" />
         </button>
 
-        {/* Hamburger — alleen mobiel, opent het off-canvas menu */}
+        {/* Hamburger — alleen mobiel, opent het off-canvas menu.
+            scale-x maakt het icoon visueel breder zonder de hoogte/layout te raken. */}
         <button
           onClick={onMenu}
           className="sm:hidden p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-600 shrink-0"
           title="Menu"
           aria-label="Menu"
         >
-          <Menu size={20} />
+          <Menu size={20} className="scale-x-125" />
         </button>
       </div>
     </header>

@@ -1,21 +1,22 @@
 'use client'
 
 import { LogOut, Settings, X } from 'lucide-react'
+import Avatar from './Avatar'
 
 interface Props {
   open: boolean
   email: string
+  avatarUrl?: string | null
   onInstellingen: () => void
   onUitloggen: () => void
   onSluit: () => void
 }
 
-export default function ProfielMenu({ open, email, onInstellingen, onUitloggen, onSluit }: Props) {
+export default function ProfielMenu({ open, email, avatarUrl, onInstellingen, onUitloggen, onSluit }: Props) {
   if (!open) return null
 
   const prefix = email.split('@')[0] ?? ''
   const naam   = prefix.charAt(0).toUpperCase() + prefix.slice(1)
-  const initiaal = naam[0] ?? '?'
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-start sm:justify-end p-0 sm:p-2 sm:pt-14">
@@ -33,9 +34,7 @@ export default function ProfielMenu({ open, email, onInstellingen, onUitloggen, 
 
         {/* Avatar + info */}
         <div className="flex flex-col items-center gap-2 px-4 py-6 border-b border-gray-100">
-          <div className="w-16 h-16 rounded-full bg-[#007AFF] flex items-center justify-center text-white text-2xl font-bold select-none">
-            {initiaal}
-          </div>
+          <Avatar email={email} avatarUrl={avatarUrl} className="w-16 h-16" tekstKlasse="text-2xl" />
           <p className="text-[17px] font-semibold text-gray-900">{naam}</p>
           <p className="text-[13px] text-gray-400">{email}</p>
         </div>

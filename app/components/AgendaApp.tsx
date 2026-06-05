@@ -536,6 +536,10 @@ export default function AgendaApp() {
     return <LoginPagina onIngelogd={() => {}} />
   }
 
+  // Profielfoto uit user_metadata (data-URL); na supabase.auth.updateUser()
+  // vuurt USER_UPDATED → setGebruiker → alle avatar-plekken verversen vanzelf.
+  const avatarUrl = (gebruiker.user_metadata?.avatar_data_url as string | undefined) ?? null
+
   return (
     <div className="flex flex-row h-full bg-white">
       {/* Desktop-zijbalk — verborgen op mobiel */}
@@ -559,6 +563,7 @@ export default function AgendaApp() {
           onMenu={() => setMobielMenuOpen(true)}
           onProfielMenu={() => setProfielMenuOpen(true)}
           gebruikerEmail={gebruiker.email ?? ''}
+          avatarUrl={avatarUrl}
         />
 
         {/* Notificatie banner */}
@@ -629,7 +634,9 @@ export default function AgendaApp() {
         <BottomBar
           weergave={weergave}
           onWeergaveChange={setWeergave}
-          onVandaag={gaNaarVandaag}
+          onProfielMenu={() => setProfielMenuOpen(true)}
+          email={gebruiker.email ?? ''}
+          avatarUrl={avatarUrl}
         />
       </div>
 
@@ -664,6 +671,7 @@ export default function AgendaApp() {
       <ProfielMenu
         open={profielMenuOpen}
         email={gebruiker.email ?? ''}
+        avatarUrl={avatarUrl}
         onInstellingen={() => setInstellingenOpen(true)}
         onUitloggen={uitloggen}
         onSluit={() => setProfielMenuOpen(false)}
@@ -672,6 +680,7 @@ export default function AgendaApp() {
       <InstellingenMenu
         open={instellingenOpen}
         email={gebruiker.email ?? ''}
+        avatarUrl={avatarUrl}
         onSluit={() => setInstellingenOpen(false)}
       />
 
