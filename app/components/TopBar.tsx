@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronLeft, ChevronRight, Plus, Tag, Cake, Menu, SlidersHorizontal } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Menu } from 'lucide-react'
 import type { WeergaveType } from '@/types'
 
 const WEERGAVEN: { key: WeergaveType; label: string }[] = [
@@ -18,16 +18,18 @@ interface Props {
   onVolgende: () => void
   onVandaag: () => void
   onNieuw: () => void
-  onLabels: () => void
-  onVerjaardagen: () => void
-  onFilters: () => void
+  onMenu: () => void
   onProfielMenu: () => void
   gebruikerEmail?: string
 }
 
+// Zonder display-utility: de instanties zetten zelf `flex sm:hidden` (mobiel) of `hidden sm:flex` (desktop)
+const avatarKlasse =
+  'w-7 h-7 rounded-full bg-[#007AFF] items-center justify-center text-white text-[11px] font-bold hover:bg-blue-600 transition-colors shrink-0'
+
 export default function TopBar({
   weergave, onWeergaveChange, titel, onVorige, onVolgende, onVandaag,
-  onNieuw, onLabels, onVerjaardagen, onFilters, onProfielMenu, gebruikerEmail,
+  onNieuw, onMenu, onProfielMenu, gebruikerEmail,
 }: Props) {
   const initiaal = gebruikerEmail?.[0]?.toUpperCase() ?? '?'
 
@@ -35,14 +37,14 @@ export default function TopBar({
     <header className="flex items-center justify-between px-3 h-12 border-b border-gray-200 bg-white shrink-0 gap-2">
       {/* Navigatie */}
       <div className="flex items-center gap-1 min-w-0 flex-1 sm:flex-none">
-        {/* Hamburger — alleen mobiel */}
+        {/* Avatar — alleen mobiel links (desktop: rechts in de acties-groep) */}
         <button
-          onClick={onFilters}
-          className="sm:hidden p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-600 shrink-0"
-          title="Menu"
-          aria-label="Menu"
+          onClick={onProfielMenu}
+          title={gebruikerEmail}
+          aria-label="Profiel"
+          className={`flex sm:hidden mr-1 ${avatarKlasse}`}
         >
-          <Menu size={20} />
+          {initiaal}
         </button>
         <button
           onClick={onVandaag}
@@ -77,28 +79,36 @@ export default function TopBar({
         ))}
       </div>
 
-      {/* Acties */}
+      {/* Acties — Verjaardagen/Labels/Filters zitten in de Sidebar (desktop) en het MobielMenu (mobiel) */}
       <div className="flex items-center gap-1 shrink-0">
-        <button onClick={onFilters} className="hidden sm:inline-flex p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-500" title="Filters">
-          <SlidersHorizontal size={18} />
-        </button>
-        <button onClick={onVerjaardagen} className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-500" title="Verjaardagen">
-          <Cake size={18} />
-        </button>
-        <button onClick={onLabels} className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-500" title="Labels">
-          <Tag size={18} />
-        </button>
-        <button onClick={onNieuw} className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-500" title="Nieuwe afspraak">
+        {/* Nieuw event — mobiel als gevulde blauwe cirkel (groter tap-target), desktop subtiel */}
+        <button
+          onClick={onNieuw}
+          title="Nieuwe afspraak"
+          aria-label="Nieuwe afspraak"
+          className="flex items-center justify-center rounded-full transition-colors shrink-0 w-8 h-8 bg-[#007AFF] text-white hover:bg-blue-600 sm:w-auto sm:h-auto sm:p-1.5 sm:bg-transparent sm:text-gray-500 sm:hover:bg-gray-100"
+        >
           <Plus size={18} />
         </button>
 
-        {/* Avatar — opent profielmenu */}
+        {/* Avatar — opent profielmenu (alleen desktop; mobiel staat hij links) */}
         <button
           onClick={onProfielMenu}
           title={gebruikerEmail}
-          className="ml-1 w-7 h-7 rounded-full bg-[#007AFF] flex items-center justify-center text-white text-[11px] font-bold hover:bg-blue-600 transition-colors shrink-0"
+          aria-label="Profiel"
+          className={`hidden sm:flex ml-1 ${avatarKlasse}`}
         >
           {initiaal}
+        </button>
+
+        {/* Hamburger — alleen mobiel, opent het off-canvas menu */}
+        <button
+          onClick={onMenu}
+          className="sm:hidden p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-600 shrink-0"
+          title="Menu"
+          aria-label="Menu"
+        >
+          <Menu size={20} />
         </button>
       </div>
     </header>

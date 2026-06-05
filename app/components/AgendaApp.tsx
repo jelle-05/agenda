@@ -19,6 +19,8 @@ import {
 } from '@/lib/supabaseOpslag'
 import { NL_MAANDEN, NL_MAANDEN_KORT, formatWeekTitel } from '@/lib/datum'
 import TopBar from './TopBar'
+import Sidebar from './Sidebar'
+import MobielMenu from './MobielMenu'
 import BottomBar from './BottomBar'
 import LoginPagina from './LoginPagina'
 import MaandWeergave from './MaandWeergave'
@@ -70,6 +72,7 @@ export default function AgendaApp() {
   const [verjaardagFormOpen, setVerjaardagFormOpen] = useState(false)
   const [bewerkVerjaardag, setBewerkVerjaardag]   = useState<Verjaardag | null>(null)
   const [filterMenuOpen, setFilterMenuOpen]       = useState(false)
+  const [mobielMenuOpen, setMobielMenuOpen]       = useState(false)
   const [filters, setFilters]                     = useState<Filters>(STANDAARD_FILTERS)
   const [vooringevuldDatum, setVooringevuldDatum] = useState<Date | null>(null)
   const [vooringevuldTijd, setVooringevuldTijd]   = useState<string | undefined>(undefined)
@@ -534,91 +537,109 @@ export default function AgendaApp() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-white">
-      <TopBar
-        weergave={weergave}
-        onWeergaveChange={setWeergave}
-        titel={getTitel()}
-        onVorige={navigeerVorige}
-        onVolgende={navigeerVolgende}
-        onVandaag={gaNaarVandaag}
-        onNieuw={() => openNieuwAfspraak()}
-        onLabels={() => setLabelBeheerOpen(true)}
-        onVerjaardagen={() => setVerjaardagKeuzeOpen(true)}
+    <div className="flex flex-row h-full bg-white">
+      {/* Desktop-zijbalk — verborgen op mobiel */}
+      <Sidebar
         onFilters={() => setFilterMenuOpen(true)}
-        onProfielMenu={() => setProfielMenuOpen(true)}
-        gebruikerEmail={gebruiker.email ?? ''}
+        onVerjaardagen={() => setVerjaardagKeuzeOpen(true)}
+        onLabels={() => setLabelBeheerOpen(true)}
       />
 
-      {/* Notificatie banner */}
-      {toonNotifBanner && (
-        <div className="flex items-center justify-between bg-blue-50 border-b border-blue-100 px-4 py-2 shrink-0">
-          <div className="flex items-center gap-2">
-            <Bell size={14} className="text-[#007AFF] shrink-0" />
-            <span className="text-[13px] text-gray-700">Zet meldingen aan voor herinneringen</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <button onClick={vraagNotificatieToestemming} className="text-[13px] text-[#007AFF] font-semibold">
-              Aanzetten
-            </button>
-            <button onClick={() => setToonNotifBanner(false)} className="text-gray-400 hover:text-gray-600">
-              <X size={14} />
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Rechterkolom: TopBar + banner + views + BottomBar.
+          min-w-0 is essentieel: anders kan deze flex-child niet krimpen en breken truncate/overflow. */}
+      <div className="flex flex-col flex-1 min-w-0 h-full">
+        <TopBar
+          weergave={weergave}
+          onWeergaveChange={setWeergave}
+          titel={getTitel()}
+          onVorige={navigeerVorige}
+          onVolgende={navigeerVolgende}
+          onVandaag={gaNaarVandaag}
+          onNieuw={() => openNieuwAfspraak()}
+          onMenu={() => setMobielMenuOpen(true)}
+          onProfielMenu={() => setProfielMenuOpen(true)}
+          gebruikerEmail={gebruiker.email ?? ''}
+        />
 
-      {/* Swipe-navigatie via touch-events (zie uitleg in useSwipe.ts); touch-pan-y
-          voorkomt dat Android Chrome horizontale drags als native gesture claimt. */}
-      <main className="flex-1 overflow-hidden touch-pan-y" {...swipeHandlers}>
-        {weergave === 'maand' && (
-          <MaandWeergave
-            huidigeDatum={huidigeDatum}
-            afspraken={afsprakenVoorWeergave}
-            labels={labelsVoorWeergave}
-            onDagKlik={selecteerDag}
-            onAfspraakKlik={openBewerkAfspraak}
-            onNieuwAfspraak={openNieuwAfspraak}
-          />
+        {/* Notificatie banner */}
+        {toonNotifBanner && (
+          <div className="flex items-center justify-between bg-blue-50 border-b border-blue-100 px-4 py-2 shrink-0">
+            <div className="flex items-center gap-2">
+              <Bell size={14} className="text-[#007AFF] shrink-0" />
+              <span className="text-[13px] text-gray-700">Zet meldingen aan voor herinneringen</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <button onClick={vraagNotificatieToestemming} className="text-[13px] text-[#007AFF] font-semibold">
+                Aanzetten
+              </button>
+              <button onClick={() => setToonNotifBanner(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={14} />
+              </button>
+            </div>
+          </div>
         )}
-        {weergave === 'week' && (
-          <WeekWeergave
-            huidigeDatum={huidigeDatum}
-            afspraken={afsprakenVoorWeergave}
-            labels={labelsVoorWeergave}
-            onDagKlik={selecteerDag}
-            onAfspraakKlik={openBewerkAfspraak}
-            onNieuwAfspraak={openNieuwAfspraak}
-            animatieKlasse={animatieKlasse}
-            animatieSleutel={animatieSleutel}
-          />
-        )}
-        {weergave === 'dag' && (
-          <DagWeergave
-            huidigeDatum={huidigeDatum}
-            afspraken={afsprakenVoorWeergave}
-            labels={labelsVoorWeergave}
-            onDagKlik={selecteerDag}
-            onAfspraakKlik={openBewerkAfspraak}
-            onNieuwAfspraak={openNieuwAfspraak}
-            animatieKlasse={animatieKlasse}
-            animatieSleutel={animatieSleutel}
-          />
-        )}
-        {weergave === 'agenda' && (
-          <AgendaLijst
-            huidigeDatum={huidigeDatum}
-            afspraken={afsprakenVoorWeergave}
-            labels={labelsVoorWeergave}
-            onAfspraakKlik={openBewerkAfspraak}
-          />
-        )}
-      </main>
 
-      <BottomBar
-        weergave={weergave}
-        onWeergaveChange={setWeergave}
-        onVandaag={gaNaarVandaag}
+        {/* Swipe-navigatie via touch-events (zie uitleg in useSwipe.ts); touch-pan-y
+            voorkomt dat Android Chrome horizontale drags als native gesture claimt. */}
+        <main className="flex-1 overflow-hidden touch-pan-y" {...swipeHandlers}>
+          {weergave === 'maand' && (
+            <MaandWeergave
+              huidigeDatum={huidigeDatum}
+              afspraken={afsprakenVoorWeergave}
+              labels={labelsVoorWeergave}
+              onDagKlik={selecteerDag}
+              onAfspraakKlik={openBewerkAfspraak}
+              onNieuwAfspraak={openNieuwAfspraak}
+            />
+          )}
+          {weergave === 'week' && (
+            <WeekWeergave
+              huidigeDatum={huidigeDatum}
+              afspraken={afsprakenVoorWeergave}
+              labels={labelsVoorWeergave}
+              onDagKlik={selecteerDag}
+              onAfspraakKlik={openBewerkAfspraak}
+              onNieuwAfspraak={openNieuwAfspraak}
+              animatieKlasse={animatieKlasse}
+              animatieSleutel={animatieSleutel}
+            />
+          )}
+          {weergave === 'dag' && (
+            <DagWeergave
+              huidigeDatum={huidigeDatum}
+              afspraken={afsprakenVoorWeergave}
+              labels={labelsVoorWeergave}
+              onDagKlik={selecteerDag}
+              onAfspraakKlik={openBewerkAfspraak}
+              onNieuwAfspraak={openNieuwAfspraak}
+              animatieKlasse={animatieKlasse}
+              animatieSleutel={animatieSleutel}
+            />
+          )}
+          {weergave === 'agenda' && (
+            <AgendaLijst
+              huidigeDatum={huidigeDatum}
+              afspraken={afsprakenVoorWeergave}
+              labels={labelsVoorWeergave}
+              onAfspraakKlik={openBewerkAfspraak}
+            />
+          )}
+        </main>
+
+        <BottomBar
+          weergave={weergave}
+          onWeergaveChange={setWeergave}
+          onVandaag={gaNaarVandaag}
+        />
+      </div>
+
+      {/* Mobiel off-canvas menu — opent via de hamburger in de TopBar */}
+      <MobielMenu
+        open={mobielMenuOpen}
+        onSluit={() => setMobielMenuOpen(false)}
+        onFilters={() => setFilterMenuOpen(true)}
+        onVerjaardagen={() => setVerjaardagKeuzeOpen(true)}
+        onLabels={() => setLabelBeheerOpen(true)}
       />
 
       <AfspraakFormulier
