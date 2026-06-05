@@ -25,6 +25,8 @@ app/
   layout.tsx                      — html/body, viewport-fit, theme-color, safe-area
   globals.css                     — Tailwind import, safe-area CSS (.safe-area-bottom)
   manifest.ts                     — PWA manifest (theme/background wit)
+  favicon.ico                     — browser-favicon (16/32/48), gegenereerd uit public/icon.svg
+  apple-icon.png                  — apple-touch-icon (180×180, full-bleed), gegenereerd uit public/icon.svg
   types.ts                        — Afspraak, Label, HerhalingConfig, WeergaveType
   components/
     AgendaApp.tsx                 — hoofd-component: state, auth, sync, navigatie, modals
@@ -153,6 +155,7 @@ public/
 ### Mobiel / PWA
 - **Witte statusbalk en home indicator** — `viewport-fit: cover` in `layout.tsx`, `padding-top: env(safe-area-inset-top)` op body, `.safe-area-bottom` class op BottomBar
 - **`statusBarStyle: 'default'`** — donkere iconen op witte achtergrond (iOS)
+- **Favicon = app-icoon** — alle iconen worden beheerd via `public/icon.svg` (bron) + `scripts/generate-icons.mjs` (sharp). Het script genereert naast de manifest-iconen (`public/icon-192/512/maskable/play.png`) ook `app/favicon.ico` (multi-size 16/32/48, PNG-in-ICO) en `app/apple-icon.png` (180×180, full-bleed `#007AFF` zoals de maskable — iOS kent geen transparantie). De `<link rel="icon">`/`<link rel="apple-touch-icon">`-tags komen automatisch via Next.js file conventions (`app/favicon.ico`/`app/apple-icon.png`), inclusief content-hash als cache-buster — géén handmatige `<head>`-config. Bij een nieuw icoon-ontwerp: alleen `icon.svg` vervangen en het script herdraaien (`node scripts/generate-icons.mjs`).
 
 ### Reminders
 - ~~**In-app check** elke 30 seconden~~ — **verwijderd (Telegram Fase 5)**. Vroeger vuurde `AgendaApp` lokaal via `ServiceWorkerRegistration.showNotification()` met dedup via `gevierdRef`; dat is weg om dubbele meldingen náást de cron (web-push/Telegram) te voorkomen. **Alle reminders lopen nu uitsluitend via de server-cron.** De notificatie-permissiebanner + `subscribeerOpPush` blijven wél bestaan, zodat de web-push-fallback via de cron blijft werken.
