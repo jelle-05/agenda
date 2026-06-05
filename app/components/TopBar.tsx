@@ -43,11 +43,13 @@ export default function TopBar({
           <ChevronLeft size={18} />
         </button>
         {/* Titel: op mobiel tikbaar = naar vandaag; op desktop puur tekst
-            (klik uit via sm:pointer-events-none — daar is de Vandaag-knop) */}
+            (klik uit via sm:pointer-events-none — daar is de Vandaag-knop).
+            Vaste breedte (net als desktop) zodat de pijltjes niet verschuiven
+            bij titels van wisselende lengte ("1 – 7 jun" vs "8 – 14 jun"). */}
         <button
           onClick={onVandaag}
           aria-label="Ga naar vandaag"
-          className="text-[15px] font-semibold text-gray-900 px-1 truncate text-left max-w-[160px] sm:max-w-none sm:text-center sm:w-[200px] sm:pointer-events-none sm:cursor-default"
+          className="text-[15px] font-semibold text-gray-900 px-1 truncate text-center w-[160px] sm:w-[200px] sm:pointer-events-none sm:cursor-default"
         >
           {titel}
         </button>
