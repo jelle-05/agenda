@@ -2,7 +2,7 @@
 
 Centrale plek voor toekomstige features, verbeteringen en ideeën. Bijgewerkt naarmate de app groeit.
 
-**Huidige staat (juni 2026):** standaardweergave week op desktop / dag op mobiel, events aanmaken/bewerken/verwijderen, herhalende events, labels, **verjaardagen** (dag/maand + optioneel geboortejaar, auto-leeftijd, keuzestap, tabel met paginatie, reminders 1u/1dag/1week), profielmenu, real-time sync, push-notificaties, e-mailreminders via Resend, PWA met witte safe areas.
+**Huidige staat (juni 2026):** standaardweergave week op desktop / dag op mobiel, events aanmaken/bewerken/verwijderen, herhalende events, labels, **verjaardagen** (dag/maand + optioneel geboortejaar, auto-leeftijd, keuzestap, tabel met paginatie, reminders 1u/1dag/1week), profielmenu, real-time sync, push-notificaties, e-mailreminders via Resend, PWA met witte safe areas, **views openen bij nu** (dag/week gecentreerd op de tijd-indicator, agenda-lijst bij vandaag).
 
 ---
 
@@ -65,6 +65,13 @@ Kleine wijzigingen met direct zichtbaar resultaat. Weinig backend-werk.
 ### ~~Nederlandse feestdagen~~ ✅ Geïmplementeerd (juni 2026)
 **Wat:** Nationale feestdagen automatisch in de kalender als paarse all-day events (read-only, niet opgeslagen). Vaste datums + Pasen-afhankelijke dagen berekend uit Eerste Paasdag (Meeus-algoritme), per jaar gegenereerd. Zelfde virtuele-event-patroon als verjaardagen, geen view-component aangepast.
 **Bestanden:** `lib/feestdagen.ts` (nieuw), `AgendaApp.tsx`.
+
+---
+
+### ~~Views openen bij nu~~ ✅ Geïmplementeerd (juni 2026)
+**Wat:** Dag- en weekweergave scrollen bij openen automatisch naar de rode huidige-tijd-indicator, verticaal gecentreerd in de scrollcontainer (07:00-fallback als vandaag niet zichtbaar is). De Agenda-lijst start bij de sectie van vandaag — of de eerstvolgende dag mét items; liggen alle events van de maand in het verleden dan eindigt de lijst onderaan, andere maanden openen bovenaan.
+**Geïmplementeerd:** scroll-effect op `[huidigeDatum]` per view; tijd wordt vers gelezen zodat de 60s-kloktick en data-refreshes/filters géén herscroll triggeren terwijl de gebruiker scrolt. Browser klemt scrollTop vanzelf bij randtijden.
+**Bestanden:** `DagWeergave.tsx`, `WeekWeergave.tsx`, `AgendaLijst.tsx`.
 
 ---
 
