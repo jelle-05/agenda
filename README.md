@@ -8,6 +8,8 @@ Persoonlijke agenda-app gebouwd met Next.js, Supabase en Tailwind CSS. Geïnspir
 - **Standaardweergave** — desktop opent in **week**, mobiel in **dag** (bepaald op basis van de `sm`-breakpoint van 640px bij het openen; daarna blijft je handmatige keuze staan)
 - **Vier weergaven** — Dag, Week, Maand en Agenda (lijstoverzicht)
 - **Opent op de huidige tijd** — de dag- en weekweergave scrollen bij het openen automatisch naar de rode huidige-tijd-indicator, verticaal gecentreerd in beeld (op andere dagen/weken opent de tijdlijn op 07:00); de Agenda-lijst start bij vandaag (of de eerstvolgende dag met items)
+- **Begroeting met dagsamenvatting** — "Goedemorgen Jelle · 3 afspraken vandaag, eerste om 09:00" in de zijbalk (desktop) en onder de dagtitel (mobiel); gebruikt de naam uit Voorkeuren
+- **Werkuren** — optioneel (Voorkeuren): uren buiten je werkdag worden subtiel gedimd in de dag- en weekweergave; alles blijft gewoon klikbaar
 - **Filters** — toon/verberg per itemtype: **Events**, **Verjaardagen** en **Feestdagen**. Open via het filtericoon in de header (desktop) of het hamburger-menu linksboven (mobiel). De kalender update direct; filters verbergen alleen de weergave (data blijft bewaard) en worden persistent opgeslagen in `localStorage` (`agenda_filters`), dus ze blijven na refresh staan. Werkt in alle weergaven.
 - **Swipe-navigatie (mobiel)** — links/rechts swipen navigeert naar de vorige/volgende **dag, week én maand** (drempel 60px, werkt ook over events/verjaardagen/feestdagen heen; verticaal scrollen blijft werken)
 - **Stabiele header (desktop)** — de periode-titel heeft een vaste breedte, zodat de vorige/volgende-knoppen niet verschuiven bij wisselende maandnamen/weekranges
@@ -20,6 +22,8 @@ Persoonlijke agenda-app gebouwd met Next.js, Supabase en Tailwind CSS. Geïnspir
 - **Herhalende events verwijderen** — alleen dit event of alle herhalingen
 - **Velden** — titel, datum, begin-/eindtijd, hele dag, locatie, notitie, label, herinnering
 - **Slimme tijdsinvoer** — de eindtijd schuift automatisch mee als je de begintijd wijzigt (met behoud van de gekozen duur, standaard 1 uur); op mobiel kies je uur en minuten via simpele dropdowns i.p.v. de ronde klok-picker van Android
+- **Dupliceren** — knop "Dupliceer afspraak" bij een bestaand event maakt er ter plekke een nieuw event van met dezelfde gegevens; pas bij Toevoegen wordt het opgeslagen, het origineel blijft ongewijzigd
+- **Invul-suggesties** — typ bij een nieuw event 2+ letters van een eerdere titel en kies een suggestie: label, locatie en duur worden automatisch ingevuld (een handmatig gekozen eindtijd blijft staan)
 - **Event-blok styling** — titel bovenaan, locatie eronder, compact bij korte tijdsloten
 - **Compacte weergave** — blokken ≥ 20px tonen tekst in compact formaat (10px); blokken ≥ 26px normaal (12px); blokken < 20px tonen alleen kleurblok
 - **Overlappende events** — gelijktijdige/deels-overlappende events worden **over elkaar** getoond (volle breedte), maar met styling die ze duidelijk onderscheidbaar maakt: een fijne gekleurde omlijning per blok, een witte scheidingsrand + zachte schaduw, en een **stapelvolgorde** (`lib/overlap.ts` → `stapelVolgorde`) waarbij langere events achter komen en kortere events bovenop blijven (zichtbaar en tappable). Werkt in dag- en weekweergave, desktop en mobiel. All-day items (verjaardagen groen, feestdagen paars) staan in de aparte hele-dag-rij en blijven ongewijzigd.

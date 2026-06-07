@@ -13,13 +13,14 @@ import {
   laadLaatsteWeergave, slaLaatsteWeergaveOp,
 } from '@/lib/opslag'
 import { leesVoorkeuren } from '@/lib/voorkeuren'
+import { begroetingstekst } from '@/lib/begroeting'
 import {
   laadAfsprakenVanSupabase, slaAfspraakOpInSupabase, verwijderAfspraakUitSupabase,
   laadLabelsVanSupabase, slaLabelOpInSupabase, verwijderLabelUitSupabase,
   laadVerjaardagenVanSupabase, slaVerjaardagOpInSupabase, verwijderVerjaardagUitSupabase,
   uploadNaarSupabase,
 } from '@/lib/supabaseOpslag'
-import { NL_MAANDEN, NL_MAANDEN_KORT, formatWeekTitel } from '@/lib/datum'
+import { NL_MAANDEN, NL_MAANDEN_KORT, formatWeekTitel, toISODatum } from '@/lib/datum'
 import TopBar from './TopBar'
 import Sidebar from './Sidebar'
 import MobielMenu from './MobielMenu'
@@ -115,6 +116,17 @@ export default function AgendaApp() {
   // Persoonlijke voorkeuren uit user_metadata; na opslaan in Instellingen vuurt
   // USER_UPDATED → setGebruiker → deze memo (en alle afnemers) verversen vanzelf.
   const voorkeuren = useMemo(() => leesVoorkeuren(gebruiker?.user_metadata), [gebruiker])
+  // Begroeting + dagsamenvatting op basis van de échte afspraken van vandaag
+  // (virtuele verjaardagen/feestdagen tellen niet mee als "afspraak").
+  const begroeting = useMemo(() => {
+    const vandaagIso = toISODatum(new Date())
+    return begroetingstekst(voorkeuren.naam, afspraken.filter(a => a.datum === vandaagIso))
+  }, [voorkeuren, afspraken])
+  // Werkuren-dim voor de dag-/weekweergave (null = uit, exact de oude weergave).
+  const werkUren = useMemo(
+    () => voorkeuren.werkuren ? { start: voorkeuren.werkurenStart, eind: voorkeuren.werkurenEind } : null,
+    [voorkeuren],
+  )
 
   // Laad opgeslagen filtervoorkeuren bij opstarten (client-only, SSR-veilig).
   // localStorage is pas op de client beschikbaar; een lazy useState-init zou een
@@ -570,6 +582,7 @@ export default function AgendaApp() {
     <div className="flex flex-row h-full bg-white">
       {/* Desktop-zijbalk — verborgen op mobiel */}
       <Sidebar
+        begroeting={begroeting}
         onFilters={() => setFilterMenuOpen(true)}
         onVerjaardagen={() => setVerjaardagKeuzeOpen(true)}
         onLabels={() => setLabelBeheerOpen(true)}
@@ -633,6 +646,7 @@ export default function AgendaApp() {
               onNieuwAfspraak={openNieuwAfspraak}
               animatieKlasse={animatieKlasse}
               animatieSleutel={animatieSleutel}
+              werkuren={werkUren}
             />
           )}
           {weergave === 'dag' && (
@@ -645,6 +659,8 @@ export default function AgendaApp() {
               onNieuwAfspraak={openNieuwAfspraak}
               animatieKlasse={animatieKlasse}
               animatieSleutel={animatieSleutel}
+              werkuren={werkUren}
+              begroeting={begroeting}
             />
           )}
           {weergave === 'agenda' && (
@@ -679,6 +695,7 @@ export default function AgendaApp() {
         open={formulierOpen}
         afspraak={bewerkAfspraak}
         labels={labels}
+        afspraken={afspraken}
         initiaalDatum={vooringevuldDatum ?? huidigeDatum}
         initiaalTijd={vooringevuldTijd}
         voorkeuren={voorkeuren}

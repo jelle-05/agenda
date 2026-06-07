@@ -15,6 +15,9 @@ export interface Voorkeuren {
   dagoverzicht: boolean            // elke ochtend een kort overzicht ontvangen
   dagoverzichtKanaal: DagoverzichtKanaal
   dagoverzichtTijd: string         // 'HH:MM', verstuurd door de cron (elke minuut)
+  werkuren: boolean                // nachturen dimmen in dag-/weekweergave
+  werkurenStart: string            // 'HH:MM' begin werkdag
+  werkurenEind: string             // 'HH:MM' einde werkdag
 }
 
 export const STANDAARD_VOORKEUREN: Voorkeuren = {
@@ -25,7 +28,12 @@ export const STANDAARD_VOORKEUREN: Voorkeuren = {
   dagoverzicht: false,
   dagoverzichtKanaal: 'telegram',
   dagoverzichtTijd: '07:00',
+  werkuren: false,
+  werkurenStart: '09:00',
+  werkurenEind: '17:00',
 }
+
+const TIJD_PATROON = /^([01]\d|2[0-3]):[0-5]\d$/
 
 const WEERGAVEN: WeergaveType[] = ['dag', 'week', 'maand', 'agenda']
 
@@ -39,7 +47,20 @@ export function leesVoorkeuren(metadata: unknown): Voorkeuren {
   const naam = ruw?.naam
   const kanaal = ruw?.dagoverzichtKanaal
   const tijd = ruw?.dagoverzichtTijd
+  // Werkuren: beide tijden geldig én start vóór eind, anders allebei terug
+  // naar de defaults (een halve/omgekeerde range zou de hele dag dimmen).
+  let wStart = typeof ruw?.werkurenStart === 'string' && TIJD_PATROON.test(ruw.werkurenStart)
+    ? ruw.werkurenStart : STANDAARD_VOORKEUREN.werkurenStart
+  let wEind = typeof ruw?.werkurenEind === 'string' && TIJD_PATROON.test(ruw.werkurenEind)
+    ? ruw.werkurenEind : STANDAARD_VOORKEUREN.werkurenEind
+  if (wStart >= wEind) {
+    wStart = STANDAARD_VOORKEUREN.werkurenStart
+    wEind = STANDAARD_VOORKEUREN.werkurenEind
+  }
   return {
+    werkuren: typeof ruw?.werkuren === 'boolean' ? ruw.werkuren : STANDAARD_VOORKEUREN.werkuren,
+    werkurenStart: wStart,
+    werkurenEind: wEind,
     naam: typeof naam === 'string' ? naam.trim().slice(0, 40) : STANDAARD_VOORKEUREN.naam,
     dagoverzicht: typeof ruw?.dagoverzicht === 'boolean'
       ? ruw.dagoverzicht

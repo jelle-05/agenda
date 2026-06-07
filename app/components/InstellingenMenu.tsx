@@ -8,6 +8,7 @@ import { subscribeerOpPush, afmeldenVanPush } from '@/lib/pushUtils'
 import { verkleinNaarVierkantDataUrl } from '@/lib/afbeelding'
 import { STANDAARD_VOORKEUREN, type DagoverzichtKanaal, type StartWeergave, type Voorkeuren } from '@/lib/voorkeuren'
 import Avatar from './Avatar'
+import TijdKiezer from './TijdKiezer'
 
 interface Props {
   open: boolean
@@ -371,6 +372,47 @@ export default function InstellingenMenu({ open, email, avatarUrl, voorkeuren = 
                 <p className="text-[12px] text-gray-400 px-1">
                   Geldt alleen voor nieuwe afspraken; bestaande afspraken veranderen niet.
                 </p>
+              </section>
+
+              <section className="flex flex-col gap-2">
+                <h3 className="text-[12px] font-semibold uppercase tracking-wide text-gray-400">Werkuren</h3>
+                <div className="bg-gray-50 rounded-xl overflow-hidden divide-y divide-gray-200">
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <span className="text-[15px] text-gray-800">Werkuren gebruiken</span>
+                    <button
+                      onClick={() => wijzigVoorkeur({ werkuren: !vk.werkuren })}
+                      disabled={vkStatus === 'laden'}
+                      className={[
+                        'relative w-12 h-7 rounded-full transition-colors disabled:opacity-50',
+                        vk.werkuren ? 'bg-[#34C759]' : 'bg-gray-300',
+                      ].join(' ')}
+                      aria-label="Werkuren gebruiken"
+                      aria-pressed={vk.werkuren}
+                    >
+                      <span className={['absolute top-[3px] w-[22px] h-[22px] bg-white rounded-full shadow transition-all', vk.werkuren ? 'left-[26px]' : 'left-[3px]'].join(' ')} />
+                    </button>
+                  </div>
+                  {vk.werkuren && (
+                    <>
+                      <div className="flex items-center justify-between px-4 py-3 gap-3">
+                        <span className="text-[15px] text-gray-800 shrink-0">Begin werkdag</span>
+                        <TijdKiezer value={vk.werkurenStart} onChange={t => wijzigVoorkeur({ werkurenStart: t })} />
+                      </div>
+                      <div className="flex items-center justify-between px-4 py-3 gap-3">
+                        <span className="text-[15px] text-gray-800 shrink-0">Einde werkdag</span>
+                        <TijdKiezer value={vk.werkurenEind} onChange={t => wijzigVoorkeur({ werkurenEind: t })} />
+                      </div>
+                    </>
+                  )}
+                </div>
+                <p className="text-[12px] text-gray-400 px-1">
+                  Uren buiten je werkdag worden gedimd in de dag- en weekweergave.
+                </p>
+                {vk.werkuren && vk.werkurenStart >= vk.werkurenEind && (
+                  <p className="text-[12px] text-red-500 px-1">
+                    Begintijd moet voor de eindtijd liggen. De kalender gebruikt anders 09:00 tot 17:00.
+                  </p>
+                )}
               </section>
 
               <section className="flex flex-col gap-2">

@@ -3,6 +3,7 @@
 import { CalendarDays, Cake, Tag, SlidersHorizontal, StickyNote } from 'lucide-react'
 
 interface Props {
+  begroeting?: string
   onFilters: () => void
   onVerjaardagen: () => void
   onLabels: () => void
@@ -13,7 +14,7 @@ const itemKlasse =
 
 // Desktop-zijbalk (verborgen op mobiel; daar neemt het off-canvas MobielMenu dit over).
 // Zelfde patroon als de sidebar van de notes-app, met onderaan de link terug naar Notes.
-export default function Sidebar({ onFilters, onVerjaardagen, onLabels }: Props) {
+export default function Sidebar({ begroeting, onFilters, onVerjaardagen, onLabels }: Props) {
   const items: {
     key: string
     label: string
@@ -32,6 +33,14 @@ export default function Sidebar({ onFilters, onVerjaardagen, onLabels }: Props) 
         <CalendarDays size={18} className="text-[#007AFF]" />
         <span className="text-[15px] font-semibold text-gray-900">Agenda</span>
       </div>
+
+      {/* Begroeting + dagsamenvatting — subtiel, op mobiel staat dit in de dagweergave */}
+      {begroeting && (
+        <div className="px-4 py-3 border-b border-gray-200">
+          <p className="text-[13px] text-gray-500 truncate">{begroeting.split(' · ')[0]}</p>
+          <p className="text-[12px] text-gray-400 truncate">{begroeting.split(' · ')[1]}</p>
+        </div>
+      )}
 
       {/* Navigatie */}
       <nav className="flex-1 overflow-y-auto p-2 space-y-0.5">

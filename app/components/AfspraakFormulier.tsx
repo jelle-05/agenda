@@ -16,6 +16,7 @@ interface Props {
   open: boolean
   afspraak?: Afspraak | null
   labels: Label[]
+  afspraken?: Afspraak[]   // eigen events, bron voor invul-suggesties
   initiaalDatum: Date
   initiaalTijd?: string
   voorkeuren?: Voorkeuren
@@ -26,6 +27,21 @@ interface Props {
 
 function minutenNaarTijd(m: number): string {
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+}
+
+// Invul-suggesties: match op titel (case-insensitive), dedup per titel waarbij
+// het meest recente event wint, gesorteerd op datum aflopend, max 4.
+function zoekSuggesties(afspraken: Afspraak[], invoer: string, max = 4): Afspraak[] {
+  const term = invoer.trim().toLowerCase()
+  if (term.length < 2) return []
+  const perTitel = new Map<string, Afspraak>()
+  for (const a of afspraken) {
+    if (!a.titel.toLowerCase().includes(term)) continue
+    const sleutel = a.titel.toLowerCase()
+    const bestaand = perTitel.get(sleutel)
+    if (!bestaand || a.datum > bestaand.datum) perTitel.set(sleutel, a)
+  }
+  return [...perTitel.values()].sort((a, b) => b.datum.localeCompare(a.datum)).slice(0, max)
 }
 
 function leeg(datum: string, beginTijd = '09:00', voorkeuren: Voorkeuren = STANDAARD_VOORKEUREN): Afspraak {
@@ -39,10 +55,15 @@ function leeg(datum: string, beginTijd = '09:00', voorkeuren: Voorkeuren = STAND
   }
 }
 
-export default function AfspraakFormulier({ open, afspraak, labels, initiaalDatum, initiaalTijd, voorkeuren = STANDAARD_VOORKEUREN, onOpslaan, onVerwijder, onSluit }: Props) {
+export default function AfspraakFormulier({ open, afspraak, labels, afspraken = [], initiaalDatum, initiaalTijd, voorkeuren = STANDAARD_VOORKEUREN, onOpslaan, onVerwijder, onSluit }: Props) {
   const [form, setForm]           = useState<Afspraak>(() => leeg(toISODatum(initiaalDatum), initiaalTijd, voorkeuren))
   const [herhaling, setHerhaling] = useState<HerhalingConfig>(HERHALING_LEEG)
   const [bewerkScope, setBewerkScope] = useState<BewerkScope>('enkel')
+  // Invul-suggesties (alleen bij nieuwe events) + vlag of de eindtijd handmatig
+  // is gekozen (dan neemt een suggestie de duur niet over).
+  const [suggestiesOpen, setSuggestiesOpen]     = useState(false)
+  const [actieveSuggestie, setActieveSuggestie] = useState(-1)
+  const [eindHandmatig, setEindHandmatig]       = useState(false)
 
   useEffect(() => {
     if (open) {
@@ -52,6 +73,9 @@ export default function AfspraakFormulier({ open, afspraak, labels, initiaalDatu
       setForm(afspraak ? { ...afspraak } : leeg(toISODatum(initiaalDatum), initiaalTijd, voorkeuren))
       setHerhaling(HERHALING_LEEG)
       setBewerkScope('enkel')
+      setSuggestiesOpen(false)
+      setActieveSuggestie(-1)
+      setEindHandmatig(false)
     }
   }, [open, afspraak, initiaalDatum, initiaalTijd, voorkeuren])
 
@@ -85,6 +109,22 @@ export default function AfspraakFormulier({ open, afspraak, labels, initiaalDatu
     })
   }
 
+  // Suggestie kiezen: titel/label/locatie overnemen; de duur van het bron-event
+  // wordt op de huidige begintijd toegepast, tenzij de eindtijd al handmatig is
+  // gekozen. Datum en begintijd blijven altijd staan.
+  function kiesSuggestie(bron: Afspraak) {
+    setForm(f => {
+      const nieuw: Afspraak = { ...f, titel: bron.titel, labelIds: [...bron.labelIds], locatie: bron.locatie }
+      if (!bron.heeldag && !eindHandmatig) {
+        const duur = tijdNaarMinuten(bron.eindTijd) - tijdNaarMinuten(bron.beginTijd)
+        if (duur > 0) nieuw.eindTijd = minutenNaarTijd((tijdNaarMinuten(f.beginTijd) + duur) % (24 * 60))
+      }
+      return nieuw
+    })
+    setSuggestiesOpen(false)
+    setActieveSuggestie(-1)
+  }
+
   function toggleLabel(id: string) {
     setForm(f => ({
       ...f,
@@ -112,6 +152,8 @@ export default function AfspraakFormulier({ open, afspraak, labels, initiaalDatu
 
   const toonDagKiezer = herhaling.type === 'wekelijks' || herhaling.type === 'tweewekelijks'
   const duuretiket    = herhaling.type === 'maandelijks' ? 'maanden' : 'weken'
+  // Suggesties alleen bij nieuwe events — bij bewerken nooit ongevraagd velden overschrijven.
+  const suggesties    = (isNieuw && suggestiesOpen) ? zoekSuggesties(afspraken, form.titel) : []
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -137,16 +179,54 @@ export default function AfspraakFormulier({ open, afspraak, labels, initiaalDatu
 
         {/* Body */}
         <div className="overflow-y-auto flex-1 p-4 space-y-3">
-          {/* Titel */}
-          <div className="bg-gray-50 rounded-xl px-4 py-3">
-            <input
-              type="text"
-              value={form.titel}
-              onChange={e => setForm(f => ({ ...f, titel: e.target.value }))}
-              placeholder="Titel"
-              className="w-full text-[17px] font-medium placeholder:text-gray-300 outline-none bg-transparent"
-              onKeyDown={e => e.key === 'Enter' && opslaan()}
-            />
+          {/* Titel + invul-suggesties uit eigen events */}
+          <div className="relative">
+            <div className="bg-gray-50 rounded-xl px-4 py-3">
+              <input
+                type="text"
+                value={form.titel}
+                onChange={e => {
+                  setForm(f => ({ ...f, titel: e.target.value }))
+                  setSuggestiesOpen(true)
+                  setActieveSuggestie(-1)
+                }}
+                onBlur={() => setSuggestiesOpen(false)}
+                placeholder="Titel"
+                className="w-full text-[17px] font-medium placeholder:text-gray-300 outline-none bg-transparent"
+                onKeyDown={e => {
+                  if (suggesties.length > 0) {
+                    if (e.key === 'ArrowDown') { e.preventDefault(); setActieveSuggestie(i => (i + 1) % suggesties.length); return }
+                    if (e.key === 'ArrowUp')   { e.preventDefault(); setActieveSuggestie(i => (i - 1 + suggesties.length) % suggesties.length); return }
+                    if (e.key === 'Escape')    { setSuggestiesOpen(false); setActieveSuggestie(-1); return }
+                    if (e.key === 'Enter' && actieveSuggestie >= 0) { e.preventDefault(); kiesSuggestie(suggesties[actieveSuggestie]); return }
+                  }
+                  if (e.key === 'Enter') opslaan()
+                }}
+              />
+            </div>
+            {suggesties.length > 0 && (
+              <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-10 overflow-hidden">
+                {suggesties.map((s, i) => {
+                  const label = labels.find(l => l.id === s.labelIds[0])
+                  const sub = [s.locatie, label?.naam].filter(Boolean).join(' · ')
+                  return (
+                    <button
+                      key={s.id}
+                      // onMouseDown i.p.v. onClick: vuurt vóór de input-blur, anders sluit de lijst te vroeg.
+                      onMouseDown={e => { e.preventDefault(); kiesSuggestie(s) }}
+                      onMouseEnter={() => setActieveSuggestie(i)}
+                      className={[
+                        'w-full text-left px-4 py-2.5 transition-colors',
+                        i === actieveSuggestie ? 'bg-gray-100' : 'hover:bg-gray-50',
+                      ].join(' ')}
+                    >
+                      <p className="text-[14px] font-medium text-gray-900 truncate">{s.titel}</p>
+                      {sub && <p className="text-[12px] text-gray-400 truncate">{sub}</p>}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
           {/* Datum & tijden */}
@@ -183,7 +263,7 @@ export default function AfspraakFormulier({ open, afspraak, labels, initiaalDatu
                 <div className="flex items-center justify-between px-4 py-3">
                   <span className="text-[15px] text-gray-800">Eind</span>
                   <TijdKiezer value={form.eindTijd}
-                    onChange={tijd => setForm(f => ({ ...f, eindTijd: tijd }))}
+                    onChange={tijd => { setEindHandmatig(true); setForm(f => ({ ...f, eindTijd: tijd })) }}
                   />
                 </div>
               </>
@@ -350,6 +430,21 @@ export default function AfspraakFormulier({ open, afspraak, labels, initiaalDatu
               className="w-full text-[15px] outline-none bg-transparent placeholder:text-gray-400 resize-none"
             />
           </div>
+
+          {/* Dupliceer — maakt van dit formulier ter plekke een nieuw-event-formulier
+              met dezelfde velden (titel blijft gelijk, Apple-conventie). Er wordt pas
+              iets opgeslagen bij "Toevoegen"; het origineel blijft onaangeraakt. */}
+          {!isNieuw && (
+            <button
+              onClick={() => {
+                setForm(f => ({ ...f, id: '', herhalingGroepId: undefined }))
+                setBewerkScope('enkel')
+              }}
+              className="w-full bg-gray-50 text-gray-700 rounded-xl py-3 text-[15px] font-medium hover:bg-gray-100 transition-colors"
+            >
+              Dupliceer afspraak
+            </button>
+          )}
 
           {/* Verwijder */}
           {!isNieuw && (

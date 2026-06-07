@@ -17,6 +17,7 @@ interface Props {
   onNieuwAfspraak: (dag: Date, beginTijd: string) => void
   animatieKlasse?: string
   animatieSleutel?: number
+  werkuren?: { start: string; eind: string } | null
 }
 
 function minutenNaarTijd(min: number): string {
@@ -24,7 +25,7 @@ function minutenNaarTijd(min: number): string {
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 }
 
-export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKlik, onAfspraakKlik, onNieuwAfspraak, animatieKlasse = '', animatieSleutel = 0 }: Props) {
+export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKlik, onAfspraakKlik, onNieuwAfspraak, animatieKlasse = '', animatieSleutel = 0, werkuren = null }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [nu, setNu] = useState(() => new Date())
 
@@ -148,6 +149,19 @@ export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKli
                 className="flex-1 relative border-l border-gray-100 sm:border-[#dfdfdf] min-w-0"
                 onDoubleClick={e => handleDubbelklik(e, dag)}
               >
+                {/* Werkuren — dim buiten de werkdag (pointer-events-none, vóór lijnen/events) */}
+                {werkuren && (
+                  <>
+                    <div
+                      className="absolute inset-x-0 top-0 bg-gray-100/60 pointer-events-none"
+                      style={{ height: (tijdNaarMinuten(werkuren.start) / 60) * UURHOOGTE }}
+                    />
+                    <div
+                      className="absolute inset-x-0 bottom-0 bg-gray-100/60 pointer-events-none"
+                      style={{ height: ((24 * 60 - tijdNaarMinuten(werkuren.eind)) / 60) * UURHOOGTE }}
+                    />
+                  </>
+                )}
                 {Array.from({ length: 24 }, (_, i) => (
                   <div key={i} className="absolute w-full border-t border-gray-100 sm:border-[#dfdfdf]" style={{ top: i * UURHOOGTE }} />
                 ))}

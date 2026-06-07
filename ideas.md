@@ -12,11 +12,9 @@ Kleine wijzigingen met direct zichtbaar resultaat. Weinig backend-werk.
 
 ---
 
-### Vandaag-knop in topbar (desktop)
-**Wat:** Klikbare "Vandaag"-knop naast de navigatiepijlen die direct terugsprint naar de huidige week/dag/maand.
-**Waarom:** Nu alleen beschikbaar in de BottomBar op mobiel. Op desktop ontbreekt dit.
-**Complexiteit:** Laag
-**Bestanden:** `TopBar.tsx`, `AgendaApp.tsx`
+### ~~Vandaag-knop in topbar (desktop)~~ ✅ Bestond al
+**Wat:** Klikbare "Vandaag"-knop naast de navigatiepijlen die direct terugspringt naar vandaag.
+**Status:** bleek al aanwezig in `TopBar.tsx` (`hidden sm:block`, links van de pijlen) — toegevoegd bij de mobiele navigatie-herinrichting; dit idee was verouderd.
 
 ---
 
@@ -75,11 +73,9 @@ Kleine wijzigingen met direct zichtbaar resultaat. Weinig backend-werk.
 
 ---
 
-### Event aanmaken via klik op maandweergave
+### ~~Event aanmaken via klik op maandweergave~~ ✅ Bestond al
 **Wat:** Klikken op een dag in de maandweergave opent direct het formulier met die datum vooringevuld.
-**Waarom:** Nu werkt dubbelklik alleen in week- en dagweergave. Maandweergave heeft geen snelle aanmaakflow.
-**Complexiteit:** Laag
-**Bestanden:** `MaandWeergave.tsx`, `AgendaApp.tsx`
+**Status:** bleek al aanwezig — klik op de lege ruimte in een dagcel (`MaandWeergave.tsx`, `onNieuwAfspraak(dag)`); dagnummer = naar dagweergave, event = bewerken. Dit idee was verouderd.
 
 ---
 
@@ -113,33 +109,23 @@ Onderzoek naar manieren om de app persoonlijker te maken, getoetst aan actuele k
 
 ---
 
-### Begroeting + dagsamenvatting in de app
-**Wat:** Tijdsafhankelijke begroeting met voornaam en mini-samenvatting ("Goedemorgen Jelle · 3 afspraken vandaag, eerste om 09:00") — desktop bovenin de Sidebar, mobiel als compacte regel boven de dagweergave.
-**Waarom:** De app opent nu "kaal"; een persoonlijke start maakt het verschil tussen een tool en jóúw agenda. Naam is al beschikbaar (user_metadata/e-mail), afspraken al in state.
-**Opslag:** Geen — volledig client-side berekend.
-**Privacy:** Uitstekend.
-**Complexiteit:** Laag
-**Bestanden:** `Sidebar.tsx`, evt. `DagWeergave.tsx`/`TopBar.tsx`, `AgendaApp.tsx` (props)
+### ~~Begroeting + dagsamenvatting in de app~~ ✅ Geïmplementeerd (juni 2026)
+**Wat:** Tijdsafhankelijke begroeting met voornaam en mini-samenvatting ("Goedemorgen Jelle · 3 afspraken vandaag, eerste om 09:00").
+**Geïmplementeerd:** `lib/begroeting.ts` (dagdeel-bewust, heeldag-varianten, naam uit `voorkeuren.naam`); desktop in de Sidebar onder de app-naam, mobiel als compacte regel onder de dagtitel in `DagWeergave` (`sm:hidden`). Client-side berekend op de echte afspraken van vandaag.
+**Bestanden:** `lib/begroeting.ts` (nieuw), `Sidebar.tsx`, `DagWeergave.tsx`, `AgendaApp.tsx`
 
 ---
 
-### Slimme invul-suggesties bij nieuw event
-**Wat:** Bij het typen van een titel in `AfspraakFormulier` suggesties tonen uit eerdere events (client-side, dedup op titel); een suggestie kiezen vult label, locatie en duur voor op basis van de vorige keer.
-**Waarom:** Terugkerende afspraken die nét niet in een herhaalreeks passen ("Tennis", "Kapper") zijn nu elke keer volledig handwerk. Dit is patroonherkenning zonder AI of externe diensten.
-**Opslag:** Geen — afgeleid van bestaande afspraken in state.
-**Privacy:** Uitstekend — er verlaat niets het apparaat.
-**Complexiteit:** Middel (suggestie-dropdown + matching; UX op mobiel goed testen)
-**Bestanden:** `AfspraakFormulier.tsx`, evt. nieuw `lib/suggesties.ts`
+### ~~Slimme invul-suggesties bij nieuw event~~ ✅ Geïmplementeerd (juni 2026)
+**Wat:** Bij het typen van een titel suggesties tonen uit eerdere events; kiezen vult label, locatie en duur voor.
+**Geïmplementeerd:** in `AfspraakFormulier.tsx` (alleen bij nieuwe events): vanaf 2 tekens max 4 suggesties (case-insensitive, dedup per titel, recentste eerst), dropdown met pijltjes/Enter/Escape + muis/touch; duur van het bron-event wordt toegepast op de huidige begintijd tenzij de eindtijd handmatig is gekozen. Volledig client-side.
 
 ---
 
-### Persoonlijke werkuren
-**Wat:** Instelbare dagstart/-einde (bv. 07:00–23:00); het week/daggrid dimt de uren erbuiten en de scroll-fallback voor andere dagen gebruikt jouw dagstart i.p.v. de vaste 07:00.
-**Waarom:** De 07:00-aanname past niet bij ieders ritme; dimmen geeft focus op je echte dag.
-**Opslag:** Via de Voorkeuren-tab (`user_metadata`).
-**Privacy:** Uitstekend.
-**Complexiteit:** Middel
-**Bestanden:** `WeekWeergave.tsx`, `DagWeergave.tsx`, `InstellingenMenu.tsx`
+### ~~Persoonlijke werkuren~~ ✅ Geïmplementeerd (juni 2026)
+**Wat:** Instelbare dagstart/-einde; het week/daggrid dimt de uren erbuiten.
+**Geïmplementeerd:** voorkeuren `werkuren`/`werkurenStart`/`werkurenEind` (default uit, 09:00–17:00; ongeldige range valt terug op defaults); sectie "Werkuren" in de Voorkeuren-tab (hergebruik `TijdKiezer`); dim-overlays (`pointer-events-none`) in dag- en weekweergave — alles blijft klikbaar.
+**Nog open (vervolgstap):** weekdag-selectie (bv. werkuren alleen ma–vr) en de scroll-fallback voor andere dagen op de eigen dagstart i.p.v. 07:00.
 
 ---
 
@@ -222,11 +208,9 @@ Onderzoek naar manieren om de app persoonlijker te maken, getoetst aan actuele k
 
 ---
 
-### Event dupliceren
+### ~~Event dupliceren~~ ✅ Geïmplementeerd (juni 2026)
 **Wat:** Een bestaand event kopiëren naar een andere datum/tijd.
-**Waarom:** Handig voor terugkerende taken die niet exact op schema passen voor de herhalings-functie.
-**Complexiteit:** Laag
-**Bestanden:** `AfspraakFormulier.tsx`, `AgendaApp.tsx`
+**Geïmplementeerd:** knop "Dupliceer afspraak" in `AfspraakFormulier.tsx` — zet het formulier ter plekke om naar nieuw-event-modus (id leeg, zelfde velden, titel ongewijzigd); pas bij Toevoegen wordt opgeslagen, origineel blijft onaangeraakt.
 
 ---
 

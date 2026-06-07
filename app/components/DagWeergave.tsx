@@ -18,6 +18,8 @@ interface Props {
   onNieuwAfspraak: (dag: Date, beginTijd: string) => void
   animatieKlasse?: string
   animatieSleutel?: number
+  werkuren?: { start: string; eind: string } | null
+  begroeting?: string
 }
 
 function minutenNaarTijd(min: number): string {
@@ -25,7 +27,7 @@ function minutenNaarTijd(min: number): string {
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 }
 
-export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik, onAfspraakKlik, onNieuwAfspraak, animatieKlasse = '', animatieSleutel = 0 }: Props) {
+export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik, onAfspraakKlik, onNieuwAfspraak, animatieKlasse = '', animatieSleutel = 0, werkuren = null, begroeting }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [nu, setNu] = useState(() => new Date())
 
@@ -67,9 +69,12 @@ export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik
     <div className="h-full flex flex-col">
       <WeekStrip peildatum={huidigeDatum} geselecteerd={huidigeDatum} onDagKlik={onDagKlik} />
 
-      {/* Dagtitel */}
-      <div className="px-4 py-2 text-sm text-gray-500 border-b border-gray-100 sm:border-[#dfdfdf] shrink-0">
-        {formatDagTitel(huidigeDatum)}
+      {/* Dagtitel + (mobiel) begroeting met dagsamenvatting; desktop toont die in de Sidebar */}
+      <div className="px-4 py-2 border-b border-gray-100 sm:border-[#dfdfdf] shrink-0">
+        <div className="text-sm text-gray-500">{formatDagTitel(huidigeDatum)}</div>
+        {begroeting && (
+          <div className="sm:hidden text-[12px] text-gray-400 truncate">{begroeting}</div>
+        )}
       </div>
 
       {/* Hele dag */}
@@ -122,6 +127,22 @@ export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik
             className="flex-1 relative border-l border-gray-100 sm:border-[#dfdfdf]"
             onDoubleClick={handleDubbelklik}
           >
+            {/* Werkuren — dim de uren buiten de werkdag (pointer-events-none:
+                dubbelklik blijft werken; vóór de uurlijnen/events in de DOM,
+                dus alles blijft erboven leesbaar) */}
+            {werkuren && (
+              <>
+                <div
+                  className="absolute inset-x-0 top-0 bg-gray-100/60 pointer-events-none"
+                  style={{ height: (tijdNaarMinuten(werkuren.start) / 60) * UURHOOGTE }}
+                />
+                <div
+                  className="absolute inset-x-0 bottom-0 bg-gray-100/60 pointer-events-none"
+                  style={{ height: ((24 * 60 - tijdNaarMinuten(werkuren.eind)) / 60) * UURHOOGTE }}
+                />
+              </>
+            )}
+
             {/* Uurlijnen */}
             {Array.from({ length: 24 }, (_, i) => (
               <div key={i} className="absolute w-full border-t border-gray-100 sm:border-[#dfdfdf]" style={{ top: i * UURHOOGTE }} />
