@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import type { Afspraak, Label, HerhalingConfig, HerhalingType } from '@/types'
 import { HERHALING_LEEG } from '@/types'
-import { toISODatum, getDagIndex } from '@/lib/datum'
+import { toISODatum, getDagIndex, tijdNaarMinuten } from '@/lib/datum'
 import { labelAchtergrond } from '@/lib/kleuren'
+import TijdKiezer from './TijdKiezer'
 
 const NL_KORT = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo']
 
@@ -19,6 +20,10 @@ interface Props {
   onOpslaan: (afspraak: Afspraak, herhaling: HerhalingConfig, scope?: BewerkScope) => void
   onVerwijder: (id: string, alleHerhalingen?: boolean) => void
   onSluit: () => void
+}
+
+function minutenNaarTijd(m: number): string {
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 }
 
 function leeg(datum: string, beginTijd = '09:00'): Afspraak {
@@ -56,6 +61,22 @@ export default function AfspraakFormulier({ open, afspraak, labels, initiaalDatu
       herhaling,
       (!isNieuw && isHerhalend) ? bewerkScope : undefined,
     )
+  }
+
+  function wijzigBeginTijd(nieuwBegin: string) {
+    // Eindtijd schuift mee met de begintijd, met behoud van de huidige duur
+    // (standaard 1 uur). Ongeldige/negatieve duur valt terug op 60 min;
+    // over middernacht heen wrapt de eindtijd (23:30 + 1u → 00:30).
+    if (!nieuwBegin) {
+      setForm(f => ({ ...f, beginTijd: nieuwBegin }))
+      return
+    }
+    setForm(f => {
+      let duur = tijdNaarMinuten(f.eindTijd) - tijdNaarMinuten(f.beginTijd)
+      if (!Number.isFinite(duur) || duur <= 0) duur = 60
+      const eindMin = (tijdNaarMinuten(nieuwBegin) + duur) % (24 * 60)
+      return { ...f, beginTijd: nieuwBegin, eindTijd: minutenNaarTijd(eindMin) }
+    })
   }
 
   function toggleLabel(id: string) {
@@ -151,16 +172,12 @@ export default function AfspraakFormulier({ open, afspraak, labels, initiaalDatu
               <>
                 <div className="flex items-center justify-between px-4 py-3">
                   <span className="text-[15px] text-gray-800">Begin</span>
-                  <input type="time" value={form.beginTijd}
-                    onChange={e => setForm(f => ({ ...f, beginTijd: e.target.value }))}
-                    className="text-[15px] text-[#007AFF] outline-none bg-transparent"
-                  />
+                  <TijdKiezer value={form.beginTijd} onChange={wijzigBeginTijd} />
                 </div>
                 <div className="flex items-center justify-between px-4 py-3">
                   <span className="text-[15px] text-gray-800">Eind</span>
-                  <input type="time" value={form.eindTijd}
-                    onChange={e => setForm(f => ({ ...f, eindTijd: e.target.value }))}
-                    className="text-[15px] text-[#007AFF] outline-none bg-transparent"
+                  <TijdKiezer value={form.eindTijd}
+                    onChange={tijd => setForm(f => ({ ...f, eindTijd: tijd }))}
                   />
                 </div>
               </>

@@ -19,6 +19,7 @@ Persoonlijke agenda-app gebouwd met Next.js, Supabase en Tailwind CSS. Geïnspir
 - **Herhalende events** — dagelijks, wekelijks, tweewekelijks of maandelijks met dag-selectie en instelbare duur
 - **Herhalende events verwijderen** — alleen dit event of alle herhalingen
 - **Velden** — titel, datum, begin-/eindtijd, hele dag, locatie, notitie, label, herinnering
+- **Slimme tijdsinvoer** — de eindtijd schuift automatisch mee als je de begintijd wijzigt (met behoud van de gekozen duur, standaard 1 uur); op mobiel kies je uur en minuten via simpele dropdowns i.p.v. de ronde klok-picker van Android
 - **Event-blok styling** — titel bovenaan, locatie eronder, compact bij korte tijdsloten
 - **Compacte weergave** — blokken ≥ 20px tonen tekst in compact formaat (10px); blokken ≥ 26px normaal (12px); blokken < 20px tonen alleen kleurblok
 - **Overlappende events** — gelijktijdige/deels-overlappende events worden **over elkaar** getoond (volle breedte), maar met styling die ze duidelijk onderscheidbaar maakt: een fijne gekleurde omlijning per blok, een witte scheidingsrand + zachte schaduw, en een **stapelvolgorde** (`lib/overlap.ts` → `stapelVolgorde`) waarbij langere events achter komen en kortere events bovenop blijven (zichtbaar en tappable). Werkt in dag- en weekweergave, desktop en mobiel. All-day items (verjaardagen groen, feestdagen paars) staan in de aparte hele-dag-rij en blijven ongewijzigd.
