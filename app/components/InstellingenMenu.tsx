@@ -6,7 +6,7 @@ import { Bell, Camera, Mail, Send, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { subscribeerOpPush, afmeldenVanPush } from '@/lib/pushUtils'
 import { verkleinNaarVierkantDataUrl } from '@/lib/afbeelding'
-import { STANDAARD_VOORKEUREN, type StartWeergave, type Voorkeuren } from '@/lib/voorkeuren'
+import { STANDAARD_VOORKEUREN, type DagoverzichtKanaal, type StartWeergave, type Voorkeuren } from '@/lib/voorkeuren'
 import Avatar from './Avatar'
 
 interface Props {
@@ -371,6 +371,77 @@ export default function InstellingenMenu({ open, email, avatarUrl, voorkeuren = 
                 <p className="text-[12px] text-gray-400 px-1">
                   Geldt alleen voor nieuwe afspraken; bestaande afspraken veranderen niet.
                 </p>
+              </section>
+
+              <section className="flex flex-col gap-2">
+                <h3 className="text-[12px] font-semibold uppercase tracking-wide text-gray-400">Dagoverzicht</h3>
+                <div className="bg-gray-50 rounded-xl overflow-hidden divide-y divide-gray-200">
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <span className="text-[15px] text-gray-800">Dagoverzicht ontvangen</span>
+                    <button
+                      onClick={() => wijzigVoorkeur({ dagoverzicht: !vk.dagoverzicht })}
+                      disabled={vkStatus === 'laden'}
+                      className={[
+                        'relative w-12 h-7 rounded-full transition-colors disabled:opacity-50',
+                        vk.dagoverzicht ? 'bg-[#34C759]' : 'bg-gray-300',
+                      ].join(' ')}
+                      aria-label="Dagoverzicht ontvangen"
+                      aria-pressed={vk.dagoverzicht}
+                    >
+                      <span className={['absolute top-[3px] w-[22px] h-[22px] bg-white rounded-full shadow transition-all', vk.dagoverzicht ? 'left-[26px]' : 'left-[3px]'].join(' ')} />
+                    </button>
+                  </div>
+                  {vk.dagoverzicht && (
+                    <>
+                      <div className="flex items-center justify-between px-4 py-3 gap-3">
+                        <span className="text-[15px] text-gray-800 shrink-0">Kanaal</span>
+                        <select
+                          value={vk.dagoverzichtKanaal}
+                          onChange={e => wijzigVoorkeur({ dagoverzichtKanaal: e.target.value as DagoverzichtKanaal })}
+                          disabled={vkStatus === 'laden'}
+                          className="text-[15px] text-[#007AFF] outline-none bg-transparent text-right min-w-0"
+                        >
+                          <option value="telegram">Telegram</option>
+                          <option value="email">E-mail</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center justify-between px-4 py-3 gap-3">
+                        <span className="text-[15px] text-gray-800 shrink-0">Tijd</span>
+                        <select
+                          value={vk.dagoverzichtTijd}
+                          onChange={e => wijzigVoorkeur({ dagoverzichtTijd: e.target.value })}
+                          disabled={vkStatus === 'laden'}
+                          className="text-[15px] text-[#007AFF] outline-none bg-transparent text-right min-w-0"
+                        >
+                          {Array.from({ length: 48 }, (_, i) => {
+                            const t = `${String(Math.floor(i / 2)).padStart(2, '0')}:${i % 2 ? '30' : '00'}`
+                            return <option key={t} value={t}>{t}</option>
+                          })}
+                        </select>
+                      </div>
+                      <div className="flex items-center justify-between px-4 py-3 gap-3">
+                        <span className="text-[15px] text-gray-800 shrink-0">Naam</span>
+                        <input
+                          type="text"
+                          value={vk.naam}
+                          maxLength={40}
+                          placeholder="Voor de begroeting"
+                          onChange={e => setVk(v => ({ ...v, naam: e.target.value }))}
+                          onBlur={e => wijzigVoorkeur({ naam: e.target.value.trim().slice(0, 40) })}
+                          className="text-[15px] text-[#007AFF] outline-none bg-transparent text-right min-w-0 placeholder:text-gray-300"
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+                <p className="text-[12px] text-gray-400 px-1">
+                  Ontvang elke ochtend een kort overzicht van je afspraken en verjaardagen.
+                </p>
+                {vk.dagoverzicht && vk.dagoverzichtKanaal === 'telegram' && tgStatus === 'niet' && (
+                  <p className="text-[12px] text-red-500 px-1">
+                    Telegram is nog niet gekoppeld (tabblad Notificaties). Zonder koppeling wordt er niets verstuurd.
+                  </p>
+                )}
               </section>
 
               {vkStatus === 'ok' && (

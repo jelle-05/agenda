@@ -106,14 +106,10 @@ Onderzoek naar manieren om de app persoonlijker te maken, getoetst aan actuele k
 
 ---
 
-### Persoonlijk dagoverzicht via Telegram en/of e-mail
-**Wat:** Elke ochtend (instelbaar tijdstip, bv. 07:00) een bericht: "Goedemorgen Jelle — vandaag 3 afspraken en 1 verjaardag", met de lijst eronder. Uit te zetten / kanaalkeuze volgens dezelfde logica als reminders (Telegram indien gekoppeld+actief, anders e-mail).
-**Waarom:** Je weet je dag zonder de app te openen; voelt als een persoonlijke assistent. Hergebruikt de volledige bestaande infra: cron-patroon, `verstuurTelegram()`, Resend, `escapeHtml`.
-**Opslag:** Geen nieuwe data (overzicht wordt berekend); aan/uit-voorkeur via de Voorkeuren-tab of `telegram_accounts`-vlag.
-**Privacy:** Goed — eigen bot/eigen mailadres, geen derden.
-**Complexiteit:** Laag (nieuw cron-endpoint `/api/cron/dagoverzicht` + cron-job.org-trigger)
-**Bestanden:** nieuw `api/cron/dagoverzicht/route.ts`, `lib/telegram.ts` (hergebruik), evt. `InstellingenMenu.tsx`
-**Let op:** vervangt/verbreedt het bestaande idee *Dagelijkse overzichtsmail* (zie Reminder & e-mail verbeteringen).
+### ~~Persoonlijk dagoverzicht via Telegram en/of e-mail~~ ✅ Geïmplementeerd (juni 2026)
+**Wat:** Elke ochtend (instelbaar tijdstip, default 07:00) een minimalistisch platte-tekst-overzicht van de afspraken en verjaardagen van vandaag, via Telegram of e-mail.
+**Geïmplementeerd:** blok "Dagoverzicht" in de Voorkeuren-tab (toggle, kanaal, tijd, optionele begroetingsnaam; voorkeuren in `user_metadata.voorkeuren`). Verzending in de bestaande every-minute cron (`/api/cron/reminders`) met dedup via `claimReminder` (max 1/dag). Telegram vereist alleen de koppeling (los van de actief-vlag); e-mail is text-only met subject "Dagoverzicht". Berichten bewust zonder emoji's/opmaak/em-dashes. Vervangt het idee *Dagelijkse overzichtsmail*.
+**Bestanden:** `lib/voorkeuren.ts`, `InstellingenMenu.tsx`, `api/cron/reminders/route.ts`
 
 ---
 
@@ -278,12 +274,9 @@ Onderzoek naar manieren om de app persoonlijker te maken, getoetst aan actuele k
 
 ---
 
-### Dagelijkse overzichtsmail
-**Wat:** Elke ochtend (bijv. 07:00) een e-mail met alle events van die dag.
-**Waarom:** Handig als je de app niet elke dag opent maar wel wilt weten wat er op de planning staat.
-**Complexiteit:** Laag (extra cron-endpoint + aparte cron-job instelling)
-**Bestanden:** Nieuw API-route `/api/cron/dagoverzicht`
-**Zie ook:** verbreed tot *Persoonlijk dagoverzicht via Telegram en/of e-mail* (sectie Personalisatie) — met begroeting en kanaalkeuze volgens de reminder-logica.
+### ~~Dagelijkse overzichtsmail~~ ✅ Geïmplementeerd (juni 2026)
+**Wat:** Elke ochtend een e-mail met alle events van die dag.
+**Geïmplementeerd:** als onderdeel van het bredere *Persoonlijk dagoverzicht via Telegram en/of e-mail* (sectie Personalisatie) — aan/uit, kanaalkeuze en tijdstip in Instellingen → Voorkeuren.
 
 ---
 

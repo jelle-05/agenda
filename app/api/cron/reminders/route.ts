@@ -4,6 +4,7 @@ import webpush from 'web-push'
 import { Resend } from 'resend'
 import { migreerDatumVelden, parseGeboortejaar } from '@/lib/verjaardagen'
 import { verstuurTelegram } from '@/lib/telegram'
+import { leesVoorkeuren } from '@/lib/voorkeuren'
 
 export const runtime = 'nodejs'
 
@@ -74,6 +75,24 @@ async function stuurPushNaarGebruiker(
     }
   }
   return { verstuurd, opgeruimd }
+}
+
+// Geeft de chat_id terug als de gebruiker Telegram gekoppeld heeft, ongeacht de
+// `actief`-vlag. Gebruikt door het dagoverzicht: dat is een expliciete
+// kanaalkeuze, los van de reminder-voorkeur die `actief` stuurt.
+async function telegramChat(userId: string): Promise<string | null> {
+  const { data, error } = await supabaseAdmin
+    .from('telegram_accounts')
+    .select('chat_id')
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (error) {
+    if (error.code !== '42P01') {
+      console.error('[reminders] telegram_accounts ophalen mislukt:', error.code)
+    }
+    return null
+  }
+  return data?.chat_id ? String(data.chat_id) : null
 }
 
 // Geeft de chat_id terug als de gebruiker Telegram gekoppeld én actief heeft;
@@ -382,12 +401,120 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // ── Dagoverzicht ──────────────────────────────────────────────────────────────
+  // Persoonlijke voorkeur (user_metadata.voorkeuren): elke ochtend op het gekozen
+  // tijdstip een minimalistisch platte-tekst-overzicht van vandaag, via Telegram
+  // (koppeling vereist, los van de actief-vlag) óf e-mail. Idempotent via
+  // claimReminder; één fout per gebruiker stopt de rest niet.
+  let dagoverzichtVerstuurd = 0
+
+  const { data: usersData, error: usersFout } = await supabaseAdmin.auth.admin.listUsers({ perPage: 100 })
+  if (usersFout) {
+    console.error('[reminders] dagoverzicht: gebruikers ophalen mislukt:', usersFout.message)
+  }
+
+  for (const user of usersData?.users ?? []) {
+    try {
+      const vk = leesVoorkeuren(user.user_metadata)
+      if (!vk.dagoverzicht) continue
+
+      // Zelfde tolerantievenster als de reminders (vangt cron-vertraging op).
+      const [tu, tm] = vk.dagoverzichtTijd.split(':').map(Number)
+      const tijdMin = tu * 60 + tm
+      if (tijdMin < nuMinuten - 1 || tijdMin > nuMinuten + 2) continue
+
+      // Idempotentie: maximaal één dagoverzicht per gebruiker per dag.
+      const sleutel = `dagoverzicht|${user.id}|${vandaag}`
+      if (!(await claimReminder(sleutel))) continue
+
+      // Afspraken van vandaag: heeldag eerst, daarna op begintijd.
+      const { data: dagAfspraken } = await supabaseAdmin
+        .from('afspraken')
+        .select('titel, begin_tijd, heeldag')
+        .eq('user_id', user.id)
+        .eq('datum', vandaag)
+      const events = (dagAfspraken ?? []).sort((a, b) => {
+        if (a.heeldag !== b.heeldag) return a.heeldag ? -1 : 1
+        return (a.begin_tijd ?? '').localeCompare(b.begin_tijd ?? '')
+      })
+
+      // Verjaardagen van vandaag; niet-terugkomende alleen in hun eigen jaar.
+      const { data: alleVj } = await supabaseAdmin
+        .from('verjaardagen')
+        .select('naam, dag, maand, datum, leeftijd, geboortejaar, terugkomend')
+        .eq('user_id', user.id)
+      const jarigen = (alleVj ?? []).filter(vj => {
+        const { dag: vd, maand: vm } = migreerDatumVelden(vj)
+        if (vd !== amNu.getDate() || vm !== amNu.getMonth() + 1) return false
+        if (vj.terugkomend === false) return (vj.datum ?? '').startsWith(String(amNu.getFullYear()))
+        return true
+      })
+
+      // Bericht: bewust minimalistisch — platte tekst, geen emoji's, geen
+      // opmaak, geen em-dashes (vaste afspraak voor het dagoverzicht).
+      const regels: string[] = [vk.naam ? `Goedemorgen ${vk.naam}` : 'Goedemorgen', '']
+      if (events.length === 0 && jarigen.length === 0) {
+        regels.push('Vandaag staat er niets gepland.')
+      } else {
+        regels.push('Vandaag:')
+        if (events.length === 0) {
+          regels.push('Geen afspraken')
+        } else {
+          for (const ev of events) {
+            regels.push(ev.heeldag ? `Hele dag ${ev.titel}` : `${(ev.begin_tijd ?? '').slice(0, 5)} ${ev.titel}`)
+          }
+        }
+        if (jarigen.length > 0) {
+          regels.push('', 'Verjaardagen:')
+          for (const j of jarigen) regels.push(j.naam)
+        }
+      }
+      const tekst = regels.join('\n')
+
+      if (vk.dagoverzichtKanaal === 'telegram') {
+        const chat = await telegramChat(user.id)
+        if (!chat) {
+          console.log('[reminders] dagoverzicht: telegram niet gekoppeld, overgeslagen', { sleutel })
+          continue
+        }
+        // parse_mode is HTML → escapen zodat titels/namen de platte tekst nooit breken.
+        if (await verstuurTelegram(chat, escapeHtml(tekst))) {
+          dagoverzichtVerstuurd++
+          console.log('[reminders] dagoverzicht verstuurd via telegram', { sleutel })
+        } else {
+          console.error('[reminders] dagoverzicht via telegram mislukt', { sleutel })
+        }
+      } else {
+        if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL) continue
+        const email = user.email
+        if (!email) continue
+        const resend = new Resend(process.env.RESEND_API_KEY)
+        const { error: resendFout } = await resend.emails.send({
+          from:    process.env.RESEND_FROM_EMAIL!,
+          to:      email,
+          replyTo: process.env.RESEND_FROM_EMAIL,
+          subject: 'Dagoverzicht',
+          text:    tekst,
+        })
+        if (resendFout) {
+          console.error('[reminders] dagoverzicht via e-mail mislukt:', resendFout)
+        } else {
+          dagoverzichtVerstuurd++
+          console.log('[reminders] dagoverzicht verstuurd via e-mail', { sleutel })
+        }
+      }
+    } catch (err) {
+      console.error('[reminders] dagoverzicht-fout voor gebruiker (overgeslagen):', err instanceof Error ? err.message : err)
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     pushVerstuurd,
     pushOpgeruimd,
     emailVerstuurd,
     telegramVerstuurd,
+    dagoverzichtVerstuurd,
     gecontroleerd: (afspraken?.length ?? 0) + (verjaardagen?.length ?? 0),
   })
 }

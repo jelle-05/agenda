@@ -52,6 +52,7 @@ Persoonlijke agenda-app gebouwd met Next.js, Supabase en Tailwind CSS. Geïnspir
 - **Profielmenu** — klik op avatar-icoon rechtsboven: toont naam en e-mailadres, met knoppen naar **Instellingen** en uitloggen
 - **Instellingenpagina** — modal met tabstructuur (`InstellingenMenu`, tabs "Voorkeuren" / "Notificaties" / "Profielfoto"): test-e-mailreminder sturen en Telegram beheren (koppelen, testbericht, **reminders aan/uit**, ontkoppelen)
 - **Voorkeuren** — tab in Instellingen, gesynchroniseerd via je account: **Open kalender met** (automatisch = week op desktop/dag op mobiel, laatst gebruikte weergave, of een vaste keuze), **standaard herinnering** en **standaard duur** voor nieuwe afspraken. Wijzigingen worden direct opgeslagen; bestaande afspraken veranderen nooit mee
+- **Dagoverzicht** — optioneel (standaard uit): elke ochtend op een zelfgekozen tijdstip (standaard 07:00) een kort overzicht van je afspraken en verjaardagen van vandaag, via **Telegram** (koppeling vereist) of **e-mail**. Bewust minimalistisch: platte tekst, geen emoji's of opmaak. Instelbaar in Voorkeuren, inclusief een optionele naam voor de begroeting; maximaal één bericht per dag
 - **Privacybeleid** — statische pagina op `/privacy` (beschrijft welke gegevens de app verwerkt en waarvoor); bereikbaar via de loginpagina en de instellingen
 - Geen zoekicoon (verwijderd)
 
