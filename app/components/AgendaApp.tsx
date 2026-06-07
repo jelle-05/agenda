@@ -609,6 +609,7 @@ export default function AgendaApp() {
         notitie: afspraak.notitie,
         locatie: afspraak.locatie,
         herinneringMinuten: afspraak.herinneringMinuten,
+        reistijdMinuten: afspraak.reistijdMinuten,   // reistijd geldt voor de hele reeks
       }
       const bijgewerkt = afspraken
         .filter(ev => ev.herhalingGroepId === groepId)
