@@ -2,6 +2,8 @@
 
 Centrale plek voor toekomstige features, verbeteringen en ideeën. Bijgewerkt naarmate de app groeit.
 
+**Zie ook:** [internet_ideas.md](internet_ideas.md) — ideeën uit internetonderzoek naar gebruikersfrustraties en geliefde features, inclusief scopevragen per idee.
+
 **Huidige staat (juni 2026):** standaardweergave week op desktop / dag op mobiel, events aanmaken/bewerken/verwijderen, herhalende events, labels, **verjaardagen** (dag/maand + optioneel geboortejaar, auto-leeftijd, keuzestap, tabel met paginatie, reminders 1u/1dag/1week), profielmenu, real-time sync, push-notificaties, e-mailreminders via Resend, PWA met witte safe areas, **views openen bij nu** (dag/week gecentreerd op de tijd-indicator, agenda-lijst bij vandaag).
 
 ---
