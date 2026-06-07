@@ -39,6 +39,7 @@ export type Verjaardag = {
   notitie?: string
   herinneringMinuten?: number   // -1 = geen, 60 = 1 uur, 1440 = 1 dag, 10080 = 1 week van tevoren
   terugkomend: boolean          // elk jaar opnieuw op dezelfde maand/dag
+  favoriet?: boolean            // gemarkeerd voor de Countdowns-lijst
 }
 
 export type HerhalingType = 'nooit' | 'dagelijks' | 'wekelijks' | 'tweewekelijks' | 'maandelijks'

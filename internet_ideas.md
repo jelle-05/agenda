@@ -24,8 +24,8 @@ Bronnen o.a.: The Week ("why are calendar apps so awful"), Reclaim ("why does my
 
 ## 3. ~~Countdown voor favoriete events~~ ✅ Geïmplementeerd (juni 2026)
 **Bron:** countdown-apps (Pretty Progress e.d.) zijn populair puur om "nog 23 dagen tot vakantie" — klein, persoonlijk, motiverend.
-**Geïmplementeerd:** ster-toggle "Countdown" in het afspraakformulier (DB-kolom `favoriet`, kleine migratie met fail-open fallback) + menu-item "Countdowns" in Sidebar/MobielMenu met `CountdownModal`: toekomstige favorieten dichtstbijzijnde eerst ("vandaag"/"morgen"/"over X dagen"), klik = navigeren + openen, ster om uit te zetten; verlopen favorieten onder "Voorbij" (nooit auto-verwijderd).
-**Nog open (vervolgstap):** verjaardagen als countdown ("Lisa jarig over 12 dagen") en evt. een compact countdown-regeltje in de begroeting/Sidebar.
+**Geïmplementeerd:** ster-toggle "Countdown" in het afspraak- én verjaardagformulier (DB-kolom `favoriet` op `afspraken` en `verjaardagen`, kleine migraties met fail-open fallback) + menu-item "Countdowns" in Sidebar/MobielMenu met `CountdownModal`: favoriete events en verjaardagen samen, dichtstbijzijnde eerst ("vandaag"/"morgen"/"over X dagen"); verjaardagen tellen af naar de eerstvolgende editie (met "wordt X"), klik = navigeren + openen, ster om uit te zetten; verlopen favoriete events onder "Voorbij" (nooit auto-verwijderd).
+**Nog open (vervolgstap):** evt. een compact countdown-regeltje in de begroeting/Sidebar.
 
 ---
 

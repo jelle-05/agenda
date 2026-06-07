@@ -72,6 +72,7 @@ export function laadVerjaardagen(): Verjaardag[] {
       notitie: r.notitie ?? undefined,
       herinneringMinuten: r.herinneringMinuten ?? -1,
       terugkomend: r.terugkomend ?? true,
+      favoriet: r.favoriet ?? undefined,
     } as Verjaardag
   })
 }

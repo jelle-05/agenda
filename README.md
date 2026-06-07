@@ -30,7 +30,7 @@ Persoonlijke agenda-app gebouwd met Next.js, Supabase en Tailwind CSS. Geïnspir
 - **Slimme tijdsinvoer** — de eindtijd schuift automatisch mee als je de begintijd wijzigt (met behoud van de gekozen duur, standaard 1 uur); op mobiel kies je uur en minuten via simpele dropdowns i.p.v. de ronde klok-picker van Android
 - **Dupliceren** — knop "Dupliceer afspraak" bij een bestaand event maakt er ter plekke een nieuw event van met dezelfde gegevens; pas bij Toevoegen wordt het opgeslagen, het origineel blijft ongewijzigd
 - **Ongedaan maken** — na het verwijderen of verslepen van een afspraak (of een hele reeks) verschijnt 5 seconden een "Herstel"-knop onderin beeld; alles (label, herinnering, locatie) komt exact terug
-- **Countdowns** — markeer een afspraak als favoriet via de ster in het formulier en zie in het menu-item "Countdowns" hoe lang het nog duurt ("Vakantie over 23 dagen"); verlopen favorieten staan compact onder "Voorbij" en kun je daar uitzetten
+- **Countdowns** — markeer een afspraak of verjaardag als favoriet via de ster in het formulier en zie in het menu-item "Countdowns" hoe lang het nog duurt ("Vakantie over 23 dagen", "Lisa over 12 dagen"); verjaardagen tellen af naar de eerstvolgende editie, verlopen favoriete afspraken staan compact onder "Voorbij" en kun je daar uitzetten
 - **Invul-suggesties** — typ bij een nieuw event 2+ letters van een eerdere titel en kies een suggestie: label, locatie en duur worden automatisch ingevuld (een handmatig gekozen eindtijd blijft staan)
 - **Event-blok styling** — titel bovenaan, locatie eronder, compact bij korte tijdsloten
 - **Compacte weergave** — blokken ≥ 20px tonen tekst in compact formaat (10px); blokken ≥ 26px normaal (12px); blokken < 20px tonen alleen kleurblok

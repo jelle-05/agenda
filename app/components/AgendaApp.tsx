@@ -502,6 +502,23 @@ export default function AgendaApp() {
     }
   }
 
+  // Verjaardag-countdown: navigeer naar de eerstvolgende editie en open de editor.
+  function kiesCountdownVerjaardag(v: Verjaardag) {
+    setCountdownsOpen(false)
+    setHuidigeDatum(eerstvolgendeVerjaardag(v, new Date()))
+    openBewerkVerjaardag(v)
+  }
+
+  // Ster aan/uit op een verjaardag (vanuit de Countdowns-lijst).
+  async function toggleFavorietVerjaardag(v: Verjaardag) {
+    const bijgewerkt = { ...v, favoriet: !v.favoriet }
+    setVerjaardagen(prev => slaVerjaardagOp(bijgewerkt, prev))
+    if (gebruiker) {
+      try { await slaVerjaardagOpInSupabase(bijgewerkt, gebruiker.id) }
+      catch (err) { console.error('Supabase verjaardag favoriet sync mislukt:', err) }
+    }
+  }
+
   // Zoekresultaat (verjaardag): navigeer naar de eerstvolgende editie en open de editor.
   function kiesZoekVerjaardag(v: Verjaardag) {
     setZoekOpen(false)
@@ -828,9 +845,12 @@ export default function AgendaApp() {
       <CountdownModal
         open={countdownsOpen}
         afspraken={afspraken}
+        verjaardagen={verjaardagen}
         labels={labels}
         onKies={kiesCountdown}
+        onKiesVerjaardag={kiesCountdownVerjaardag}
         onToggleFavoriet={toggleFavoriet}
+        onToggleFavorietVerjaardag={toggleFavorietVerjaardag}
         onSluit={() => setCountdownsOpen(false)}
       />
 

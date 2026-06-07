@@ -113,6 +113,7 @@ function rijNaarVerjaardag(rij: any): Verjaardag {
     notitie:            rij.notitie             ?? undefined,
     herinneringMinuten: rij.herinnering_minuten ?? -1,
     terugkomend:        rij.terugkomend         ?? true,
+    favoriet:           rij.favoriet            ?? undefined,
   }
 }
 
@@ -133,6 +134,7 @@ function verjaardagNaarRij(v: Verjaardag, userId: string) {
     notitie:             v.notitie            ?? null,
     herinnering_minuten: v.herinneringMinuten ?? -1,
     terugkomend:         v.terugkomend,
+    favoriet:            v.favoriet           ?? false,
   }
 }
 
@@ -184,7 +186,14 @@ export async function laadVerjaardagenVanSupabase(): Promise<Verjaardag[]> {
 }
 
 export async function slaVerjaardagOpInSupabase(v: Verjaardag, userId: string): Promise<void> {
-  const { error } = await supabase.from('verjaardagen').upsert(verjaardagNaarRij(v, userId))
+  const rij = verjaardagNaarRij(v, userId)
+  let { error } = await supabase.from('verjaardagen').upsert(rij)
+  if (error && kolomOntbreekt(error)) {
+    // Fail-open vóór de favoriet-migratie: retry zonder de favoriet-kolom.
+    const { favoriet: _favoriet, ...basis } = rij
+    void _favoriet
+    ;({ error } = await supabase.from('verjaardagen').upsert(basis))
+  }
   if (error) throw error
 }
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { Star } from 'lucide-react'
 import type { Verjaardag } from '@/types'
 import { berekenLeeftijd, geldigeDag, dagenInMaand, parseGeboortejaar, MND_LANG } from '@/lib/verjaardagen'
 
@@ -164,6 +165,23 @@ export default function VerjaardagFormulier({ open, verjaardag, onOpslaan, onVer
                 aria-label="Elk jaar terugkomend"
               >
                 <span className={['absolute top-[3px] w-[22px] h-[22px] bg-white rounded-full shadow transition-all', form.terugkomend ? 'left-[26px]' : 'left-[3px]'].join(' ')} />
+              </button>
+            </div>
+
+            {/* Countdown — favoriet markeren voor de Countdowns-lijst */}
+            <div className="flex items-center justify-between px-4 py-3">
+              <span className="text-[15px] text-gray-800">Countdown</span>
+              <button
+                onClick={() => setForm(f => ({ ...f, favoriet: !f.favoriet }))}
+                aria-label="Countdown"
+                aria-pressed={!!form.favoriet}
+                className="p-1 -m-1 transition-colors"
+              >
+                <Star
+                  size={20}
+                  className={form.favoriet ? 'text-[#FFCC00]' : 'text-gray-300 hover:text-gray-400'}
+                  fill={form.favoriet ? '#FFCC00' : 'none'}
+                />
               </button>
             </div>
           </div>
