@@ -14,6 +14,7 @@ import {
 } from '@/lib/opslag'
 import { leesVoorkeuren } from '@/lib/voorkeuren'
 import { begroetingstekst } from '@/lib/begroeting'
+import { haalWeerOp, type WeerPerDag } from '@/lib/weer'
 import {
   laadAfsprakenVanSupabase, slaAfspraakOpInSupabase, verwijderAfspraakUitSupabase,
   laadLabelsVanSupabase, slaLabelOpInSupabase, verwijderLabelUitSupabase,
@@ -135,6 +136,22 @@ export default function AgendaApp() {
     () => voorkeuren.werkuren ? { start: voorkeuren.werkurenStart, eind: voorkeuren.werkurenEind } : null,
     [voorkeuren],
   )
+
+  // Weer bij de dagkoppen: één fetch (1 uur gecachet in lib/weer.ts), alleen
+  // als de toggle aan staat én er een vaste locatie is ingesteld. Stil falen.
+  // "Uit" wordt afgeleid bij het doorgeven (weerVoorWeergave) — geen synchrone
+  // setState in de effect-body nodig.
+  const [weerData, setWeerData] = useState<WeerPerDag | null>(null)
+  useEffect(() => {
+    let actief = true
+    if (voorkeuren.weer && voorkeuren.weerLat != null && voorkeuren.weerLon != null) {
+      haalWeerOp(voorkeuren.weerLat, voorkeuren.weerLon).then(dagen => {
+        if (actief) setWeerData(dagen)
+      })
+    }
+    return () => { actief = false }
+  }, [voorkeuren.weer, voorkeuren.weerLat, voorkeuren.weerLon])
+  const weerVoorWeergave = voorkeuren.weer && voorkeuren.weerLat != null ? weerData : null
 
   // Laad opgeslagen filtervoorkeuren bij opstarten (client-only, SSR-veilig).
   // localStorage is pas op de client beschikbaar; een lazy useState-init zou een
@@ -731,6 +748,7 @@ export default function AgendaApp() {
               animatieSleutel={animatieSleutel}
               werkuren={werkUren}
               onVerplaats={verplaatsAfspraak}
+              weer={weerVoorWeergave}
             />
           )}
           {weergave === 'dag' && (
@@ -746,6 +764,7 @@ export default function AgendaApp() {
               werkuren={werkUren}
               begroeting={begroeting}
               onVerplaats={verplaatsAfspraak}
+              weer={weerVoorWeergave}
             />
           )}
           {weergave === 'agenda' && (

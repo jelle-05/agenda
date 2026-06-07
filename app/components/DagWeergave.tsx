@@ -6,6 +6,7 @@ import { toISODatum, isVandaag, formatDagTitel, tijdNaarMinuten, getWeekNummer }
 import { labelAchtergrond, eventKleuren } from '@/lib/kleuren'
 import { stapelVolgorde } from '@/lib/overlap'
 import { useEventDrag } from '@/lib/useEventDrag'
+import { weerIcoon, type WeerPerDag } from '@/lib/weer'
 import type { Afspraak, Label } from '@/types'
 
 const UURHOOGTE = 60
@@ -22,6 +23,7 @@ interface Props {
   werkuren?: { start: string; eind: string } | null
   begroeting?: string
   onVerplaats?: (a: Afspraak, nieuweDatum: string, nieuweBeginTijd: string) => void
+  weer?: WeerPerDag | null
 }
 
 function minutenNaarTijd(min: number): string {
@@ -29,7 +31,7 @@ function minutenNaarTijd(min: number): string {
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 }
 
-export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik, onAfspraakKlik, onNieuwAfspraak, animatieKlasse = '', animatieSleutel = 0, werkuren = null, begroeting, onVerplaats }: Props) {
+export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik, onAfspraakKlik, onNieuwAfspraak, animatieKlasse = '', animatieSleutel = 0, werkuren = null, begroeting, onVerplaats, weer = null }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [nu, setNu] = useState(() => new Date())
 
@@ -80,9 +82,23 @@ export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik
 
       {/* Dagtitel + (mobiel) begroeting met dagsamenvatting; desktop toont die in de Sidebar */}
       <div className="px-4 py-2 border-b border-gray-100 sm:border-[#dfdfdf] shrink-0">
-        <div className="text-sm text-gray-500">
-          {formatDagTitel(huidigeDatum)}
-          <span className="text-gray-300"> · week {getWeekNummer(huidigeDatum)}</span>
+        <div className="text-sm text-gray-500 flex items-center gap-1 min-w-0">
+          <span className="truncate">
+            {formatDagTitel(huidigeDatum)}
+            <span className="text-gray-300"> · week {getWeekNummer(huidigeDatum)}</span>
+          </span>
+          {/* Weer voor deze dag — alleen als er forecast-data is (komende ~7 dagen) */}
+          {weer?.[iso] && (() => {
+            const dagWeer = weer[iso]
+            const { Icoon, label } = weerIcoon(dagWeer.code)
+            return (
+              <span className="flex items-center gap-0.5 text-[12px] text-gray-400 shrink-0">
+                <span className="text-gray-300">·</span>
+                <Icoon size={12} aria-label={label} />
+                <span className="tabular-nums">{Math.round(dagWeer.maxTemp)}°</span>
+              </span>
+            )
+          })()}
         </div>
         {begroeting && (
           <div className="sm:hidden text-[12px] text-gray-400 truncate">{begroeting}</div>

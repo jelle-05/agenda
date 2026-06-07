@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { subscribeerOpPush, afmeldenVanPush } from '@/lib/pushUtils'
 import { verkleinNaarVierkantDataUrl } from '@/lib/afbeelding'
 import { STANDAARD_VOORKEUREN, type DagoverzichtKanaal, type StartWeergave, type Voorkeuren } from '@/lib/voorkeuren'
+import { zoekLocatie } from '@/lib/weer'
 import Avatar from './Avatar'
 import TijdKiezer from './TijdKiezer'
 
@@ -32,6 +33,9 @@ export default function InstellingenMenu({ open, email, avatarUrl, voorkeuren = 
   const [vk, setVk] = useState<Voorkeuren>(voorkeuren)
   const [vkStatus, setVkStatus] = useState<'idle' | 'laden' | 'ok' | 'fout'>('idle')
   const [vkFout, setVkFout] = useState('')
+
+  const [weerLocatieInvoer, setWeerLocatieInvoer] = useState(voorkeuren.weerLocatieNaam)
+  const [locatieStatus, setLocatieStatus] = useState<'idle' | 'zoeken' | 'ok' | 'fout'>('idle')
 
   const [emailTestStatus, setEmailTestStatus] = useState<'idle' | 'laden' | 'ok' | 'fout'>('idle')
   const [emailTestFout, setEmailTestFout] = useState('')
@@ -106,7 +110,7 @@ export default function InstellingenMenu({ open, email, avatarUrl, voorkeuren = 
   useEffect(() => {
     // Bewuste reset bij openen (modal-open-conventie); tg/push-setState gebeurt pas ná de fetch.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (open) { haalTgStatus(); bepaalPushStatus(); setFotoStatus('idle'); setFotoFout(''); setVk(voorkeuren); setVkStatus('idle'); setVkFout(''); setWwNieuw(''); setWwBevestig(''); setWwStatus('idle'); setWwFout('') }
+    if (open) { haalTgStatus(); bepaalPushStatus(); setFotoStatus('idle'); setFotoFout(''); setVk(voorkeuren); setVkStatus('idle'); setVkFout(''); setWwNieuw(''); setWwBevestig(''); setWwStatus('idle'); setWwFout(''); setWeerLocatieInvoer(voorkeuren.weerLocatieNaam); setLocatieStatus('idle') }
     return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null } }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
@@ -262,6 +266,20 @@ export default function InstellingenMenu({ open, email, avatarUrl, voorkeuren = 
       setFotoStatus('fout')
       setFotoFout(err instanceof Error ? err.message : 'Er ging iets mis.')
     }
+  }
+
+  // Plaatsnaam → coördinaten via Open-Meteo Geocoding; bij succes alles in één
+  // keer opslaan (naam + lat/lon). Alleen de vaste, hier ingestelde locatie
+  // wordt gebruikt — nooit de device-locatie.
+  async function zoekWeerLocatie() {
+    const naam = weerLocatieInvoer.trim()
+    if (!naam || naam === vk.weerLocatieNaam) return
+    setLocatieStatus('zoeken')
+    const gevonden = await zoekLocatie(naam)
+    if (!gevonden) { setLocatieStatus('fout'); return }
+    setWeerLocatieInvoer(gevonden.naam)
+    setLocatieStatus('ok')
+    wijzigVoorkeur({ weerLocatieNaam: gevonden.naam, weerLat: gevonden.lat, weerLon: gevonden.lon })
   }
 
   // Wachtwoord wijzigen via de ingelogde Supabase-sessie. Client-side validatie
@@ -443,6 +461,57 @@ export default function InstellingenMenu({ open, email, avatarUrl, voorkeuren = 
                     Begintijd moet voor de eindtijd liggen. De kalender gebruikt anders 09:00 tot 17:00.
                   </p>
                 )}
+              </section>
+
+              <section className="flex flex-col gap-2">
+                <h3 className="text-[12px] font-semibold uppercase tracking-wide text-gray-400">Weer</h3>
+                <div className="bg-gray-50 rounded-xl overflow-hidden divide-y divide-gray-200">
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <span className="text-[15px] text-gray-800">Weer tonen in agenda</span>
+                    <button
+                      onClick={() => wijzigVoorkeur({ weer: !vk.weer })}
+                      disabled={vkStatus === 'laden'}
+                      className={[
+                        'relative w-12 h-7 rounded-full transition-colors disabled:opacity-50',
+                        vk.weer ? 'bg-[#34C759]' : 'bg-gray-300',
+                      ].join(' ')}
+                      aria-label="Weer tonen in agenda"
+                      aria-pressed={vk.weer}
+                    >
+                      <span className={['absolute top-[3px] w-[22px] h-[22px] bg-white rounded-full shadow transition-all', vk.weer ? 'left-[26px]' : 'left-[3px]'].join(' ')} />
+                    </button>
+                  </div>
+                  {vk.weer && (
+                    <div className="flex items-center justify-between px-4 py-3 gap-3">
+                      <span className="text-[15px] text-gray-800 shrink-0">Locatie</span>
+                      <input
+                        type="text"
+                        value={weerLocatieInvoer}
+                        placeholder="Bijv. Rotterdam"
+                        onChange={e => { setWeerLocatieInvoer(e.target.value); setLocatieStatus('idle') }}
+                        onBlur={zoekWeerLocatie}
+                        onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                        className="text-[15px] text-[#007AFF] outline-none bg-transparent text-right min-w-0 placeholder:text-gray-300"
+                        aria-label="Locatie voor weersinformatie"
+                      />
+                    </div>
+                  )}
+                </div>
+                {locatieStatus === 'zoeken' && (
+                  <p className="text-[12px] text-gray-400 px-1">Zoeken…</p>
+                )}
+                {locatieStatus === 'fout' && (
+                  <p className="text-[12px] text-red-500 px-1">Plaats niet gevonden. Probeer een andere naam.</p>
+                )}
+                {locatieStatus === 'ok' && (
+                  <p className="text-[12px] text-green-600 px-1">Locatie ingesteld: {vk.weerLocatieNaam || weerLocatieInvoer}</p>
+                )}
+                {vk.weer && !vk.weerLat && locatieStatus === 'idle' && (
+                  <p className="text-[12px] text-gray-400 px-1">Stel een locatie in om weer te zien.</p>
+                )}
+                <p className="text-[12px] text-gray-400 px-1">
+                  Weersverwachting via Open-Meteo op basis van deze vaste locatie. Er wordt geen live locatie gevolgd.
+                </p>
               </section>
 
               <section className="flex flex-col gap-2">

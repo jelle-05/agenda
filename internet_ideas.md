@@ -15,17 +15,10 @@ Bronnen o.a.: The Week ("why are calendar apps so awful"), Reclaim ("why does my
 
 ---
 
-## 2. Weer bij de dagkoppen ⭐ aanbevolen
+## 2. ~~Weer bij de dagkoppen~~ ✅ Geïmplementeerd (juni 2026)
 **Bron:** veelgenoemde delight-feature; kale agenda's missen context voor het plannen van je dag.
-**Wat:** klein weericoon + temperatuur bij de dagkoppen in dag-/weekweergave voor de komende ~7 dagen, via de gratis **Open-Meteo API** (geen API-key, geen account — privacyvriendelijk).
-**Complexiteit:** Middel · **Privacy:** goed, mits vaste/instelbare locatie (geen device-tracking) · **Bestanden (verwacht):** nieuw `lib/weer.ts`, `WeekWeergave.tsx`, `DagWeergave.tsx`, evt. `InstellingenMenu.tsx`
-**Scopevragen:**
-- Welke locatie: één vast punt (bv. woonplaats, ingesteld in Voorkeuren) of automatisch via device-locatie (privacy-afweging)?
-- Waar tonen: alleen week- en dagweergave, of ook de maandweergave (drukte-risico)?
-- Hoeveel dagen vooruit, en wat tonen we: alleen icoon + max-temperatuur, of ook neerslagkans?
-- Ververs-strategie: hoe vaak ophalen en cachen we (bv. 1×/uur in localStorage)?
-- Wat bij offline of API-fout — gewoon stilletjes weglaten?
-- Aan/uit-toggle in Voorkeuren, of altijd aan?
+**Geïmplementeerd:** `lib/weer.ts` (Open-Meteo, geen key) + sectie "Weer" in Voorkeuren. Scope-antwoorden: vaste locatie via plaatsnaam + geocoding (géén device-locatie), alleen dag-/weekweergave, ~7 dagen, lucide-icoon + max-temperatuur (geen neerslag in v1), 1-uurs localStorage-cache per locatie, stil falen, toggle standaard uit.
+**Nog open (vervolgstap):** neerslagkans toevoegen als het compact blijft.
 
 ---
 

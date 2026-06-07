@@ -5,6 +5,7 @@ import { getWeekDagen, toISODatum, isVandaag, getDagIndex, isSameDag, NL_DAGEN_K
 import { labelAchtergrond, eventKleuren } from '@/lib/kleuren'
 import { stapelVolgorde } from '@/lib/overlap'
 import { useEventDrag } from '@/lib/useEventDrag'
+import { weerIcoon, type WeerPerDag } from '@/lib/weer'
 import type { Afspraak, Label } from '@/types'
 
 const UURHOOGTE = 60
@@ -20,6 +21,7 @@ interface Props {
   animatieSleutel?: number
   werkuren?: { start: string; eind: string } | null
   onVerplaats?: (a: Afspraak, nieuweDatum: string, nieuweBeginTijd: string) => void
+  weer?: WeerPerDag | null
 }
 
 function minutenNaarTijd(min: number): string {
@@ -27,7 +29,7 @@ function minutenNaarTijd(min: number): string {
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 }
 
-export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKlik, onAfspraakKlik, onNieuwAfspraak, animatieKlasse = '', animatieSleutel = 0, werkuren = null, onVerplaats }: Props) {
+export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKlik, onAfspraakKlik, onNieuwAfspraak, animatieKlasse = '', animatieSleutel = 0, werkuren = null, onVerplaats, weer = null }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [nu, setNu] = useState(() => new Date())
 
@@ -80,6 +82,7 @@ export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKli
         {weekDagen.map((dag, i) => {
           const vandaag = isVandaag(dag)
           const gekozen = isSameDag(dag, huidigeDatum)
+          const dagWeer = weer?.[toISODatum(dag)]
           return (
             <button
               key={i}
@@ -97,6 +100,20 @@ export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKli
               ].join(' ')}>
                 {dag.getDate()}
               </span>
+              {/* Weer — vaste hoogte zodra weer aan staat, zodat kolommen altijd uitlijnen */}
+              {weer && (
+                <span className="h-3.5 mt-0.5 flex items-center gap-0.5 text-[10px] text-gray-400">
+                  {dagWeer && (() => {
+                    const { Icoon, label } = weerIcoon(dagWeer.code)
+                    return (
+                      <>
+                        <Icoon size={10} aria-label={label} />
+                        <span className="tabular-nums">{Math.round(dagWeer.maxTemp)}°</span>
+                      </>
+                    )
+                  })()}
+                </span>
+              )}
             </button>
           )
         })}
