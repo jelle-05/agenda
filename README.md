@@ -7,7 +7,7 @@ Persoonlijke agenda-app gebouwd met Next.js, Supabase en Tailwind CSS. Geïnspir
 ### Kalender
 - **Standaardweergave** — desktop opent in **week**, mobiel in **dag** (bepaald op basis van de `sm`-breakpoint van 640px bij het openen; daarna blijft je handmatige keuze staan)
 - **Vier weergaven** — Dag, Week, Maand en Agenda (lijstoverzicht)
-- **Opent op de huidige tijd** — de dag- en weekweergave scrollen bij het openen automatisch naar de rode huidige-tijd-indicator, verticaal gecentreerd in beeld (op andere dagen/weken opent de tijdlijn op 07:00)
+- **Opent op de huidige tijd** — de dag- en weekweergave scrollen bij het openen automatisch naar de rode huidige-tijd-indicator, verticaal gecentreerd in beeld (op andere dagen/weken opent de tijdlijn op 07:00); de Agenda-lijst start bij vandaag (of de eerstvolgende dag met items)
 - **Filters** — toon/verberg per itemtype: **Events**, **Verjaardagen** en **Feestdagen**. Open via het filtericoon in de header (desktop) of het hamburger-menu linksboven (mobiel). De kalender update direct; filters verbergen alleen de weergave (data blijft bewaard) en worden persistent opgeslagen in `localStorage` (`agenda_filters`), dus ze blijven na refresh staan. Werkt in alle weergaven.
 - **Swipe-navigatie (mobiel)** — links/rechts swipen navigeert naar de vorige/volgende **dag, week én maand** (drempel 60px, werkt ook over events/verjaardagen/feestdagen heen; verticaal scrollen blijft werken)
 - **Stabiele header (desktop)** — de periode-titel heeft een vaste breedte, zodat de vorige/volgende-knoppen niet verschuiven bij wisselende maandnamen/weekranges

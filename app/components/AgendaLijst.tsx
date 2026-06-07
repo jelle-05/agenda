@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import { toISODatum, NL_DAGEN_LANG, NL_MAANDEN_KORT, getDagIndex } from '@/lib/datum'
 import { eventKleuren } from '@/lib/kleuren'
 import type { Afspraak, Label } from '@/types'
@@ -19,6 +20,9 @@ function formatDatumHeader(datum: string): string {
 }
 
 export default function AgendaLijst({ huidigeDatum, afspraken, labels, onAfspraakKlik }: Props) {
+  const scrollRef  = useRef<HTMLDivElement>(null)
+  const vandaagRef = useRef<HTMLDivElement>(null)
+
   const jaar  = huidigeDatum.getFullYear()
   const maand = huidigeDatum.getMonth()
   const start = `${jaar}-${String(maand + 1).padStart(2, '0')}-01`
@@ -35,6 +39,26 @@ export default function AgendaLijst({ huidigeDatum, afspraken, labels, onAfspraa
   }, {})
 
   const vandaag = toISODatum(new Date())
+  // Sectie van vandaag, of anders de eerstvolgende dag mét items (keys staan op datum gesorteerd).
+  const doelDatum = Object.keys(gegroepeerd).find(d => d >= vandaag)
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    // Alleen auto-scrollen als vandaag in de getoonde maand valt (datums vers
+    // berekenen in het effect → dep-array blijft schoon: alleen huidigeDatum).
+    const v = toISODatum(new Date())
+    const s = `${huidigeDatum.getFullYear()}-${String(huidigeDatum.getMonth() + 1).padStart(2, '0')}-01`
+    if (v < s || v > s.slice(0, 8) + '31') return
+    const doel = vandaagRef.current
+    if (doel) {
+      // Zet de sectie van vandaag bovenaan; de sticky "— Vandaag"-header komt tegen de top.
+      el.scrollTop = doel.getBoundingClientRect().top - el.getBoundingClientRect().top + el.scrollTop
+    } else {
+      // Alle events deze maand liggen vóór vandaag → eindig onderaan (dichtst bij vandaag).
+      el.scrollTop = el.scrollHeight
+    }
+  }, [huidigeDatum])
 
   if (gefilterd.length === 0) {
     return (
@@ -49,9 +73,9 @@ export default function AgendaLijst({ huidigeDatum, afspraken, labels, onAfspraa
   }
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div ref={scrollRef} className="h-full overflow-y-auto">
       {Object.entries(gegroepeerd).map(([datum, dagAfspraken]) => (
-        <div key={datum}>
+        <div key={datum} ref={datum === doelDatum ? vandaagRef : undefined}>
           <div className={[
             'px-4 py-2 text-xs font-semibold uppercase tracking-wide sticky top-0 bg-white border-b border-gray-100',
             datum === vandaag ? 'text-[#FF3B30]' : 'text-gray-500',
