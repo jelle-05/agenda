@@ -27,6 +27,7 @@ export type Afspraak = {
   locatie?: string
   herinneringMinuten?: number   // -1 = geen, 0 = bij aanvang, N = N minuten van tevoren
   herhalingGroepId?: string     // koppelt herhalende instanties aan elkaar
+  favoriet?: boolean            // gemarkeerd voor de Countdowns-lijst (per occurrence)
 }
 
 export type Verjaardag = {

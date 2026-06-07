@@ -18,6 +18,7 @@ function rijNaarAfspraak(rij: any): Afspraak {
     locatie:            rij.locatie              ?? undefined,
     herinneringMinuten: rij.herinnering_minuten  ?? -1,
     herhalingGroepId:   rij.herhalingsgroep_id   ?? undefined,
+    favoriet:           rij.favoriet             ?? undefined,
   }
 }
 
@@ -35,6 +36,7 @@ function afspraakNaarRij(a: Afspraak, userId: string) {
     locatie:             a.locatie            ?? null,
     herinnering_minuten: a.herinneringMinuten ?? -1,
     herhalingsgroep_id:  a.herhalingGroepId   ?? null,
+    favoriet:            a.favoriet           ?? false,
   }
 }
 
@@ -63,7 +65,23 @@ function kolomOntbreekt(error: any): boolean {
   return error?.code === 'PGRST204'
     || error?.code === '42703'
     || /column .* does not exist/i.test(error?.message ?? '')
-    || /achtergrond_kleur|tekst_kleur/.test(error?.message ?? '')
+    || /achtergrond_kleur|tekst_kleur|favoriet/.test(error?.message ?? '')
+}
+
+// Upsert afspraken; valt terug op een variant zonder de favoriet-kolom als die
+// (nog) niet bestaat, zodat alles blijft syncen vóór de SQL-migratie.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function upsertAfspraken(rows: any[]): Promise<void> {
+  let { error } = await supabase.from('afspraken').upsert(rows)
+  if (error && kolomOntbreekt(error)) {
+    const basis = rows.map(r => {
+      const kopie = { ...r }
+      delete kopie.favoriet
+      return kopie
+    })
+    ;({ error } = await supabase.from('afspraken').upsert(basis))
+  }
+  if (error) throw error
 }
 
 // Upsert labels; valt terug op een variant zonder de nieuwe kleurkolommen als die
@@ -127,14 +145,12 @@ export async function laadAfsprakenVanSupabase(): Promise<Afspraak[]> {
 }
 
 export async function slaAfspraakOpInSupabase(a: Afspraak, userId: string): Promise<void> {
-  const { error } = await supabase.from('afspraken').upsert(afspraakNaarRij(a, userId))
-  if (error) throw error
+  await upsertAfspraken([afspraakNaarRij(a, userId)])
 }
 
 export async function slaVeelAfsprakenOpInSupabase(afspraken: Afspraak[], userId: string): Promise<void> {
   if (!afspraken.length) return
-  const { error } = await supabase.from('afspraken').upsert(afspraken.map(a => afspraakNaarRij(a, userId)))
-  if (error) throw error
+  await upsertAfspraken(afspraken.map(a => afspraakNaarRij(a, userId)))
 }
 
 export async function verwijderAfspraakUitSupabase(id: string): Promise<void> {
@@ -188,9 +204,6 @@ export async function uploadNaarSupabase(
     await upsertLabels(labels.map(l => labelNaarRij(l, userId)))
   }
   if (afspraken.length > 0) {
-    const { error } = await supabase
-      .from('afspraken')
-      .upsert(afspraken.map(a => afspraakNaarRij(a, userId)))
-    if (error) throw error
+    await upsertAfspraken(afspraken.map(a => afspraakNaarRij(a, userId)))
   }
 }

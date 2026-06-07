@@ -1,6 +1,6 @@
 'use client'
 
-import { CalendarDays, Cake, Tag, SlidersHorizontal, StickyNote, CloudSun } from 'lucide-react'
+import { CalendarDays, Cake, Tag, SlidersHorizontal, StickyNote, CloudSun, Hourglass } from 'lucide-react'
 import MiniKalender from './MiniKalender'
 import type { Afspraak } from '@/types'
 
@@ -10,6 +10,7 @@ interface Props {
   afspraken: Afspraak[]
   onDagKlik: (d: Date) => void
   onWeer: () => void
+  onCountdowns: () => void
   onFilters: () => void
   onVerjaardagen: () => void
   onLabels: () => void
@@ -20,7 +21,7 @@ const itemKlasse =
 
 // Desktop-zijbalk (verborgen op mobiel; daar neemt het off-canvas MobielMenu dit over).
 // Zelfde patroon als de sidebar van de notes-app, met onderaan de link terug naar Notes.
-export default function Sidebar({ begroeting, huidigeDatum, afspraken, onDagKlik, onWeer, onFilters, onVerjaardagen, onLabels }: Props) {
+export default function Sidebar({ begroeting, huidigeDatum, afspraken, onDagKlik, onWeer, onCountdowns, onFilters, onVerjaardagen, onLabels }: Props) {
   const items: {
     key: string
     label: string
@@ -28,6 +29,7 @@ export default function Sidebar({ begroeting, huidigeDatum, afspraken, onDagKlik
     onClick: () => void
   }[] = [
     { key: 'weer',         label: 'Weer',         icon: CloudSun,          onClick: onWeer },
+    { key: 'countdowns',   label: 'Countdowns',   icon: Hourglass,         onClick: onCountdowns },
     { key: 'verjaardagen', label: 'Verjaardagen', icon: Cake,              onClick: onVerjaardagen },
     { key: 'labels',       label: 'Labels',       icon: Tag,               onClick: onLabels },
     { key: 'filters',      label: 'Filters',      icon: SlidersHorizontal, onClick: onFilters },

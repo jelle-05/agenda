@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { Star } from 'lucide-react'
 import type { Afspraak, Label, HerhalingConfig, HerhalingType } from '@/types'
 import { HERHALING_LEEG } from '@/types'
 import { toISODatum, getDagIndex, tijdNaarMinuten } from '@/lib/datum'
@@ -268,6 +269,23 @@ export default function AfspraakFormulier({ open, afspraak, labels, afspraken = 
                 </div>
               </>
             )}
+
+            {/* Countdown — favoriet markeren voor de Countdowns-lijst */}
+            <div className="flex items-center justify-between px-4 py-3">
+              <span className="text-[15px] text-gray-800">Countdown</span>
+              <button
+                onClick={() => setForm(f => ({ ...f, favoriet: !f.favoriet }))}
+                aria-label="Countdown"
+                aria-pressed={!!form.favoriet}
+                className="p-1 -m-1 transition-colors"
+              >
+                <Star
+                  size={20}
+                  className={form.favoriet ? 'text-[#FFCC00]' : 'text-gray-300 hover:text-gray-400'}
+                  fill={form.favoriet ? '#FFCC00' : 'none'}
+                />
+              </button>
+            </div>
           </div>
 
           {/* Herhaling — alleen bij nieuwe events */}
@@ -457,7 +475,8 @@ export default function AfspraakFormulier({ open, afspraak, labels, afspraken = 
           {!isNieuw && (
             <button
               onClick={() => {
-                setForm(f => ({ ...f, id: '', herhalingGroepId: undefined }))
+                // favoriet niet meekopiëren: een duplicaat is niet automatisch een countdown
+                setForm(f => ({ ...f, id: '', herhalingGroepId: undefined, favoriet: undefined }))
                 setBewerkScope('enkel')
               }}
               className="w-full bg-gray-50 text-gray-700 rounded-xl py-3 text-[15px] font-medium hover:bg-gray-100 transition-colors"

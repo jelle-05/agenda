@@ -22,17 +22,10 @@ Bronnen o.a.: The Week ("why are calendar apps so awful"), Reclaim ("why does my
 
 ---
 
-## 3. Countdown voor favoriete events ⭐ aanbevolen
+## 3. ~~Countdown voor favoriete events~~ ✅ Geïmplementeerd (juni 2026)
 **Bron:** countdown-apps (Pretty Progress e.d.) zijn populair puur om "nog 23 dagen tot vakantie" — klein, persoonlijk, motiverend.
-**Wat:** markeer een event als favoriet → countdown zichtbaar op een vaste plek, bv. in de begroeting of Sidebar: "Vakantie over 23 dagen".
-**Complexiteit:** Laag–Middel · **Privacy:** n.v.t. · **Bestanden (verwacht):** `types.ts`, `AfspraakFormulier.tsx`, `Sidebar.tsx`/`lib/begroeting.ts`, opslaglaag
-**Scopevragen:**
-- Hoe markeer je een favoriet: ster-icoon in het afspraakformulier, of ergens anders?
-- Waar verschijnt de countdown: in de begroeting (1 regel), als apart Sidebar-blokje, of beide (desktop/mobiel)?
-- Meerdere favorieten tegelijk: hoeveel tonen we, en in welke volgorde (dichtstbijzijnde eerst)?
-- Wat gebeurt er na afloop van het event — favoriet automatisch laten vervallen?
-- Tellen verjaardagen ook mee als mogelijke countdown ("Lisa jarig over 12 dagen")?
-- Opslag: nieuw veld op `Afspraak` vergt een DB-kolom (`favoriet boolean`) — akkoord met die kleine migratie, of liever favorieten-ids in `user_metadata` (geen migratie, maar losser gekoppeld)?
+**Geïmplementeerd:** ster-toggle "Countdown" in het afspraakformulier (DB-kolom `favoriet`, kleine migratie met fail-open fallback) + menu-item "Countdowns" in Sidebar/MobielMenu met `CountdownModal`: toekomstige favorieten dichtstbijzijnde eerst ("vandaag"/"morgen"/"over X dagen"), klik = navigeren + openen, ster om uit te zetten; verlopen favorieten onder "Voorbij" (nooit auto-verwijderd).
+**Nog open (vervolgstap):** verjaardagen als countdown ("Lisa jarig over 12 dagen") en evt. een compact countdown-regeltje in de begroeting/Sidebar.
 
 ---
 

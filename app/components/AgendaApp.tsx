@@ -41,6 +41,7 @@ import VerjaardagKeuze from './VerjaardagKeuze'
 import FilterMenu from './FilterMenu'
 import ZoekModal from './ZoekModal'
 import WeerModal from './WeerModal'
+import CountdownModal from './CountdownModal'
 import Snackbar from './Snackbar'
 import { subscribeerOpPush } from '@/lib/pushUtils'
 import { genereerHerhalingen } from '@/lib/herhaling'
@@ -72,6 +73,7 @@ export default function AgendaApp() {
   const [formulierOpen, setFormulierOpen]         = useState(false)
   const [zoekOpen, setZoekOpen]                   = useState(false)
   const [weerModalOpen, setWeerModalOpen]         = useState(false)
+  const [countdownsOpen, setCountdownsOpen]       = useState(false)
 
   // Undo-snackbar: maximaal één actie tegelijk (nieuwste vervangt vorige);
   // `sleutel` herstart de timer in de Snackbar bij elke nieuwe actie.
@@ -483,6 +485,23 @@ export default function AgendaApp() {
     openBewerkAfspraak(afspraak)
   }
 
+  // Countdown-item: zelfde gedrag als een zoekresultaat (navigeren + openen).
+  function kiesCountdown(afspraak: Afspraak) {
+    setCountdownsOpen(false)
+    kiesZoekresultaat(afspraak)
+  }
+
+  // Ster aan/uit op een event (vanuit de Countdowns-lijst). Optimistisch +
+  // fail-soft Supabase-sync, zelfde patroon als verplaatsAfspraak.
+  async function toggleFavoriet(afspraak: Afspraak) {
+    const bijgewerkt = { ...afspraak, favoriet: !afspraak.favoriet }
+    setAfspraken(prev => slaAfspraakOp(bijgewerkt, prev))
+    if (gebruiker) {
+      try { await slaAfspraakOpInSupabase(bijgewerkt, gebruiker.id) }
+      catch (err) { console.error('Supabase favoriet sync mislukt:', err) }
+    }
+  }
+
   // Zoekresultaat (verjaardag): navigeer naar de eerstvolgende editie en open de editor.
   function kiesZoekVerjaardag(v: Verjaardag) {
     setZoekOpen(false)
@@ -689,6 +708,7 @@ export default function AgendaApp() {
         afspraken={afspraken}
         onDagKlik={gaNaarDatum}
         onWeer={() => setWeerModalOpen(true)}
+        onCountdowns={() => setCountdownsOpen(true)}
         onFilters={() => setFilterMenuOpen(true)}
         onVerjaardagen={() => setVerjaardagKeuzeOpen(true)}
         onLabels={() => setLabelBeheerOpen(true)}
@@ -799,9 +819,19 @@ export default function AgendaApp() {
         onSluit={() => setMobielMenuOpen(false)}
         onZoek={() => setZoekOpen(true)}
         onWeer={() => setWeerModalOpen(true)}
+        onCountdowns={() => setCountdownsOpen(true)}
         onFilters={() => setFilterMenuOpen(true)}
         onVerjaardagen={() => setVerjaardagKeuzeOpen(true)}
         onLabels={() => setLabelBeheerOpen(true)}
+      />
+
+      <CountdownModal
+        open={countdownsOpen}
+        afspraken={afspraken}
+        labels={labels}
+        onKies={kiesCountdown}
+        onToggleFavoriet={toggleFavoriet}
+        onSluit={() => setCountdownsOpen(false)}
       />
 
       <WeerModal
