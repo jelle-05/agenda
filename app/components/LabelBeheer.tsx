@@ -6,9 +6,14 @@ import type { Label } from '@/types'
 import { eventKleuren, contrastRatio, hex6Van, alphaVan, metAlpha } from '@/lib/kleuren'
 
 const PRESET_KLEUREN = [
+  // Basispalet (iOS-systeemkleuren)
   '#FF3B30', '#FF6B00', '#FF9500', '#FFCC00',
   '#34C759', '#00C7BE', '#32ADE6', '#007AFF',
   '#5856D6', '#AF52DE', '#FF2D55', '#8E8E93',
+  // Uitbreiding: diepe en zachte tinten, duidelijk onderscheidend van het basispalet
+  '#D70015', '#FF6482', '#A2845E', '#7CB518',
+  '#248A3D', '#66D4CF', '#00838F', '#0040DD',
+  '#6A1B9A', '#8E4585', '#64748B', '#3A3A3C',
 ]
 
 interface Props {

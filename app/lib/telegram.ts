@@ -18,19 +18,26 @@ interface TelegramOpties {
   geenLinkPreview?: boolean
 }
 
+export interface TelegramResultaat {
+  ok: boolean
+  /** HTTP-status van de Telegram API bij een fout (bv. 403 = bot geblokkeerd); null bij netwerkfout of ontbrekend token. */
+  status: number | null
+}
+
 /**
  * Stuurt één Telegram-bericht naar `chatId`.
- * @returns `true` als Telegram het bericht accepteerde, anders `false`.
+ * @returns `{ ok, status }` — `ok: true` als Telegram het bericht accepteerde;
+ *          `status` bevat bij een API-fout de HTTP-status (403 = geblokkeerd).
  */
 export async function verstuurTelegram(
   chatId: string,
   tekst: string,
   opties: TelegramOpties = {},
-): Promise<boolean> {
+): Promise<TelegramResultaat> {
   const token = process.env.TELEGRAM_BOT_TOKEN
   if (!token) {
     console.error('[telegram] TELEGRAM_BOT_TOKEN ontbreekt — bericht niet verstuurd')
-    return false
+    return { ok: false, status: null }
   }
 
   const { parseMode = 'HTML', geenLinkPreview = true } = opties
@@ -54,12 +61,12 @@ export async function verstuurTelegram(
         status: res.status,
         beschrijving: data?.description ?? null,
       })
-      return false
+      return { ok: false, status: res.status }
     }
 
-    return true
+    return { ok: true, status: null }
   } catch (err) {
     console.error('[telegram] netwerkfout bij sendMessage:', err instanceof Error ? err.message : err)
-    return false
+    return { ok: false, status: null }
   }
 }

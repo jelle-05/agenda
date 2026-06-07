@@ -22,7 +22,7 @@ interface Props {
 const TABS = [
   { id: 'voorkeuren',   label: 'Voorkeuren' },
   { id: 'notificaties', label: 'Notificaties' },
-  { id: 'profielfoto',  label: 'Profielfoto' },
+  { id: 'account',      label: 'Account' },
 ] as const
 type TabId = (typeof TABS)[number]['id']
 
@@ -53,6 +53,11 @@ export default function InstellingenMenu({ open, email, avatarUrl, voorkeuren = 
   const [fotoStatus, setFotoStatus] = useState<'idle' | 'laden' | 'ok' | 'fout'>('idle')
   const [fotoFout, setFotoFout] = useState('')
   const fotoInputRef = useRef<HTMLInputElement | null>(null)
+
+  const [wwNieuw, setWwNieuw]           = useState('')
+  const [wwBevestig, setWwBevestig]     = useState('')
+  const [wwStatus, setWwStatus]         = useState<'idle' | 'laden' | 'ok' | 'fout'>('idle')
+  const [wwFout, setWwFout]             = useState('')
 
   async function token() {
     const { data: { session } } = await supabase.auth.getSession()
@@ -101,7 +106,7 @@ export default function InstellingenMenu({ open, email, avatarUrl, voorkeuren = 
   useEffect(() => {
     // Bewuste reset bij openen (modal-open-conventie); tg/push-setState gebeurt pas ná de fetch.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (open) { haalTgStatus(); bepaalPushStatus(); setFotoStatus('idle'); setFotoFout(''); setVk(voorkeuren); setVkStatus('idle'); setVkFout('') }
+    if (open) { haalTgStatus(); bepaalPushStatus(); setFotoStatus('idle'); setFotoFout(''); setVk(voorkeuren); setVkStatus('idle'); setVkFout(''); setWwNieuw(''); setWwBevestig(''); setWwStatus('idle'); setWwFout('') }
     return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null } }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
@@ -256,6 +261,31 @@ export default function InstellingenMenu({ open, email, avatarUrl, voorkeuren = 
     } catch (err) {
       setFotoStatus('fout')
       setFotoFout(err instanceof Error ? err.message : 'Er ging iets mis.')
+    }
+  }
+
+  // Wachtwoord wijzigen via de ingelogde Supabase-sessie. Client-side validatie
+  // vóór de call; wachtwoorden worden nooit gelogd of zelf opgeslagen.
+  async function wijzigWachtwoord() {
+    setWwFout('')
+    if (wwNieuw.length < 6) { setWwStatus('fout'); setWwFout('Gebruik minimaal 6 tekens.'); return }
+    if (wwNieuw !== wwBevestig) { setWwStatus('fout'); setWwFout('De wachtwoorden komen niet overeen.'); return }
+    setWwStatus('laden')
+    try {
+      const { error } = await supabase.auth.updateUser({ password: wwNieuw })
+      if (error) {
+        setWwStatus('fout')
+        // Bekendste Supabase-fouten netjes vertalen; anders generiek.
+        setWwFout(
+          error.message.includes('different from the old')
+            ? 'Het nieuwe wachtwoord moet anders zijn dan het huidige.'
+            : 'Wijzigen mislukt. Log opnieuw in en probeer het nog eens.'
+        )
+        return
+      }
+      setWwStatus('ok'); setWwNieuw(''); setWwBevestig('')
+    } catch {
+      setWwStatus('fout'); setWwFout('Netwerkfout. Probeer het opnieuw.')
     }
   }
 
@@ -638,7 +668,7 @@ export default function InstellingenMenu({ open, email, avatarUrl, voorkeuren = 
             </div>
           )}
 
-          {actieveTab === 'profielfoto' && (
+          {actieveTab === 'account' && (
             <div className="flex flex-col gap-4">
               <section className="flex flex-col items-center gap-3">
                 <h3 className="text-[12px] font-semibold uppercase tracking-wide text-gray-400 self-start">Profielfoto</h3>
@@ -676,6 +706,50 @@ export default function InstellingenMenu({ open, email, avatarUrl, voorkeuren = 
 
                 <p className="text-[12px] text-gray-400 px-1 text-center">
                   De foto wordt vierkant bijgesneden en verkleind (max 10 MB). JPG of PNG werkt het best.
+                </p>
+              </section>
+
+              {/* Wachtwoord wijzigen */}
+              <section className="flex flex-col gap-2">
+                <h3 className="text-[12px] font-semibold uppercase tracking-wide text-gray-400">Wachtwoord</h3>
+                <div className="bg-gray-50 rounded-xl px-4 py-3">
+                  <input
+                    type="password"
+                    value={wwNieuw}
+                    onChange={e => setWwNieuw(e.target.value)}
+                    placeholder="Nieuw wachtwoord"
+                    autoComplete="new-password"
+                    aria-label="Nieuw wachtwoord"
+                    className="w-full text-[15px] outline-none bg-transparent placeholder:text-gray-400"
+                  />
+                </div>
+                <div className="bg-gray-50 rounded-xl px-4 py-3">
+                  <input
+                    type="password"
+                    value={wwBevestig}
+                    onChange={e => setWwBevestig(e.target.value)}
+                    placeholder="Herhaal nieuw wachtwoord"
+                    autoComplete="new-password"
+                    aria-label="Herhaal nieuw wachtwoord"
+                    className="w-full text-[15px] outline-none bg-transparent placeholder:text-gray-400"
+                    onKeyDown={e => e.key === 'Enter' && wijzigWachtwoord()}
+                  />
+                </div>
+                <button
+                  onClick={wijzigWachtwoord}
+                  disabled={wwStatus === 'laden' || !wwNieuw || !wwBevestig}
+                  className="w-full flex items-center justify-center gap-2 bg-gray-50 hover:bg-gray-100 disabled:opacity-50 text-gray-700 rounded-xl py-3 text-[15px] font-medium transition-colors"
+                >
+                  {wwStatus === 'laden' ? 'Bezig…' : 'Wachtwoord wijzigen'}
+                </button>
+                {wwStatus === 'ok' && (
+                  <p className="text-[12px] text-green-600 text-center">Wachtwoord gewijzigd</p>
+                )}
+                {wwStatus === 'fout' && (
+                  <p className="text-[12px] text-red-500 text-center">{wwFout}</p>
+                )}
+                <p className="text-[12px] text-gray-400 px-1">
+                  Minimaal 6 tekens. Je blijft ingelogd na het wijzigen.
                 </p>
               </section>
             </div>

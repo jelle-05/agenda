@@ -78,3 +78,13 @@ export function tijdNaarMinuten(tijd: string): number {
   const [uur, min] = tijd.split(':').map(Number)
   return uur * 60 + min
 }
+
+// ISO 8601-weeknummer via de donderdag-truc: de donderdag van de week bepaalt
+// het ISO-jaar — correct rond jaarwisselingen (week 1 t/m 52/53).
+export function getWeekNummer(d: Date): number {
+  const donderdag = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  donderdag.setDate(donderdag.getDate() - getDagIndex(donderdag) + 3)
+  const eersteDonderdag = new Date(donderdag.getFullYear(), 0, 4)
+  eersteDonderdag.setDate(eersteDonderdag.getDate() - getDagIndex(eersteDonderdag) + 3)
+  return 1 + Math.round((donderdag.getTime() - eersteDonderdag.getTime()) / (7 * 24 * 3600 * 1000))
+}

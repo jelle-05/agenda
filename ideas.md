@@ -26,11 +26,9 @@ Kleine wijzigingen met direct zichtbaar resultaat. Weinig backend-werk.
 
 ---
 
-### Hele-dag events in weekoverzicht tonen
-**Wat:** Hele-dag events bovenaan de weekkolommen weergeven (aparte rij), zoals in Google Calendar.
-**Waarom:** Nu worden heeldagevents in de weekweergave niet getoond — alleen in de dagweergave.
-**Complexiteit:** Middel
-**Bestanden:** `WeekWeergave.tsx`
+### ~~Hele-dag events in weekoverzicht tonen~~ ✅ Bestond al
+**Wat:** Hele-dag events bovenaan de weekkolommen weergeven (aparte rij).
+**Status:** bleek al volledig aanwezig in `WeekWeergave.tsx` (aparte "hele dag"-rij boven het tijdsgrid, per dag, klikbaar/bewerkbaar, meerdere events gestapeld). Dit idee was verouderd.
 
 ---
 
@@ -79,11 +77,9 @@ Kleine wijzigingen met direct zichtbaar resultaat. Weinig backend-werk.
 
 ---
 
-### Kleurpicker voor labels uitbreiden
-**Wat:** Meer voorgedefinieerde kleuren of een volledige kleurpicker (hex/HSL) aanbieden.
-**Waarom:** Nu is de keuze beperkt. Meer kleuren geven meer visuele structuur aan de kalender.
-**Complexiteit:** Laag
-**Bestanden:** `LabelBeheer.tsx`
+### ~~Kleurpicker voor labels uitbreiden~~ ✅ Geïmplementeerd (juni 2026)
+**Wat:** Meer voorgedefinieerde kleuren aanbieden.
+**Geïmplementeerd:** `PRESET_KLEUREN` van 12 → 24 (basis-iOS-palet + diepe/zachte tinten) in `LabelBeheer.tsx`; volledige hex/HSL-picker bestond al via de eigen-kleuren-toggle (native color inputs).
 
 ---
 
@@ -171,11 +167,9 @@ Onderzoek naar manieren om de app persoonlijker te maken, getoetst aan actuele k
 
 ---
 
-### Weeknummer tonen
-**Wat:** Weeknummer weergeven in de topbar of bij de kolomhoofden in de weekweergave.
-**Waarom:** Handig voor planning en zakelijk gebruik. Standaard in Apple Calendar.
-**Complexiteit:** Laag
-**Bestanden:** `WeekWeergave.tsx`, `datum.ts`
+### ~~Weeknummer tonen~~ ✅ Geïmplementeerd (juni 2026)
+**Wat:** Weeknummer weergeven bij de kolomhoofden in de weekweergave.
+**Geïmplementeerd:** `getWeekNummer()` (ISO 8601, donderdag-truc) in `lib/datum.ts`; "wk NN" in de hoek van de weekweergave-kolomhoofden + "· week NN" achter de dagtitel in de dagweergave.
 
 ---
 
@@ -318,11 +312,9 @@ Onderzoek naar manieren om de app persoonlijker te maken, getoetst aan actuele k
 
 ---
 
-### Wachtwoord wijzigen
-**Wat:** In het profielmenu een wachtwoord-wijzigingsflow aanbieden.
-**Waarom:** Nu is er geen manier om het wachtwoord te veranderen vanuit de app.
-**Complexiteit:** Laag (Supabase Auth heeft dit ingebouwd)
-**Bestanden:** `ProfielMenu.tsx`
+### ~~Wachtwoord wijzigen~~ ✅ Geïmplementeerd (juni 2026)
+**Wat:** Een wachtwoord-wijzigingsflow vanuit de app.
+**Geïmplementeerd:** sectie Wachtwoord in Instellingen → tab **Account** (voorheen "Profielfoto"): nieuw wachtwoord + bevestiging, ≥ 6 tekens, via `supabase.auth.updateUser({ password })`; nette fout-/succesmeldingen, velden leeg na succes.
 
 ---
 
@@ -354,11 +346,10 @@ Onderzoek naar manieren om de app persoonlijker te maken, getoetst aan actuele k
 
 ---
 
-### Telegram: geblokkeerde bot automatisch uitzetten (403)
-**Wat:** Als de Telegram API een `403` geeft (gebruiker heeft de bot geblokkeerd), de koppeling automatisch op `actief=false` zetten zodat de cron terugvalt op web-push.
-**Waarom:** Nu logt de cron alleen "telegram mislukt" en blijft elke run opnieuw proberen; de gebruiker krijgt ondertussen geen reminders via push.
-**Complexiteit:** Laag–Middel — vereist dat `verstuurTelegram()` de HTTP-status teruggeeft i.p.v. alleen een boolean (returncontract wijzigt op meerdere call-sites: cron, webhook, testroute).
-**Bestanden:** `lib/telegram.ts`, `api/cron/reminders/route.ts`
+### ~~Telegram: geblokkeerde bot automatisch uitzetten (403)~~ ✅ Geïmplementeerd (juni 2026)
+**Wat:** Bij een Telegram-`403` (bot geblokkeerd) de koppeling automatisch opruimen zodat de cron terugvalt op web-push.
+**Geïmplementeerd:** `verstuurTelegram()` retourneert nu `{ ok, status }`; bij 403 verwijdert de cron de koppeling (`verwerkTelegram403`) — reminders vallen automatisch terug op push, dagoverzicht toont de bestaande warning, en de app toont weer "Telegram koppelen". Plus: elke mislukte Telegram-reminderpoging krijgt in dezelfde firing een push-fallback. Tijdelijke fouten (5xx/netwerk) raken de koppeling niet.
+**Bestanden:** `lib/telegram.ts`, `api/cron/reminders/route.ts`, `api/telegram/test/route.ts`
 
 ---
 

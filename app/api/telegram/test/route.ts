@@ -38,13 +38,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Telegram is niet gekoppeld' }, { status: 400 })
   }
 
-  const ok = await verstuurTelegram(
+  const { ok, status } = await verstuurTelegram(
     String(data.chat_id),
     '<b>Testbericht</b>\nJe Telegram-reminders werken — je ontvangt je herinneringen vanaf nu hier.',
   )
   if (!ok) {
     return NextResponse.json(
-      { error: 'Versturen mislukt. Is de bot geblokkeerd of het token onjuist?' },
+      {
+        error: status === 403
+          ? 'De bot is geblokkeerd in Telegram. Deblokkeer de bot of koppel opnieuw.'
+          : 'Versturen mislukt. Is de bot geblokkeerd of het token onjuist?',
+      },
       { status: 502 }
     )
   }

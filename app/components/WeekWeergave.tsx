@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { getWeekDagen, toISODatum, isVandaag, getDagIndex, isSameDag, NL_DAGEN_KORT, tijdNaarMinuten } from '@/lib/datum'
+import { getWeekDagen, toISODatum, isVandaag, getDagIndex, isSameDag, NL_DAGEN_KORT, tijdNaarMinuten, getWeekNummer } from '@/lib/datum'
 import { labelAchtergrond, eventKleuren } from '@/lib/kleuren'
 import { stapelVolgorde } from '@/lib/overlap'
 import type { Afspraak, Label } from '@/types'
@@ -61,9 +61,11 @@ export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKli
 
   return (
     <div className="h-full flex flex-col">
-      {/* Kolomhoofden */}
+      {/* Kolomhoofden — de hoek toont het ISO-weeknummer */}
       <div className="flex border-b border-gray-200 sm:border-[#dfdfdf] shrink-0 bg-white">
-        <div className="w-14 shrink-0" />
+        <div className="w-14 shrink-0 flex items-end justify-end pr-2 pb-1.5">
+          <span className="text-[10px] text-gray-300 uppercase tracking-wide leading-none">wk {getWeekNummer(huidigeDatum)}</span>
+        </div>
         {weekDagen.map((dag, i) => {
           const vandaag = isVandaag(dag)
           const gekozen = isSameDag(dag, huidigeDatum)

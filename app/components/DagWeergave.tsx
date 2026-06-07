@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import WeekStrip from './WeekStrip'
-import { toISODatum, isVandaag, formatDagTitel, tijdNaarMinuten } from '@/lib/datum'
+import { toISODatum, isVandaag, formatDagTitel, tijdNaarMinuten, getWeekNummer } from '@/lib/datum'
 import { labelAchtergrond, eventKleuren } from '@/lib/kleuren'
 import { stapelVolgorde } from '@/lib/overlap'
 import type { Afspraak, Label } from '@/types'
@@ -71,7 +71,10 @@ export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik
 
       {/* Dagtitel + (mobiel) begroeting met dagsamenvatting; desktop toont die in de Sidebar */}
       <div className="px-4 py-2 border-b border-gray-100 sm:border-[#dfdfdf] shrink-0">
-        <div className="text-sm text-gray-500">{formatDagTitel(huidigeDatum)}</div>
+        <div className="text-sm text-gray-500">
+          {formatDagTitel(huidigeDatum)}
+          <span className="text-gray-300"> · week {getWeekNummer(huidigeDatum)}</span>
+        </div>
         {begroeting && (
           <div className="sm:hidden text-[12px] text-gray-400 truncate">{begroeting}</div>
         )}

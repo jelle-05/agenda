@@ -95,6 +95,16 @@ async function telegramChat(userId: string): Promise<string | null> {
   return data?.chat_id ? String(data.chat_id) : null
 }
 
+// Bot geblokkeerd (HTTP 403 van Telegram): verwijder de koppeling, zodat
+// reminders vanaf de volgende run automatisch terugvallen op web-push, het
+// dagoverzicht stopt met proberen en de app weer "Telegram koppelen" toont.
+// Alleen 403 triggert dit — tijdelijke fouten (5xx/netwerk) raken de koppeling niet.
+async function verwerkTelegram403(userId: string): Promise<void> {
+  const { error } = await supabaseAdmin.from('telegram_accounts').delete().eq('user_id', userId)
+  if (error) console.error('[reminders] telegram-koppeling verwijderen mislukt:', error.code)
+  else console.log('[reminders] telegram 403 (bot geblokkeerd) — koppeling verwijderd')
+}
+
 // Geeft de chat_id terug als de gebruiker Telegram gekoppeld én actief heeft;
 // anders null (→ val terug op browser-push). Een ontbrekende tabel (pre-migratie)
 // of andere fout telt als "niet gekoppeld" zodat reminders blijven werken.
@@ -198,8 +208,11 @@ export async function GET(req: NextRequest) {
         : `Dit event begint over ${rm / 60} uur.`
 
     // ── Reminderkanaal: Telegram vervangt browser-push (globale voorkeur) ─────
-    // Gekoppeld + actief → Telegram; anders push als fallback. E-mail blijft los hieronder.
+    // Gekoppeld + actief → Telegram; anders (of als Telegram faalt) push.
+    // Bij een 403 (bot geblokkeerd) wordt de koppeling verwijderd zodat
+    // volgende runs direct op push terugvallen. E-mail blijft los hieronder.
     const tgChat = await actieveTelegramChat(afspraak.user_id)
+    let viaTelegram = false
     if (tgChat) {
       const regels = [
         `<b>${escapeHtml(afspraak.titel)}</b>`,
@@ -207,14 +220,18 @@ export async function GET(req: NextRequest) {
       ]
       if (locatie) regels.push(escapeHtml(locatie))
       regels.push('', starttekst)
-      if (await verstuurTelegram(tgChat, regels.join('\n'))) {
+      const resultaat = await verstuurTelegram(tgChat, regels.join('\n'))
+      if (resultaat.ok) {
+        viaTelegram = true
         telegramVerstuurd++
         console.log('[reminders] telegram verstuurd', { eventId: afspraak.id, sleutel })
       } else {
-        console.error('[reminders] telegram mislukt', { eventId: afspraak.id, sleutel })
+        console.error('[reminders] telegram mislukt', { eventId: afspraak.id, sleutel, status: resultaat.status })
+        if (resultaat.status === 403) await verwerkTelegram403(afspraak.user_id)
       }
-    } else {
-      // ── Push notificatie (fallback voor niet-gekoppelde gebruikers) ─────────
+    }
+    if (!viaTelegram) {
+      // ── Push notificatie (fallback: niet gekoppeld óf Telegram-poging mislukt) ─
       // Bewust zonder emoji's en kort: titel "Herinnering", body "Titel om HH:MM".
       const payload = JSON.stringify({
         titel:   'Herinnering',
@@ -342,17 +359,23 @@ export async function GET(req: NextRequest) {
       const verjaardagRegel = `${vj.naam} is ${wanneer} jarig${leeftijdTekst}.`
 
       // ── Reminderkanaal: Telegram vervangt browser-push (globale voorkeur) ───
+      // Faalt Telegram (incl. 403 → koppeling verwijderd), dan alsnog push.
       const tgChat = await actieveTelegramChat(vj.user_id)
+      let viaTelegram = false
       if (tgChat) {
         const bericht = `<b>${escapeHtml(vj.naam)}</b>\n${escapeHtml(verjaardagRegel)}`
-        if (await verstuurTelegram(tgChat, bericht)) {
+        const resultaat = await verstuurTelegram(tgChat, bericht)
+        if (resultaat.ok) {
+          viaTelegram = true
           telegramVerstuurd++
           console.log('[reminders] telegram verjaardag verstuurd', { verjaardagId: vj.id, sleutel })
         } else {
-          console.error('[reminders] telegram verjaardag mislukt', { verjaardagId: vj.id, sleutel })
+          console.error('[reminders] telegram verjaardag mislukt', { verjaardagId: vj.id, sleutel, status: resultaat.status })
+          if (resultaat.status === 403) await verwerkTelegram403(vj.user_id)
         }
-      } else {
-        // ── Push (fallback voor niet-gekoppelde gebruikers) ───────────────────
+      }
+      if (!viaTelegram) {
+        // ── Push (fallback: niet gekoppeld óf Telegram-poging mislukt) ────────
         // Bewust zonder emoji's: titel "Verjaardag", body de bestaande regel.
         const payload = JSON.stringify({
           titel:   'Verjaardag',
@@ -478,11 +501,15 @@ export async function GET(req: NextRequest) {
           continue
         }
         // parse_mode is HTML → escapen zodat titels/namen de platte tekst nooit breken.
-        if (await verstuurTelegram(chat, escapeHtml(tekst))) {
+        const resultaat = await verstuurTelegram(chat, escapeHtml(tekst))
+        if (resultaat.ok) {
           dagoverzichtVerstuurd++
           console.log('[reminders] dagoverzicht verstuurd via telegram', { sleutel })
         } else {
-          console.error('[reminders] dagoverzicht via telegram mislukt', { sleutel })
+          console.error('[reminders] dagoverzicht via telegram mislukt', { sleutel, status: resultaat.status })
+          // Bot geblokkeerd → ontkoppelen; de UI toont dan de bestaande warning
+          // bij het Dagoverzicht-blok en de koppel-knop in Notificaties.
+          if (resultaat.status === 403) await verwerkTelegram403(user.id)
         }
       } else {
         if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL) continue
