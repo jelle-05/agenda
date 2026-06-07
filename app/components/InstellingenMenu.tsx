@@ -337,8 +337,9 @@ export default function InstellingenMenu({ open, email, avatarUrl, voorkeuren = 
           </button>
         </div>
 
-        {/* Tabs — horizontaal scrollbaar (5 tabs passen niet op smalle schermen) */}
-        <div className="flex items-center gap-1 px-3 pt-2 border-b border-gray-100 shrink-0 overflow-x-auto">
+        {/* Tabs — horizontaal scrollbaar (5 tabs passen niet op smalle schermen);
+            overflow-y-hidden voorkomt een verticale scrollbar door de -mb-px van de actieve tab */}
+        <div className="flex items-center gap-1 px-3 pt-2 border-b border-gray-100 shrink-0 overflow-x-auto overflow-y-hidden">
           {TABS.map(tab => (
             <button
               key={tab.id}
