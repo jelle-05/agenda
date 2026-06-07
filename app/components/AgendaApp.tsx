@@ -39,6 +39,7 @@ import VerjaardagFormulier from './VerjaardagFormulier'
 import VerjaardagKeuze from './VerjaardagKeuze'
 import FilterMenu from './FilterMenu'
 import ZoekModal from './ZoekModal'
+import Snackbar from './Snackbar'
 import { subscribeerOpPush } from '@/lib/pushUtils'
 import { genereerHerhalingen } from '@/lib/herhaling'
 import type { HerhalingConfig } from '@/types'
@@ -68,6 +69,11 @@ export default function AgendaApp() {
   // Modal state
   const [formulierOpen, setFormulierOpen]         = useState(false)
   const [zoekOpen, setZoekOpen]                   = useState(false)
+
+  // Undo-snackbar: maximaal één actie tegelijk (nieuwste vervangt vorige);
+  // `sleutel` herstart de timer in de Snackbar bij elke nieuwe actie.
+  const [undo, setUndo] = useState<{ melding: string; herstel: () => void; sleutel: number } | null>(null)
+  const undoTeller = useRef(0)
   const [bewerkAfspraak, setBewerkAfspraak]       = useState<Afspraak | null>(null)
   const [labelBeheerOpen, setLabelBeheerOpen]     = useState(false)
   const [profielMenuOpen, setProfielMenuOpen]     = useState(false)
@@ -402,6 +408,27 @@ export default function AgendaApp() {
     setHuidigeDatum(datum)
   }
 
+  // ── Undo ─────────────────────────────────────────────────────────────────────
+
+  function toonUndo(melding: string, herstel: () => void) {
+    undoTeller.current += 1
+    setUndo({ melding, herstel, sleutel: undoTeller.current })
+  }
+
+  // Zet eerder verwijderde/gewijzigde afspraken terug. Alle opslag is upsert
+  // (zelfde id's), dus herstel kan nooit duplicaten opleveren.
+  function herstelAfspraken(items: Afspraak[]) {
+    setAfspraken(prev => {
+      let next = prev
+      for (const item of items) next = slaAfspraakOp(item, next)
+      return next
+    })
+    if (gebruiker) {
+      slaVeelAfsprakenOpInSupabase(items, gebruiker.id)
+        .catch(err => console.error('Supabase herstel sync mislukt:', err))
+    }
+  }
+
   // Drag & drop: verplaats een event naar een nieuwe datum/begintijd met behoud
   // van de duur. Optimistisch (state + cache direct), Supabase-sync fail-soft —
   // zelfde patroon als alle andere mutaties; realtime corrigeert bij conflicten.
@@ -416,7 +443,9 @@ export default function AgendaApp() {
       beginTijd: nieuweBeginTijd,
       eindTijd: minutenNaarTijd(eindMin),
     }
+    const origineel = { ...afspraak }   // snapshot voor undo (zelfde id → upsert-herstel)
     setAfspraken(prev => slaAfspraakOp(bijgewerkt, prev))
+    toonUndo('Afspraak verplaatst', () => herstelAfspraken([origineel]))
     if (gebruiker) {
       try { await slaAfspraakOpInSupabase(bijgewerkt, gebruiker.id) }
       catch (err) { console.error('Supabase verplaats sync mislukt:', err) }
@@ -549,23 +578,30 @@ export default function AgendaApp() {
   }
 
   async function handleVerwijderAfspraak(id: string, alleHerhalingen = false) {
+    // Snapshot vóór het verwijderen (voor de undo-snackbar): één event, of bij
+    // "alle herhalingen" de hele reeks. Herstel = upsert met dezelfde id's.
+    const groepId = alleHerhalingen ? afspraken.find(a => a.id === id)?.herhalingGroepId : undefined
+    const snapshot = groepId
+      ? afspraken.filter(a => a.herhalingGroepId === groepId).map(a => ({ ...a }))
+      : afspraken.filter(a => a.id === id).map(a => ({ ...a }))
+    const teVerwijderen = snapshot.map(a => a.id)
+
     setAfspraken(prev => {
-      if (alleHerhalingen) {
-        const groepId = prev.find(a => a.id === id)?.herhalingGroepId
-        const teVerwijderen = groepId ? prev.filter(a => a.herhalingGroepId === groepId).map(a => a.id) : [id]
-        let next = prev
-        for (const vid of teVerwijderen) next = verwijderAfspraak(vid, next)
-        if (gebruiker) {
-          Promise.all(teVerwijderen.map(vid => verwijderAfspraakUitSupabase(vid)))
-            .catch(err => console.error('Supabase verwijder sync mislukt:', err))
-        }
-        return next
-      }
-      return verwijderAfspraak(id, prev)
+      let next = prev
+      for (const vid of teVerwijderen) next = verwijderAfspraak(vid, next)
+      return next
     })
     setFormulierOpen(false)
-    if (!alleHerhalingen && gebruiker) {
-      try { await verwijderAfspraakUitSupabase(id) }
+
+    if (snapshot.length > 0) {
+      toonUndo(
+        snapshot.length > 1 ? 'Reeks verwijderd' : 'Afspraak verwijderd',
+        () => herstelAfspraken(snapshot),
+      )
+    }
+
+    if (gebruiker) {
+      try { await Promise.all(teVerwijderen.map(vid => verwijderAfspraakUitSupabase(vid))) }
       catch (err) { console.error('Supabase verwijder sync mislukt:', err) }
     }
   }
@@ -795,6 +831,16 @@ export default function AgendaApp() {
         onWijzig={wijzigFilter}
         onSluit={() => setFilterMenuOpen(false)}
       />
+
+      {/* Undo-snackbar — buiten <main>, dus blijft staan bij weergave-wissel */}
+      {undo && (
+        <Snackbar
+          melding={undo.melding}
+          sleutel={undo.sleutel}
+          onHerstel={() => { undo.herstel(); setUndo(null) }}
+          onVerloop={() => setUndo(null)}
+        />
+      )}
 
       <VerjaardagKeuze
         open={verjaardagKeuzeOpen}

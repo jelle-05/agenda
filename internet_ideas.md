@@ -8,16 +8,10 @@ Bronnen o.a.: The Week ("why are calendar apps so awful"), Reclaim ("why does my
 
 ---
 
-## 1. Undo-snackbar ("Herstel") ⭐ aanbevolen
+## 1. ~~Undo-snackbar ("Herstel")~~ ✅ Geïmplementeerd (juni 2026)
 **Bron:** grootste frustratie in het onderzoek — per ongeluk verwijderen/wijzigen is definitief, geen nette undo (klassieke Google Calendar-klacht).
-**Wat:** na een destructieve actie een snackbar onderin: "Afspraak verwijderd · Herstel" (±5 sec). Extra relevant sinds drag & drop: één misdrop is zo gemaakt.
-**Complexiteit:** Laag · **Privacy:** n.v.t. (client-side) · **Bestanden (verwacht):** `AgendaApp.tsx`, nieuw `Snackbar.tsx`
-**Scopevragen:**
-- Welke acties krijgen undo: alleen verwijderen, of ook verslepen (drag & drop) en bewerken?
-- Moet "alle herhalingen verwijderen" ook herstelbaar zijn (= hele reeks terugzetten)?
-- Hoe lang blijft de snackbar staan, en pauzeert de timer bij hover/touch?
-- Plaatsing mobiel: boven de BottomBar? Desktop: linksonder of gecentreerd?
-- Wat gebeurt er bij meerdere snelle acties achter elkaar — stapelen of vervangt de nieuwste de oude?
+**Geïmplementeerd:** `Snackbar.tsx` + undo-state in `AgendaApp`. Scope-antwoorden: undo bij **verwijderen** (incl. hele reeks, "Reeks verwijderd") en **verslepen**; bewerken bewust later. Gecentreerd onderin (mobiel boven de BottomBar), 5 sec met hover-pauze, nieuwste actie vervangt de vorige. Herstel = upsert met dezelfde id's (geen duplicaten; reminders blijven intact).
+**Nog open (vervolgstap):** undo na bewerken (incl. "hele reeks"-bewerking).
 
 ---
 
