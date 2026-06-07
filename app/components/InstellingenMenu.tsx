@@ -20,15 +20,19 @@ interface Props {
 }
 
 // Tabs staan in een array zodat er later eenvoudig instellingstabjes bij kunnen.
+// De voorkeuren zijn verdeeld over drie tabs (Algemeen/Kalender/Dagoverzicht)
+// zodat geen enkel tabblad te lang wordt; de tab-rij scrolt horizontaal op mobiel.
 const TABS = [
-  { id: 'voorkeuren',   label: 'Voorkeuren' },
+  { id: 'algemeen',     label: 'Algemeen' },
+  { id: 'kalender',     label: 'Kalender' },
+  { id: 'dagoverzicht', label: 'Dagoverzicht' },
   { id: 'notificaties', label: 'Notificaties' },
   { id: 'account',      label: 'Account' },
 ] as const
 type TabId = (typeof TABS)[number]['id']
 
 export default function InstellingenMenu({ open, email, avatarUrl, voorkeuren = STANDAARD_VOORKEUREN, onSluit }: Props) {
-  const [actieveTab, setActieveTab] = useState<TabId>('voorkeuren')
+  const [actieveTab, setActieveTab] = useState<TabId>('algemeen')
 
   const [vk, setVk] = useState<Voorkeuren>(voorkeuren)
   const [vkStatus, setVkStatus] = useState<'idle' | 'laden' | 'ok' | 'fout'>('idle')
@@ -332,14 +336,14 @@ export default function InstellingenMenu({ open, email, avatarUrl, voorkeuren = 
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex items-center gap-1 px-3 pt-2 border-b border-gray-100 shrink-0">
+        {/* Tabs — horizontaal scrollbaar (5 tabs passen niet op smalle schermen) */}
+        <div className="flex items-center gap-1 px-3 pt-2 border-b border-gray-100 shrink-0 overflow-x-auto">
           {TABS.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActieveTab(tab.id)}
               className={[
-                'px-3 py-2 text-[14px] font-medium border-b-2 -mb-px transition-colors',
+                'px-3 py-2 text-[14px] font-medium border-b-2 -mb-px transition-colors shrink-0 whitespace-nowrap',
                 actieveTab === tab.id
                   ? 'border-[#007AFF] text-[#007AFF]'
                   : 'border-transparent text-gray-500 hover:text-gray-800',
@@ -352,8 +356,9 @@ export default function InstellingenMenu({ open, email, avatarUrl, voorkeuren = 
 
         {/* Body */}
         <div className="overflow-y-auto flex-1 p-4">
-          {actieveTab === 'voorkeuren' && (
+          {(actieveTab === 'algemeen' || actieveTab === 'kalender' || actieveTab === 'dagoverzicht') && (
             <div className="flex flex-col gap-4">
+              {actieveTab === 'algemeen' && (<>
               <section className="flex flex-col gap-2">
                 <h3 className="text-[12px] font-semibold uppercase tracking-wide text-gray-400">Kalender</h3>
                 <div className="bg-gray-50 rounded-xl overflow-hidden divide-y divide-gray-200">
@@ -421,7 +426,9 @@ export default function InstellingenMenu({ open, email, avatarUrl, voorkeuren = 
                   Geldt alleen voor nieuwe afspraken; bestaande afspraken veranderen niet.
                 </p>
               </section>
+              </>)}
 
+              {actieveTab === 'kalender' && (<>
               <section className="flex flex-col gap-2">
                 <h3 className="text-[12px] font-semibold uppercase tracking-wide text-gray-400">Werkuren</h3>
                 <div className="bg-gray-50 rounded-xl overflow-hidden divide-y divide-gray-200">
@@ -513,7 +520,9 @@ export default function InstellingenMenu({ open, email, avatarUrl, voorkeuren = 
                   Weersverwachting via Open-Meteo op basis van deze vaste locatie. Er wordt geen live locatie gevolgd.
                 </p>
               </section>
+              </>)}
 
+              {actieveTab === 'dagoverzicht' && (
               <section className="flex flex-col gap-2">
                 <h3 className="text-[12px] font-semibold uppercase tracking-wide text-gray-400">Dagoverzicht</h3>
                 <div className="bg-gray-50 rounded-xl overflow-hidden divide-y divide-gray-200">
@@ -584,7 +593,9 @@ export default function InstellingenMenu({ open, email, avatarUrl, voorkeuren = 
                   </p>
                 )}
               </section>
+              )}
 
+              {/* Opslaan-status — gedeeld door de drie voorkeuren-tabs */}
               {vkStatus === 'ok' && (
                 <p className="text-[12px] text-green-600 text-center">Voorkeuren opgeslagen</p>
               )}

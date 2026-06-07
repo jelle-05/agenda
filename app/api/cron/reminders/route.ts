@@ -5,6 +5,7 @@ import { Resend } from 'resend'
 import { migreerDatumVelden, parseGeboortejaar } from '@/lib/verjaardagen'
 import { verstuurTelegram } from '@/lib/telegram'
 import { leesVoorkeuren } from '@/lib/voorkeuren'
+import { haalForecast, weerLabel } from '@/lib/weer'
 
 export const runtime = 'nodejs'
 
@@ -476,6 +477,28 @@ export async function GET(req: NextRequest) {
       // Bericht: bewust minimalistisch — platte tekst, geen emoji's, geen
       // opmaak, geen em-dashes (vaste afspraak voor het dagoverzicht).
       const regels: string[] = [vk.naam ? `Goedemorgen ${vk.naam}` : 'Goedemorgen', '']
+
+      // Weerregels — alleen met een ingestelde locatie; fail-soft (haalForecast
+      // geeft null bij fouten, dan blijft het bericht zoals voorheen).
+      if (vk.weerLat != null && vk.weerLon != null) {
+        const forecast = await haalForecast(vk.weerLat, vk.weerLon)
+        const dagWeer = forecast?.dagen[vandaag]
+        if (dagWeer) {
+          regels.push(`Weer: ${weerLabel(dagWeer.code)}, ${Math.round(dagWeer.minTemp)} tot ${Math.round(dagWeer.maxTemp)} graden`)
+          if (dagWeer.neerslagKans >= 15) {
+            // Het uur met de hoogste regenkans als indicatie van "hoe laat".
+            let maxKans = 0
+            let maxTijd = ''
+            for (const u of forecast?.uren[vandaag] ?? []) {
+              if (u.neerslagKans > maxKans) { maxKans = u.neerslagKans; maxTijd = u.tijd }
+            }
+            regels.push(`Kans op regen: ${dagWeer.neerslagKans} procent${maxTijd ? ` rond ${maxTijd}` : ''}`)
+          } else {
+            regels.push('Kans op regen: vrijwel geen')
+          }
+          regels.push('')
+        }
+      }
       if (events.length === 0 && jarigen.length === 0) {
         regels.push('Vandaag staat er niets gepland.')
       } else {

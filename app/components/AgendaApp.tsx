@@ -14,7 +14,7 @@ import {
 } from '@/lib/opslag'
 import { leesVoorkeuren } from '@/lib/voorkeuren'
 import { begroetingstekst } from '@/lib/begroeting'
-import { haalWeerOp, type WeerPerDag } from '@/lib/weer'
+import { haalWeerOp, type WeerBundel } from '@/lib/weer'
 import {
   laadAfsprakenVanSupabase, slaAfspraakOpInSupabase, verwijderAfspraakUitSupabase,
   laadLabelsVanSupabase, slaLabelOpInSupabase, verwijderLabelUitSupabase,
@@ -40,6 +40,7 @@ import VerjaardagFormulier from './VerjaardagFormulier'
 import VerjaardagKeuze from './VerjaardagKeuze'
 import FilterMenu from './FilterMenu'
 import ZoekModal from './ZoekModal'
+import WeerModal from './WeerModal'
 import Snackbar from './Snackbar'
 import { subscribeerOpPush } from '@/lib/pushUtils'
 import { genereerHerhalingen } from '@/lib/herhaling'
@@ -70,6 +71,7 @@ export default function AgendaApp() {
   // Modal state
   const [formulierOpen, setFormulierOpen]         = useState(false)
   const [zoekOpen, setZoekOpen]                   = useState(false)
+  const [weerModalOpen, setWeerModalOpen]         = useState(false)
 
   // Undo-snackbar: maximaal één actie tegelijk (nieuwste vervangt vorige);
   // `sleutel` herstart de timer in de Snackbar bij elke nieuwe actie.
@@ -141,17 +143,21 @@ export default function AgendaApp() {
   // als de toggle aan staat én er een vaste locatie is ingesteld. Stil falen.
   // "Uit" wordt afgeleid bij het doorgeven (weerVoorWeergave) — geen synchrone
   // setState in de effect-body nodig.
-  const [weerData, setWeerData] = useState<WeerPerDag | null>(null)
+  const [weerData, setWeerData] = useState<WeerBundel | null>(null)
   useEffect(() => {
     let actief = true
-    if (voorkeuren.weer && voorkeuren.weerLat != null && voorkeuren.weerLon != null) {
-      haalWeerOp(voorkeuren.weerLat, voorkeuren.weerLon).then(dagen => {
-        if (actief) setWeerData(dagen)
+    // Fetch zodra er een locatie is ingesteld — de detailmodal werkt ook als
+    // de dagkoppen-toggle uit staat. 1-uurs cache voorkomt extra verkeer.
+    if (voorkeuren.weerLat != null && voorkeuren.weerLon != null) {
+      haalWeerOp(voorkeuren.weerLat, voorkeuren.weerLon).then(bundel => {
+        if (actief) setWeerData(bundel)
       })
     }
     return () => { actief = false }
-  }, [voorkeuren.weer, voorkeuren.weerLat, voorkeuren.weerLon])
-  const weerVoorWeergave = voorkeuren.weer && voorkeuren.weerLat != null ? weerData : null
+  }, [voorkeuren.weerLat, voorkeuren.weerLon])
+  // Dagkoppen tonen alleen bij toggle aan; de detailmodal werkt al met
+  // een ingestelde locatie (los van de agenda-toggle).
+  const weerVoorWeergave = voorkeuren.weer && voorkeuren.weerLat != null ? (weerData?.dagen ?? null) : null
 
   // Laad opgeslagen filtervoorkeuren bij opstarten (client-only, SSR-veilig).
   // localStorage is pas op de client beschikbaar; een lazy useState-init zou een
@@ -682,6 +688,7 @@ export default function AgendaApp() {
         huidigeDatum={huidigeDatum}
         afspraken={afspraken}
         onDagKlik={gaNaarDatum}
+        onWeer={() => setWeerModalOpen(true)}
         onFilters={() => setFilterMenuOpen(true)}
         onVerjaardagen={() => setVerjaardagKeuzeOpen(true)}
         onLabels={() => setLabelBeheerOpen(true)}
@@ -791,9 +798,17 @@ export default function AgendaApp() {
         open={mobielMenuOpen}
         onSluit={() => setMobielMenuOpen(false)}
         onZoek={() => setZoekOpen(true)}
+        onWeer={() => setWeerModalOpen(true)}
         onFilters={() => setFilterMenuOpen(true)}
         onVerjaardagen={() => setVerjaardagKeuzeOpen(true)}
         onLabels={() => setLabelBeheerOpen(true)}
+      />
+
+      <WeerModal
+        open={weerModalOpen}
+        locatieNaam={voorkeuren.weerLocatieNaam}
+        weer={voorkeuren.weerLat != null ? weerData : null}
+        onSluit={() => setWeerModalOpen(false)}
       />
 
       <ZoekModal

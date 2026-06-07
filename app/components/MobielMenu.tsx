@@ -1,11 +1,12 @@
 'use client'
 
-import { X, Cake, Tag, SlidersHorizontal, StickyNote, Search } from 'lucide-react'
+import { X, Cake, Tag, SlidersHorizontal, StickyNote, Search, CloudSun } from 'lucide-react'
 
 interface Props {
   open: boolean
   onSluit: () => void
   onZoek: () => void
+  onWeer: () => void
   onFilters: () => void
   onVerjaardagen: () => void
   onLabels: () => void
@@ -18,7 +19,7 @@ const itemKlasse =
 // Bewust altijd gemount (geen `if (!open) return null` zoals de modals): alleen zo kan de
 // sluit-animatie via CSS-transitions vloeiend aflopen. `pointer-events-none` als dicht
 // voorkomt dat het onzichtbare paneel kliks of focus onderschept.
-export default function MobielMenu({ open, onSluit, onZoek, onFilters, onVerjaardagen, onLabels }: Props) {
+export default function MobielMenu({ open, onSluit, onZoek, onWeer, onFilters, onVerjaardagen, onLabels }: Props) {
   const actieItems: {
     key: string
     label: string
@@ -26,6 +27,7 @@ export default function MobielMenu({ open, onSluit, onZoek, onFilters, onVerjaar
     onClick: () => void
   }[] = [
     { key: 'zoeken',       label: 'Zoeken',       icon: Search,            onClick: onZoek },
+    { key: 'weer',         label: 'Weer',         icon: CloudSun,          onClick: onWeer },
     { key: 'verjaardagen', label: 'Verjaardagen', icon: Cake,              onClick: onVerjaardagen },
     { key: 'labels',       label: 'Labels',       icon: Tag,               onClick: onLabels },
     { key: 'filters',      label: 'Filters',      icon: SlidersHorizontal, onClick: onFilters },
