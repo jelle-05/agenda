@@ -1,10 +1,11 @@
-import type { Afspraak, Label, Verjaardag, Filters } from '@/types'
+import type { Afspraak, Label, Verjaardag, Filters, WeergaveType } from '@/types'
 import { migreerDatumVelden } from './verjaardagen'
 
-const SLEUTEL_AFSPRAKEN    = 'agenda_afspraken'
-const SLEUTEL_LABELS       = 'agenda_labels'
-const SLEUTEL_VERJAARDAGEN = 'agenda_verjaardagen'
-const SLEUTEL_FILTERS      = 'agenda_filters'
+const SLEUTEL_AFSPRAKEN        = 'agenda_afspraken'
+const SLEUTEL_LABELS           = 'agenda_labels'
+const SLEUTEL_VERJAARDAGEN     = 'agenda_verjaardagen'
+const SLEUTEL_FILTERS          = 'agenda_filters'
+const SLEUTEL_LAATSTE_WEERGAVE = 'agenda_laatste_weergave'
 
 export function laadAfspraken(): Afspraak[] {
   const data = localStorage.getItem(SLEUTEL_AFSPRAKEN)
@@ -109,4 +110,19 @@ export function laadFilters(): Filters {
 
 export function slaFiltersOp(filters: Filters): void {
   localStorage.setItem(SLEUTEL_FILTERS, JSON.stringify(filters))
+}
+
+// ── Laatst gebruikte weergave ────────────────────────────────────────────────
+// Bewust per apparaat (localStorage, niet user_metadata): wijzigt bij elke
+// tab-wissel en desktop/mobiel hebben vaak verschillende weergave-gewoonten.
+
+const WEERGAVEN: WeergaveType[] = ['dag', 'week', 'maand', 'agenda']
+
+export function laadLaatsteWeergave(): WeergaveType | null {
+  const data = localStorage.getItem(SLEUTEL_LAATSTE_WEERGAVE)
+  return WEERGAVEN.includes(data as WeergaveType) ? (data as WeergaveType) : null
+}
+
+export function slaLaatsteWeergaveOp(weergave: WeergaveType): void {
+  localStorage.setItem(SLEUTEL_LAATSTE_WEERGAVE, weergave)
 }

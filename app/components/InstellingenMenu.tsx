@@ -6,24 +6,31 @@ import { Bell, Camera, Mail, Send, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { subscribeerOpPush, afmeldenVanPush } from '@/lib/pushUtils'
 import { verkleinNaarVierkantDataUrl } from '@/lib/afbeelding'
+import { STANDAARD_VOORKEUREN, type StartWeergave, type Voorkeuren } from '@/lib/voorkeuren'
 import Avatar from './Avatar'
 
 interface Props {
   open: boolean
   email: string
   avatarUrl?: string | null
+  voorkeuren?: Voorkeuren
   onSluit: () => void
 }
 
 // Tabs staan in een array zodat er later eenvoudig instellingstabjes bij kunnen.
 const TABS = [
+  { id: 'voorkeuren',   label: 'Voorkeuren' },
   { id: 'notificaties', label: 'Notificaties' },
   { id: 'profielfoto',  label: 'Profielfoto' },
 ] as const
 type TabId = (typeof TABS)[number]['id']
 
-export default function InstellingenMenu({ open, email, avatarUrl, onSluit }: Props) {
-  const [actieveTab, setActieveTab] = useState<TabId>('notificaties')
+export default function InstellingenMenu({ open, email, avatarUrl, voorkeuren = STANDAARD_VOORKEUREN, onSluit }: Props) {
+  const [actieveTab, setActieveTab] = useState<TabId>('voorkeuren')
+
+  const [vk, setVk] = useState<Voorkeuren>(voorkeuren)
+  const [vkStatus, setVkStatus] = useState<'idle' | 'laden' | 'ok' | 'fout'>('idle')
+  const [vkFout, setVkFout] = useState('')
 
   const [emailTestStatus, setEmailTestStatus] = useState<'idle' | 'laden' | 'ok' | 'fout'>('idle')
   const [emailTestFout, setEmailTestFout] = useState('')
@@ -93,7 +100,7 @@ export default function InstellingenMenu({ open, email, avatarUrl, onSluit }: Pr
   useEffect(() => {
     // Bewuste reset bij openen (modal-open-conventie); tg/push-setState gebeurt pas ná de fetch.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (open) { haalTgStatus(); bepaalPushStatus(); setFotoStatus('idle'); setFotoFout('') }
+    if (open) { haalTgStatus(); bepaalPushStatus(); setFotoStatus('idle'); setFotoFout(''); setVk(voorkeuren); setVkStatus('idle'); setVkFout('') }
     return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null } }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
@@ -217,6 +224,22 @@ export default function InstellingenMenu({ open, email, avatarUrl, onSluit }: Pr
     }
   }
 
+  // Voorkeuren: per wijziging direct opslaan in user_metadata (volledig object —
+  // updateUser merged shallow op top-niveau). Optimistisch met rollback bij fout;
+  // USER_UPDATED → AgendaApp ververst de voorkeuren-prop vanzelf.
+  async function wijzigVoorkeur(patch: Partial<Voorkeuren>) {
+    const oud = vk
+    const nieuw = { ...vk, ...patch }
+    setVk(nieuw); setVkStatus('laden'); setVkFout('')
+    try {
+      const { error } = await supabase.auth.updateUser({ data: { voorkeuren: nieuw } })
+      if (error) { setVk(oud); setVkStatus('fout'); setVkFout('Opslaan mislukt. Probeer opnieuw.'); return }
+      setVkStatus('ok')
+    } catch {
+      setVk(oud); setVkStatus('fout'); setVkFout('Netwerkfout')
+    }
+  }
+
   // Profielfoto: client-side verkleinen naar 256×256 JPEG en als data-URL in
   // user_metadata opslaan. USER_UPDATED → AgendaApp ververst de avatarUrl-prop.
   async function kiesFoto(e: React.ChangeEvent<HTMLInputElement>) {
@@ -280,6 +303,85 @@ export default function InstellingenMenu({ open, email, avatarUrl, onSluit }: Pr
 
         {/* Body */}
         <div className="overflow-y-auto flex-1 p-4">
+          {actieveTab === 'voorkeuren' && (
+            <div className="flex flex-col gap-4">
+              <section className="flex flex-col gap-2">
+                <h3 className="text-[12px] font-semibold uppercase tracking-wide text-gray-400">Kalender</h3>
+                <div className="bg-gray-50 rounded-xl overflow-hidden divide-y divide-gray-200">
+                  <div className="flex items-center justify-between px-4 py-3 gap-3">
+                    <span className="text-[15px] text-gray-800 shrink-0">Open kalender met</span>
+                    <select
+                      value={vk.startWeergave}
+                      onChange={e => wijzigVoorkeur({ startWeergave: e.target.value as StartWeergave })}
+                      disabled={vkStatus === 'laden'}
+                      className="text-[15px] text-[#007AFF] outline-none bg-transparent text-right min-w-0"
+                    >
+                      <option value="auto">Automatisch</option>
+                      <option value="laatst">Laatst gebruikt</option>
+                      <option value="dag">Dag</option>
+                      <option value="week">Week</option>
+                      <option value="maand">Maand</option>
+                      <option value="agenda">Agenda</option>
+                    </select>
+                  </div>
+                </div>
+                <p className="text-[12px] text-gray-400 px-1">
+                  Automatisch = week op desktop en dag op mobiel. Laatst gebruikt onthoudt je keuze per apparaat.
+                </p>
+              </section>
+
+              <section className="flex flex-col gap-2">
+                <h3 className="text-[12px] font-semibold uppercase tracking-wide text-gray-400">Nieuwe afspraken</h3>
+                <div className="bg-gray-50 rounded-xl overflow-hidden divide-y divide-gray-200">
+                  <div className="flex items-center justify-between px-4 py-3 gap-3">
+                    <span className="text-[15px] text-gray-800 shrink-0">Standaard herinnering</span>
+                    <select
+                      value={vk.standaardHerinnering}
+                      onChange={e => wijzigVoorkeur({ standaardHerinnering: parseInt(e.target.value) })}
+                      disabled={vkStatus === 'laden'}
+                      className="text-[15px] text-[#007AFF] outline-none bg-transparent text-right min-w-0"
+                    >
+                      <option value={-1}>Geen</option>
+                      <option value={0}>Bij aanvang</option>
+                      <option value={5}>5 min van tevoren</option>
+                      <option value={15}>15 min van tevoren</option>
+                      <option value={30}>30 min van tevoren</option>
+                      <option value={60}>1 uur van tevoren</option>
+                      <option value={120}>2 uur van tevoren</option>
+                      <option value={1440}>1 dag van tevoren</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center justify-between px-4 py-3 gap-3">
+                    <span className="text-[15px] text-gray-800 shrink-0">Standaard duur</span>
+                    <select
+                      value={vk.standaardDuur}
+                      onChange={e => wijzigVoorkeur({ standaardDuur: parseInt(e.target.value) })}
+                      disabled={vkStatus === 'laden'}
+                      className="text-[15px] text-[#007AFF] outline-none bg-transparent text-right min-w-0"
+                    >
+                      <option value={15}>15 minuten</option>
+                      <option value={30}>30 minuten</option>
+                      <option value={45}>45 minuten</option>
+                      <option value={60}>1 uur</option>
+                      <option value={90}>1,5 uur</option>
+                      <option value={120}>2 uur</option>
+                    </select>
+                  </div>
+                </div>
+                <p className="text-[12px] text-gray-400 px-1">
+                  Geldt alleen voor nieuwe afspraken; bestaande afspraken veranderen niet.
+                </p>
+              </section>
+
+              {vkStatus === 'ok' && (
+                <p className="text-[12px] text-green-600 text-center">Voorkeuren opgeslagen</p>
+              )}
+              {vkStatus === 'fout' && (
+                <p className="text-[12px] text-red-500 text-center">{vkFout}</p>
+              )}
+            </div>
+          )}
+
           {actieveTab === 'notificaties' && (
             <div className="flex flex-col gap-4">
               {/* Browser-meldingen (web-push) */}

@@ -99,14 +99,10 @@ Onderzoek naar manieren om de app persoonlijker te maken, getoetst aan actuele k
 
 ---
 
-### Voorkeuren-tab in Instellingen (slimme standaarden)
-**Wat:** Nieuwe tab "Voorkeuren" in `InstellingenMenu` (tabs-array is al uitbreidbaar) met: startweergave (vaste keuze óf "laatst gebruikt"), standaard herinnering voor nieuwe events, standaard eventduur. Later uitbreidbaar met werkuren, accentkleur, eerste weekdag.
-**Waarom:** Nu zijn standaarden hardcoded (weergave per apparaattype, reminder "geen", duur 1 uur); wie andere gewoonten heeft stelt elke keer hetzelfde in.
-**Opslag:** `user_metadata` via `supabase.auth.updateUser()` (zelfde patroon als de profielfoto → synct automatisch tussen apparaten, géén DB-migratie); per-apparaat-uitzonderingen evt. in localStorage.
-**Privacy:** Uitstekend — alleen eigen voorkeuren in je eigen account.
-**Complexiteit:** Laag–Middel
-**Bestanden:** `InstellingenMenu.tsx`, `AgendaApp.tsx`, `AfspraakFormulier.tsx`, evt. `lib/opslag.ts`
-**Let op:** absorbeert het bestaande idee *Weergave-voorkeur opslaan* (zie Profiel & account).
+### ~~Voorkeuren-tab in Instellingen (slimme standaarden)~~ ✅ Geïmplementeerd (juni 2026)
+**Wat:** Tab "Voorkeuren" in `InstellingenMenu` met: **Open kalender met** (automatisch / laatst gebruikt / vaste weergave), **standaard herinnering** en **standaard duur** voor nieuwe events. Later uitbreidbaar met werkuren, accentkleur, eerste weekdag.
+**Geïmplementeerd:** opslag in `user_metadata.voorkeuren` (avatar-patroon, synct via account, geen DB-migratie; `lib/voorkeuren.ts` met `leesVoorkeuren()` + veilige defaults per veld). Laatst gebruikte weergave per apparaat in localStorage (`agenda_laatste_weergave`); startweergave toegepast via run-once-per-login effect. Opslaan per wijziging, optimistisch met rollback. Absorbeert het idee *Weergave-voorkeur opslaan*.
+**Bestanden:** `lib/voorkeuren.ts` (nieuw), `InstellingenMenu.tsx`, `AgendaApp.tsx`, `AfspraakFormulier.tsx`, `lib/opslag.ts`
 
 ---
 
@@ -331,12 +327,9 @@ Onderzoek naar manieren om de app persoonlijker te maken, getoetst aan actuele k
 
 ---
 
-### Weergave-voorkeur opslaan
-**Wat:** De gekozen weergave (week/dag/maand) onthouden na sluiten van de app.
-**Waarom:** Nu start de app altijd in weekweergave. Als iemand liever dagweergave gebruikt, moet dat elke keer opnieuw worden ingesteld.
-**Complexiteit:** Laag (localStorage)
-**Bestanden:** `AgendaApp.tsx`
-**Zie ook:** gaat op in de *Voorkeuren-tab in Instellingen* (sectie Personalisatie) — bij voorkeur daar in één keer meenemen.
+### ~~Weergave-voorkeur opslaan~~ ✅ Geïmplementeerd (juni 2026)
+**Wat:** De gekozen weergave (week/dag/maand/agenda) onthouden na sluiten van de app.
+**Geïmplementeerd:** onderdeel van de *Voorkeuren-tab in Instellingen* (sectie Personalisatie) — kies "Laatst gebruikt" of een vaste startweergave; laatst gebruikte weergave wordt per apparaat onthouden in localStorage.
 
 ---
 

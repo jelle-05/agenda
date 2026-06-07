@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Bell, X } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 import type { WeergaveType, Afspraak, Label, Verjaardag, Filters } from '@/types'
@@ -10,7 +10,9 @@ import {
   laadLabels, slaLabelOp, verwijderLabel, slaAlleLabelsOp,
   laadVerjaardagen, slaVerjaardagOp, verwijderVerjaardag, slaAlleVerjaardagenOp,
   STANDAARD_FILTERS, laadFilters, slaFiltersOp,
+  laadLaatsteWeergave, slaLaatsteWeergaveOp,
 } from '@/lib/opslag'
+import { leesVoorkeuren } from '@/lib/voorkeuren'
 import {
   laadAfsprakenVanSupabase, slaAfspraakOpInSupabase, verwijderAfspraakUitSupabase,
   laadLabelsVanSupabase, slaLabelOpInSupabase, verwijderLabelUitSupabase,
@@ -110,6 +112,9 @@ export default function AgendaApp() {
     [afspraken, feestdagAfspraken, verjaardagAfspraken, filters],
   )
   const labelsVoorWeergave = useMemo(() => [...labels, FEESTDAG_LABEL, VERJAARDAG_LABEL], [labels])
+  // Persoonlijke voorkeuren uit user_metadata; na opslaan in Instellingen vuurt
+  // USER_UPDATED → setGebruiker → deze memo (en alle afnemers) verversen vanzelf.
+  const voorkeuren = useMemo(() => leesVoorkeuren(gebruiker?.user_metadata), [gebruiker])
 
   // Laad opgeslagen filtervoorkeuren bij opstarten (client-only, SSR-veilig).
   // localStorage is pas op de client beschikbaar; een lazy useState-init zou een
@@ -157,6 +162,7 @@ export default function AgendaApp() {
         setAfspraken([])
         setLabels([])
         setVerjaardagen([])
+        startWeergaveToegepast.current = false   // herinloggen past de startweergave opnieuw toe
         // klaar blijft true → loginpagina zichtbaar
       }
       // TOKEN_REFRESHED / USER_UPDATED: geen actie — data is al geladen
@@ -176,15 +182,27 @@ export default function AgendaApp() {
     return () => window.removeEventListener('popstate', onPop)
   }, [])
 
-  // ── Standaardweergave: desktop = week, mobiel = dag ───────────────────────────
-  // Eenmalig bij init: initiële state is 'dag' (SSR-veilig). Op desktop (≥ sm,
-  // 640px) eenmaal upgraden naar 'week'. Draait één keer → springt niet terug
-  // tijdens gebruik en resizen verandert de keuze niet.
+  // ── Startweergave ─────────────────────────────────────────────────────────────
+  // Eenmalig per login toegepast zodra de gebruiker bekend is (voorkeur uit
+  // user_metadata): 'auto' = week op desktop / dag op mobiel (≥ sm, 640px),
+  // 'laatst' = laatst gebruikte weergave uit localStorage (fallback auto),
+  // anders de vaste keuze. Ref-guard: draait één keer per login → springt niet
+  // terug bij USER_UPDATED (bv. voorkeuren opslaan) en resizen verandert niets.
+  // Geen flash: de UI toont een spinner tot `klaar`.
+  const startWeergaveToegepast = useRef(false)
   useEffect(() => {
-    // matchMedia bestaat alleen op de client; bewuste eenmalige mount-upgrade (SSR-veilig).
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (window.matchMedia('(min-width: 640px)').matches) setWeergave('week')
-  }, [])
+    if (!gebruiker || startWeergaveToegepast.current) return
+    startWeergaveToegepast.current = true
+    const vk = leesVoorkeuren(gebruiker.user_metadata)
+    const auto = (): WeergaveType =>
+      window.matchMedia('(min-width: 640px)').matches ? 'week' : 'dag'
+    // matchMedia bestaat alleen op de client; bewuste eenmalige init (SSR-veilig).
+    setWeergave(
+      vk.startWeergave === 'laatst' ? (laadLaatsteWeergave() ?? auto())
+      : vk.startWeergave === 'auto' ? auto()
+      : vk.startWeergave
+    )
+  }, [gebruiker])
 
   // Stille achtergrond-sync: update UI zonder spinner
   async function achtergrondSync(userId: string) {
@@ -351,6 +369,14 @@ export default function AgendaApp() {
   }
 
   function gaNaarVandaag() { setHuidigeDatum(new Date()) }
+
+  // Bewuste weergave-keuze via de tabs (TopBar/BottomBar): onthoud als "laatst
+  // gebruikt" voor de startweergave-voorkeur. Navigatie (bv. maand→dag-klik in
+  // selecteerDag) telt bewust niet als keuze.
+  function wijzigWeergave(w: WeergaveType) {
+    setWeergave(w)
+    slaLaatsteWeergaveOp(w)
+  }
 
   function selecteerDag(datum: Date) {
     setHuidigeDatum(datum)
@@ -554,7 +580,7 @@ export default function AgendaApp() {
       <div className="flex flex-col flex-1 min-w-0 h-full">
         <TopBar
           weergave={weergave}
-          onWeergaveChange={setWeergave}
+          onWeergaveChange={wijzigWeergave}
           titel={getTitel()}
           onVorige={navigeerVorige}
           onVolgende={navigeerVolgende}
@@ -633,7 +659,7 @@ export default function AgendaApp() {
 
         <BottomBar
           weergave={weergave}
-          onWeergaveChange={setWeergave}
+          onWeergaveChange={wijzigWeergave}
           onProfielMenu={() => setProfielMenuOpen(true)}
           email={gebruiker.email ?? ''}
           avatarUrl={avatarUrl}
@@ -655,6 +681,7 @@ export default function AgendaApp() {
         labels={labels}
         initiaalDatum={vooringevuldDatum ?? huidigeDatum}
         initiaalTijd={vooringevuldTijd}
+        voorkeuren={voorkeuren}
         onOpslaan={handleOpslaanAfspraak}
         onVerwijder={handleVerwijderAfspraak}
         onSluit={() => setFormulierOpen(false)}
@@ -681,6 +708,7 @@ export default function AgendaApp() {
         open={instellingenOpen}
         email={gebruiker.email ?? ''}
         avatarUrl={avatarUrl}
+        voorkeuren={voorkeuren}
         onSluit={() => setInstellingenOpen(false)}
       />
 

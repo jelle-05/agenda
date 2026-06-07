@@ -5,6 +5,7 @@ import type { Afspraak, Label, HerhalingConfig, HerhalingType } from '@/types'
 import { HERHALING_LEEG } from '@/types'
 import { toISODatum, getDagIndex, tijdNaarMinuten } from '@/lib/datum'
 import { labelAchtergrond } from '@/lib/kleuren'
+import { STANDAARD_VOORKEUREN, type Voorkeuren } from '@/lib/voorkeuren'
 import TijdKiezer from './TijdKiezer'
 
 const NL_KORT = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo']
@@ -17,6 +18,7 @@ interface Props {
   labels: Label[]
   initiaalDatum: Date
   initiaalTijd?: string
+  voorkeuren?: Voorkeuren
   onOpslaan: (afspraak: Afspraak, herhaling: HerhalingConfig, scope?: BewerkScope) => void
   onVerwijder: (id: string, alleHerhalingen?: boolean) => void
   onSluit: () => void
@@ -26,15 +28,19 @@ function minutenNaarTijd(m: number): string {
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 }
 
-function leeg(datum: string, beginTijd = '09:00'): Afspraak {
+function leeg(datum: string, beginTijd = '09:00', voorkeuren: Voorkeuren = STANDAARD_VOORKEUREN): Afspraak {
+  // Standaardduur en -herinnering uit de voorkeuren; alleen voor níéuwe events
+  // (bewerken spreidt het bestaande event). Eindtijd wrapt over middernacht.
   const [h, m] = beginTijd.split(':').map(Number)
-  const eindMin = h * 60 + m + 60
-  const eindTijd = `${String(Math.floor(eindMin / 60) % 24).padStart(2, '0')}:${String(eindMin % 60).padStart(2, '0')}`
-  return { id: '', titel: '', datum, beginTijd, eindTijd, heeldag: false, labelIds: [] }
+  const eindTijd = minutenNaarTijd((h * 60 + m + voorkeuren.standaardDuur) % (24 * 60))
+  return {
+    id: '', titel: '', datum, beginTijd, eindTijd, heeldag: false, labelIds: [],
+    herinneringMinuten: voorkeuren.standaardHerinnering,
+  }
 }
 
-export default function AfspraakFormulier({ open, afspraak, labels, initiaalDatum, initiaalTijd, onOpslaan, onVerwijder, onSluit }: Props) {
-  const [form, setForm]           = useState<Afspraak>(() => leeg(toISODatum(initiaalDatum), initiaalTijd))
+export default function AfspraakFormulier({ open, afspraak, labels, initiaalDatum, initiaalTijd, voorkeuren = STANDAARD_VOORKEUREN, onOpslaan, onVerwijder, onSluit }: Props) {
+  const [form, setForm]           = useState<Afspraak>(() => leeg(toISODatum(initiaalDatum), initiaalTijd, voorkeuren))
   const [herhaling, setHerhaling] = useState<HerhalingConfig>(HERHALING_LEEG)
   const [bewerkScope, setBewerkScope] = useState<BewerkScope>('enkel')
 
@@ -43,11 +49,11 @@ export default function AfspraakFormulier({ open, afspraak, labels, initiaalDatu
       // Bewuste form-reset bij het openen van de modal; de component blijft gemount
       // (key-based reset zou het open/dicht-gedrag veranderen).
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setForm(afspraak ? { ...afspraak } : leeg(toISODatum(initiaalDatum), initiaalTijd))
+      setForm(afspraak ? { ...afspraak } : leeg(toISODatum(initiaalDatum), initiaalTijd, voorkeuren))
       setHerhaling(HERHALING_LEEG)
       setBewerkScope('enkel')
     }
-  }, [open, afspraak, initiaalDatum, initiaalTijd])
+  }, [open, afspraak, initiaalDatum, initiaalTijd, voorkeuren])
 
   if (!open) return null
 
