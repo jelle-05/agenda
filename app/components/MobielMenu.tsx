@@ -1,6 +1,6 @@
 'use client'
 
-import { X, Cake, Tag, SlidersHorizontal, StickyNote, Search, CloudSun, Hourglass } from 'lucide-react'
+import { X, Cake, Tag, SlidersHorizontal, StickyNote, Search, CloudSun, Hourglass, Car } from 'lucide-react'
 
 interface Props {
   open: boolean
@@ -8,6 +8,7 @@ interface Props {
   onZoek: () => void
   onWeer: () => void
   onCountdowns: () => void
+  onReistijd: () => void
   onFilters: () => void
   onVerjaardagen: () => void
   onLabels: () => void
@@ -20,17 +21,19 @@ const itemKlasse =
 // Bewust altijd gemount (geen `if (!open) return null` zoals de modals): alleen zo kan de
 // sluit-animatie via CSS-transitions vloeiend aflopen. `pointer-events-none` als dicht
 // voorkomt dat het onzichtbare paneel kliks of focus onderschept.
-export default function MobielMenu({ open, onSluit, onZoek, onWeer, onCountdowns, onFilters, onVerjaardagen, onLabels }: Props) {
+export default function MobielMenu({ open, onSluit, onZoek, onWeer, onCountdowns, onReistijd, onFilters, onVerjaardagen, onLabels }: Props) {
   const actieItems: {
     key: string
     label: string
     icon: React.ComponentType<{ size?: number; className?: string }>
     onClick: () => void
+    sep?: boolean   // dashed scheidingslijn erboven (iOS-stijl)
   }[] = [
     { key: 'zoeken',       label: 'Zoeken',       icon: Search,            onClick: onZoek },
     { key: 'weer',         label: 'Weer',         icon: CloudSun,          onClick: onWeer },
     { key: 'countdowns',   label: 'Countdowns',   icon: Hourglass,         onClick: onCountdowns },
-    { key: 'verjaardagen', label: 'Verjaardagen', icon: Cake,              onClick: onVerjaardagen },
+    { key: 'reistijd',     label: 'Reistijd',     icon: Car,               onClick: onReistijd, sep: true },
+    { key: 'verjaardagen', label: 'Verjaardagen', icon: Cake,              onClick: onVerjaardagen, sep: true },
     { key: 'labels',       label: 'Labels',       icon: Tag,               onClick: onLabels },
     { key: 'filters',      label: 'Filters',      icon: SlidersHorizontal, onClick: onFilters },
   ]
@@ -75,11 +78,14 @@ export default function MobielMenu({ open, onSluit, onZoek, onWeer, onCountdowns
             <StickyNote size={18} className="text-gray-400" />
             Notes
           </a>
-          {actieItems.map(({ key, label, icon: Icon, onClick }) => (
-            <button key={key} onClick={() => { onSluit(); onClick() }} className={itemKlasse}>
-              <Icon size={18} className="text-gray-400" />
-              {label}
-            </button>
+          {actieItems.map(({ key, label, icon: Icon, onClick, sep }) => (
+            <div key={key}>
+              {sep && <div className="border-t border-dashed border-gray-300 mx-1 my-1.5" />}
+              <button onClick={() => { onSluit(); onClick() }} className={itemKlasse}>
+                <Icon size={18} className="text-gray-400" />
+                {label}
+              </button>
+            </div>
           ))}
         </nav>
       </div>

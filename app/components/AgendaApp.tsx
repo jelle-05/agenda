@@ -42,6 +42,7 @@ import FilterMenu from './FilterMenu'
 import ZoekModal from './ZoekModal'
 import WeerModal from './WeerModal'
 import CountdownModal from './CountdownModal'
+import ReistijdModal from './ReistijdModal'
 import Snackbar from './Snackbar'
 import { subscribeerOpPush } from '@/lib/pushUtils'
 import { genereerHerhalingen } from '@/lib/herhaling'
@@ -74,6 +75,7 @@ export default function AgendaApp() {
   const [zoekOpen, setZoekOpen]                   = useState(false)
   const [weerModalOpen, setWeerModalOpen]         = useState(false)
   const [countdownsOpen, setCountdownsOpen]       = useState(false)
+  const [reistijdOpen, setReistijdOpen]           = useState(false)
 
   // Undo-snackbar: maximaal één actie tegelijk (nieuwste vervangt vorige);
   // `sleutel` herstart de timer in de Snackbar bij elke nieuwe actie.
@@ -491,6 +493,12 @@ export default function AgendaApp() {
     kiesZoekresultaat(afspraak)
   }
 
+  // Reistijd-item: navigeren naar de datum en het event openen.
+  function kiesReistijd(afspraak: Afspraak) {
+    setReistijdOpen(false)
+    kiesZoekresultaat(afspraak)
+  }
+
   // Ster aan/uit op een event (vanuit de Countdowns-lijst). Optimistisch +
   // fail-soft Supabase-sync, zelfde patroon als verplaatsAfspraak.
   async function toggleFavoriet(afspraak: Afspraak) {
@@ -726,6 +734,7 @@ export default function AgendaApp() {
         onDagKlik={gaNaarDatum}
         onWeer={() => setWeerModalOpen(true)}
         onCountdowns={() => setCountdownsOpen(true)}
+        onReistijd={() => setReistijdOpen(true)}
         onFilters={() => setFilterMenuOpen(true)}
         onVerjaardagen={() => setVerjaardagKeuzeOpen(true)}
         onLabels={() => setLabelBeheerOpen(true)}
@@ -837,6 +846,7 @@ export default function AgendaApp() {
         onZoek={() => setZoekOpen(true)}
         onWeer={() => setWeerModalOpen(true)}
         onCountdowns={() => setCountdownsOpen(true)}
+        onReistijd={() => setReistijdOpen(true)}
         onFilters={() => setFilterMenuOpen(true)}
         onVerjaardagen={() => setVerjaardagKeuzeOpen(true)}
         onLabels={() => setLabelBeheerOpen(true)}
@@ -852,6 +862,14 @@ export default function AgendaApp() {
         onToggleFavoriet={toggleFavoriet}
         onToggleFavorietVerjaardag={toggleFavorietVerjaardag}
         onSluit={() => setCountdownsOpen(false)}
+      />
+
+      <ReistijdModal
+        open={reistijdOpen}
+        afspraken={afspraken}
+        labels={labels}
+        onKies={kiesReistijd}
+        onSluit={() => setReistijdOpen(false)}
       />
 
       <WeerModal

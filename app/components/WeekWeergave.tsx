@@ -203,6 +203,30 @@ export default function WeekWeergave({ huidigeDatum, afspraken, labels, onDagKli
                   </div>
                 )}
 
+                {/* Reistijd-schaduwblokken — informatief + klikbaar (opent het event) */}
+                {dagAfspraken.filter(a => (a.reistijdMinuten ?? 0) > 0).map(afspraak => {
+                  const label = labels.find(l => l.id === afspraak.labelIds[0])
+                  const { accent } = eventKleuren(label, 0.22)
+                  const beginMin = tijdNaarMinuten(afspraak.beginTijd)
+                  const startMin = Math.max(beginMin - (afspraak.reistijdMinuten ?? 0), 0)
+                  const vertrek  = minutenNaarTijd((beginMin - (afspraak.reistijdMinuten ?? 0) + 24 * 60) % (24 * 60))
+                  const sTop = (startMin / 60) * UURHOOGTE
+                  const sHgt = ((beginMin - startMin) / 60) * UURHOOGTE
+                  return (
+                    <button
+                      key={`reis-${afspraak.id}`}
+                      onClick={() => { if (consumeerKlik()) return; onAfspraakKlik(afspraak) }}
+                      className="absolute inset-x-0.5 rounded overflow-hidden text-left z-0"
+                      style={{ top: sTop, height: sHgt, border: `1.5px dashed ${accent}`, opacity: 0.6, padding: '1px 4px' }}
+                      aria-label={`Reistijd, vertrek om ${vertrek}`}
+                    >
+                      {sHgt >= 16 && (
+                        <span className="text-[9px] font-medium leading-tight" style={{ color: accent }}>{vertrek}</span>
+                      )}
+                    </button>
+                  )
+                })}
+
                 {dagAfspraken.map(afspraak => {
                   const label    = labels.find(l => l.id === afspraak.labelIds[0])
                   const { accent, achtergrond, tekst } = eventKleuren(label, 0.22)

@@ -1,6 +1,6 @@
 'use client'
 
-import { CalendarDays, Cake, Tag, SlidersHorizontal, StickyNote, CloudSun, Hourglass } from 'lucide-react'
+import { CalendarDays, Cake, Tag, SlidersHorizontal, StickyNote, CloudSun, Hourglass, Car } from 'lucide-react'
 import MiniKalender from './MiniKalender'
 import type { Afspraak } from '@/types'
 
@@ -11,6 +11,7 @@ interface Props {
   onDagKlik: (d: Date) => void
   onWeer: () => void
   onCountdowns: () => void
+  onReistijd: () => void
   onFilters: () => void
   onVerjaardagen: () => void
   onLabels: () => void
@@ -21,16 +22,18 @@ const itemKlasse =
 
 // Desktop-zijbalk (verborgen op mobiel; daar neemt het off-canvas MobielMenu dit over).
 // Zelfde patroon als de sidebar van de notes-app, met onderaan de link terug naar Notes.
-export default function Sidebar({ begroeting, huidigeDatum, afspraken, onDagKlik, onWeer, onCountdowns, onFilters, onVerjaardagen, onLabels }: Props) {
+export default function Sidebar({ begroeting, huidigeDatum, afspraken, onDagKlik, onWeer, onCountdowns, onReistijd, onFilters, onVerjaardagen, onLabels }: Props) {
   const items: {
     key: string
     label: string
     icon: React.ComponentType<{ size?: number; className?: string }>
     onClick: () => void
+    sep?: boolean   // dashed scheidingslijn erboven (iOS-stijl)
   }[] = [
     { key: 'weer',         label: 'Weer',         icon: CloudSun,          onClick: onWeer },
     { key: 'countdowns',   label: 'Countdowns',   icon: Hourglass,         onClick: onCountdowns },
-    { key: 'verjaardagen', label: 'Verjaardagen', icon: Cake,              onClick: onVerjaardagen },
+    { key: 'reistijd',     label: 'Reistijd',     icon: Car,               onClick: onReistijd, sep: true },
+    { key: 'verjaardagen', label: 'Verjaardagen', icon: Cake,              onClick: onVerjaardagen, sep: true },
     { key: 'labels',       label: 'Labels',       icon: Tag,               onClick: onLabels },
     { key: 'filters',      label: 'Filters',      icon: SlidersHorizontal, onClick: onFilters },
   ]
@@ -54,13 +57,16 @@ export default function Sidebar({ begroeting, huidigeDatum, afspraken, onDagKlik
       {/* Mini-maandkalender — klik navigeert met behoud van de weergave */}
       <MiniKalender huidigeDatum={huidigeDatum} afspraken={afspraken} onDagKlik={onDagKlik} />
 
-      {/* Navigatie */}
+      {/* Navigatie — items met `sep` krijgen een dashed scheidingslijn erboven (iOS-stijl) */}
       <nav className="flex-1 overflow-y-auto p-2 space-y-0.5">
-        {items.map(({ key, label, icon: Icon, onClick }) => (
-          <button key={key} onClick={onClick} className={itemKlasse}>
-            <Icon size={18} className="text-gray-400" />
-            {label}
-          </button>
+        {items.map(({ key, label, icon: Icon, onClick, sep }) => (
+          <div key={key}>
+            {sep && <div className="border-t border-dashed border-gray-300 mx-1 my-1.5" />}
+            <button onClick={onClick} className={itemKlasse}>
+              <Icon size={18} className="text-gray-400" />
+              {label}
+            </button>
+          </div>
         ))}
       </nav>
 

@@ -19,6 +19,7 @@ function rijNaarAfspraak(rij: any): Afspraak {
     herinneringMinuten: rij.herinnering_minuten  ?? -1,
     herhalingGroepId:   rij.herhalingsgroep_id   ?? undefined,
     favoriet:           rij.favoriet             ?? undefined,
+    reistijdMinuten:    rij.reistijd_minuten     ?? undefined,
   }
 }
 
@@ -37,6 +38,7 @@ function afspraakNaarRij(a: Afspraak, userId: string) {
     herinnering_minuten: a.herinneringMinuten ?? -1,
     herhalingsgroep_id:  a.herhalingGroepId   ?? null,
     favoriet:            a.favoriet           ?? false,
+    reistijd_minuten:    a.reistijdMinuten    ?? 0,
   }
 }
 
@@ -65,11 +67,12 @@ function kolomOntbreekt(error: any): boolean {
   return error?.code === 'PGRST204'
     || error?.code === '42703'
     || /column .* does not exist/i.test(error?.message ?? '')
-    || /achtergrond_kleur|tekst_kleur|favoriet/.test(error?.message ?? '')
+    || /achtergrond_kleur|tekst_kleur|favoriet|reistijd_minuten/.test(error?.message ?? '')
 }
 
-// Upsert afspraken; valt terug op een variant zonder de favoriet-kolom als die
-// (nog) niet bestaat, zodat alles blijft syncen vóór de SQL-migratie.
+// Upsert afspraken; valt terug op een variant zonder de nieuwere kolommen
+// (favoriet/reistijd_minuten) als die (nog) niet bestaan, zodat alles blijft
+// syncen vóór de SQL-migraties.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function upsertAfspraken(rows: any[]): Promise<void> {
   let { error } = await supabase.from('afspraken').upsert(rows)
@@ -77,6 +80,7 @@ async function upsertAfspraken(rows: any[]): Promise<void> {
     const basis = rows.map(r => {
       const kopie = { ...r }
       delete kopie.favoriet
+      delete kopie.reistijd_minuten
       return kopie
     })
     ;({ error } = await supabase.from('afspraken').upsert(basis))

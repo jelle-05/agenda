@@ -30,6 +30,8 @@ function minutenNaarTijd(m: number): string {
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 }
 
+const REISTIJD_PRESETS = [0, 5, 10, 15, 30, 60]
+
 // Invul-suggesties: match op titel (case-insensitive), dedup per titel waarbij
 // het meest recente event wint, gesorteerd op datum aflopend, max 4.
 function zoekSuggesties(afspraken: Afspraak[], invoer: string, max = 4): Afspraak[] {
@@ -65,6 +67,9 @@ export default function AfspraakFormulier({ open, afspraak, labels, afspraken = 
   const [suggestiesOpen, setSuggestiesOpen]     = useState(false)
   const [actieveSuggestie, setActieveSuggestie] = useState(-1)
   const [eindHandmatig, setEindHandmatig]       = useState(false)
+  // Reistijd: presets via select, "Aangepast" toont een vrij minuutveld.
+  const [reistijdCustom, setReistijdCustom]     = useState(false)
+  const [reistijdInvoer, setReistijdInvoer]     = useState('')
 
   useEffect(() => {
     if (open) {
@@ -77,6 +82,10 @@ export default function AfspraakFormulier({ open, afspraak, labels, afspraken = 
       setSuggestiesOpen(false)
       setActieveSuggestie(-1)
       setEindHandmatig(false)
+      const rt = afspraak?.reistijdMinuten ?? 0
+      const custom = rt > 0 && !REISTIJD_PRESETS.includes(rt)
+      setReistijdCustom(custom)
+      setReistijdInvoer(custom ? String(rt) : '')
     }
   }, [open, afspraak, initiaalDatum, initiaalTijd, voorkeuren])
 
@@ -267,6 +276,64 @@ export default function AfspraakFormulier({ open, afspraak, labels, afspraken = 
                     onChange={tijd => { setEindHandmatig(true); setForm(f => ({ ...f, eindTijd: tijd })) }}
                   />
                 </div>
+
+                {/* Reistijd — handmatige buffer vóór het event (geen route/locatie-API) */}
+                <div className="flex items-center justify-between px-4 py-3 gap-3">
+                  <span className="text-[15px] text-gray-800 shrink-0">Reistijd</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    {reistijdCustom && (
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={reistijdInvoer}
+                        placeholder="min"
+                        onChange={e => {
+                          const s = e.target.value.replace(/[^0-9]/g, '')
+                          setReistijdInvoer(s)
+                          const n = parseInt(s)
+                          setForm(f => ({ ...f, reistijdMinuten: (n >= 1 && n <= 480) ? n : 0 }))
+                        }}
+                        className="w-16 text-[15px] text-[#007AFF] outline-none bg-gray-100 rounded-lg px-2 py-1 text-right"
+                        aria-label="Reistijd in minuten"
+                      />
+                    )}
+                    <select
+                      value={reistijdCustom ? 'custom' : String(form.reistijdMinuten ?? 0)}
+                      onChange={e => {
+                        if (e.target.value === 'custom') {
+                          setReistijdCustom(true)
+                          setReistijdInvoer('')
+                          setForm(f => ({ ...f, reistijdMinuten: 0 }))
+                        } else {
+                          setReistijdCustom(false)
+                          setForm(f => ({ ...f, reistijdMinuten: parseInt(e.target.value) }))
+                        }
+                      }}
+                      className="text-[15px] text-[#007AFF] outline-none bg-transparent text-right"
+                    >
+                      <option value={0}>Geen</option>
+                      <option value={5}>5 minuten</option>
+                      <option value={10}>10 minuten</option>
+                      <option value={15}>15 minuten</option>
+                      <option value={30}>30 minuten</option>
+                      <option value={60}>1 uur</option>
+                      <option value="custom">Aangepast…</option>
+                    </select>
+                  </div>
+                </div>
+                {(form.reistijdMinuten ?? 0) > 0 && (
+                  <div className="px-4 py-2">
+                    <p className="text-[13px] text-[#007AFF]">
+                      Vertrek om {minutenNaarTijd((tijdNaarMinuten(form.beginTijd) - (form.reistijdMinuten ?? 0) + 24 * 60) % (24 * 60))}
+                    </p>
+                    <p className="text-[12px] text-gray-400 mt-0.5">
+                      Handmatige reistijd-buffer. Er wordt geen route of locatie opgehaald.
+                    </p>
+                  </div>
+                )}
+                {reistijdCustom && reistijdInvoer.trim() !== '' && !(parseInt(reistijdInvoer) >= 1 && parseInt(reistijdInvoer) <= 480) && (
+                  <p className="px-4 py-1 text-[12px] text-red-500">Vul een aantal minuten in tussen 1 en 480.</p>
+                )}
               </>
             )}
 

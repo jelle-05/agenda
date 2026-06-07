@@ -80,16 +80,10 @@ Bronnen o.a.: The Week ("why are calendar apps so awful"), Reclaim ("why does my
 
 ---
 
-## 8. Reistijd-buffer ("vertrek om 08:40")
+## 8. ~~Reistijd-buffer ("vertrek om 08:40")~~ ✅ Geïmplementeerd (juni 2026)
 **Bron:** veelgehoorde wens bij events met locatie; volwaardige reistijd vergt een route-API, dit is de privacyvriendelijke handmatige variant.
-**Wat:** per event met locatie een buffer instellen (bv. 30 min) → schaduwblokje vóór het event in dag/week + eventueel een reminder op de vertrektijd.
-**Complexiteit:** Middel · **Privacy:** uitstekend (geen route-API) · **Bestanden (verwacht):** `types.ts`, DB-kolom, `AfspraakFormulier.tsx`, `Dag-/WeekWeergave.tsx`, evt. cron
-**Scopevragen:**
-- Nieuw DB-veld (`reistijd_minuten`) — akkoord met die kleine migratie?
-- Alleen tonen als schaduwblok, of ook een aparte "tijd om te vertrekken"-reminder via de bestaande cron?
-- Geldt de buffer ook ná het event (terugreis), of alleen ervoor?
-- Beschikbaar voor alle events of alleen events mét locatie?
-- Hoe ziet het schaduwblok eruit (gestreept/transparant, klikbaar of niet)?
+**Geïmplementeerd:** `reistijdMinuten` per event (DB-kolom met fail-open fallback), instelbaar in het afspraakformulier (presets + custom 1–480 min) met live "Vertrek om HH:MM"; gestreept schaduwblok vóór het event in dag-/weekweergave (klikbaar, opent het event); menu-item "Reistijd" (Sidebar/MobielMenu, met dashed iOS-separator) → `ReistijdModal` met vertrektijden gesorteerd op vertrekmoment. Alleen vóór het event, alle events (helptekst dat het vooral nuttig is met locatie), geen route-/locatie-API. Dupliceren behoudt reistijd; per occurrence voor herhalende events.
+**Nog open (vervolgstap):** een echte reminder op de vertrektijd via de cron (vereist een extra query-tak + dedup-sleutel).
 
 ---
 
