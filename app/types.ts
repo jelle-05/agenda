@@ -44,8 +44,9 @@ export type HerhalingType = 'nooit' | 'dagelijks' | 'wekelijks' | 'tweewekelijks
 
 export type HerhalingConfig = {
   type: HerhalingType
-  dagen: number[]  // 0=Ma … 6=Zo, relevant bij wekelijks/tweewekelijks
-  duur: number     // aantal weken (of maanden bij maandelijks)
+  dagen: number[]   // 0=Ma … 6=Zo, relevant bij wekelijks/tweewekelijks
+  duur: number      // aantal weken (of maanden bij maandelijks)
+  totDatum?: string // 'YYYY-MM-DD', inclusief; indien gezet vervangt dit `duur` (met veiligheidscap)
 }
 
 export const HERHALING_LEEG: HerhalingConfig = {

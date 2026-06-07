@@ -1,9 +1,14 @@
 'use client'
 
 import { CalendarDays, Cake, Tag, SlidersHorizontal, StickyNote } from 'lucide-react'
+import MiniKalender from './MiniKalender'
+import type { Afspraak } from '@/types'
 
 interface Props {
   begroeting?: string
+  huidigeDatum: Date
+  afspraken: Afspraak[]
+  onDagKlik: (d: Date) => void
   onFilters: () => void
   onVerjaardagen: () => void
   onLabels: () => void
@@ -14,7 +19,7 @@ const itemKlasse =
 
 // Desktop-zijbalk (verborgen op mobiel; daar neemt het off-canvas MobielMenu dit over).
 // Zelfde patroon als de sidebar van de notes-app, met onderaan de link terug naar Notes.
-export default function Sidebar({ begroeting, onFilters, onVerjaardagen, onLabels }: Props) {
+export default function Sidebar({ begroeting, huidigeDatum, afspraken, onDagKlik, onFilters, onVerjaardagen, onLabels }: Props) {
   const items: {
     key: string
     label: string
@@ -41,6 +46,9 @@ export default function Sidebar({ begroeting, onFilters, onVerjaardagen, onLabel
           <p className="text-[12px] text-gray-400 truncate">{begroeting.split(' · ')[1]}</p>
         </div>
       )}
+
+      {/* Mini-maandkalender — klik navigeert met behoud van de weergave */}
+      <MiniKalender huidigeDatum={huidigeDatum} afspraken={afspraken} onDagKlik={onDagKlik} />
 
       {/* Navigatie */}
       <nav className="flex-1 overflow-y-auto p-2 space-y-0.5">

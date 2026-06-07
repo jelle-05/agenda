@@ -20,7 +20,7 @@ import {
   laadVerjaardagenVanSupabase, slaVerjaardagOpInSupabase, verwijderVerjaardagUitSupabase,
   uploadNaarSupabase,
 } from '@/lib/supabaseOpslag'
-import { NL_MAANDEN, NL_MAANDEN_KORT, formatWeekTitel, toISODatum } from '@/lib/datum'
+import { NL_MAANDEN, NL_MAANDEN_KORT, formatWeekTitel, toISODatum, tijdNaarMinuten, minutenNaarTijd } from '@/lib/datum'
 import TopBar from './TopBar'
 import Sidebar from './Sidebar'
 import MobielMenu from './MobielMenu'
@@ -38,6 +38,7 @@ import VerjaardagenLijst from './VerjaardagenLijst'
 import VerjaardagFormulier from './VerjaardagFormulier'
 import VerjaardagKeuze from './VerjaardagKeuze'
 import FilterMenu from './FilterMenu'
+import ZoekModal from './ZoekModal'
 import { subscribeerOpPush } from '@/lib/pushUtils'
 import { genereerHerhalingen } from '@/lib/herhaling'
 import type { HerhalingConfig } from '@/types'
@@ -66,6 +67,7 @@ export default function AgendaApp() {
 
   // Modal state
   const [formulierOpen, setFormulierOpen]         = useState(false)
+  const [zoekOpen, setZoekOpen]                   = useState(false)
   const [bewerkAfspraak, setBewerkAfspraak]       = useState<Afspraak | null>(null)
   const [labelBeheerOpen, setLabelBeheerOpen]     = useState(false)
   const [profielMenuOpen, setProfielMenuOpen]     = useState(false)
@@ -395,6 +397,40 @@ export default function AgendaApp() {
     setWeergave('dag')
   }
 
+  // Navigeren met behoud van de huidige weergave (minikalender in de Sidebar).
+  function gaNaarDatum(datum: Date) {
+    setHuidigeDatum(datum)
+  }
+
+  // Drag & drop: verplaats een event naar een nieuwe datum/begintijd met behoud
+  // van de duur. Optimistisch (state + cache direct), Supabase-sync fail-soft —
+  // zelfde patroon als alle andere mutaties; realtime corrigeert bij conflicten.
+  // Bij herhalende events verplaatst dit bewust alleen déze occurrence (events
+  // zijn gematerialiseerd; zelfde semantiek als bewerken met "Alleen dit event").
+  async function verplaatsAfspraak(afspraak: Afspraak, nieuweDatum: string, nieuweBeginTijd: string) {
+    const duur = Math.max(tijdNaarMinuten(afspraak.eindTijd) - tijdNaarMinuten(afspraak.beginTijd), 0)
+    const eindMin = Math.min(tijdNaarMinuten(nieuweBeginTijd) + duur, 24 * 60 - 1)
+    const bijgewerkt: Afspraak = {
+      ...afspraak,
+      datum: nieuweDatum,
+      beginTijd: nieuweBeginTijd,
+      eindTijd: minutenNaarTijd(eindMin),
+    }
+    setAfspraken(prev => slaAfspraakOp(bijgewerkt, prev))
+    if (gebruiker) {
+      try { await slaAfspraakOpInSupabase(bijgewerkt, gebruiker.id) }
+      catch (err) { console.error('Supabase verplaats sync mislukt:', err) }
+    }
+  }
+
+  // Zoekresultaat: navigeer naar de datum van het event én open het meteen.
+  function kiesZoekresultaat(afspraak: Afspraak) {
+    setZoekOpen(false)
+    const [y, m, d] = afspraak.datum.split('-').map(Number)
+    setHuidigeDatum(new Date(y, m - 1, d))
+    openBewerkAfspraak(afspraak)
+  }
+
   // ── Afspraak CRUD ────────────────────────────────────────────────────────────
 
   function openNieuwAfspraak(datum?: Date, beginTijd?: string) {
@@ -583,6 +619,9 @@ export default function AgendaApp() {
       {/* Desktop-zijbalk — verborgen op mobiel */}
       <Sidebar
         begroeting={begroeting}
+        huidigeDatum={huidigeDatum}
+        afspraken={afspraken}
+        onDagKlik={gaNaarDatum}
         onFilters={() => setFilterMenuOpen(true)}
         onVerjaardagen={() => setVerjaardagKeuzeOpen(true)}
         onLabels={() => setLabelBeheerOpen(true)}
@@ -599,6 +638,7 @@ export default function AgendaApp() {
           onVolgende={navigeerVolgende}
           onVandaag={gaNaarVandaag}
           onNieuw={() => openNieuwAfspraak()}
+          onZoek={() => setZoekOpen(true)}
           onMenu={() => setMobielMenuOpen(true)}
           onProfielMenu={() => setProfielMenuOpen(true)}
           gebruikerEmail={gebruiker.email ?? ''}
@@ -647,6 +687,7 @@ export default function AgendaApp() {
               animatieKlasse={animatieKlasse}
               animatieSleutel={animatieSleutel}
               werkuren={werkUren}
+              onVerplaats={verplaatsAfspraak}
             />
           )}
           {weergave === 'dag' && (
@@ -661,6 +702,7 @@ export default function AgendaApp() {
               animatieSleutel={animatieSleutel}
               werkuren={werkUren}
               begroeting={begroeting}
+              onVerplaats={verplaatsAfspraak}
             />
           )}
           {weergave === 'agenda' && (
@@ -686,9 +728,18 @@ export default function AgendaApp() {
       <MobielMenu
         open={mobielMenuOpen}
         onSluit={() => setMobielMenuOpen(false)}
+        onZoek={() => setZoekOpen(true)}
         onFilters={() => setFilterMenuOpen(true)}
         onVerjaardagen={() => setVerjaardagKeuzeOpen(true)}
         onLabels={() => setLabelBeheerOpen(true)}
+      />
+
+      <ZoekModal
+        open={zoekOpen}
+        afspraken={afspraken}
+        labels={labels}
+        onKies={kiesZoekresultaat}
+        onSluit={() => setZoekOpen(false)}
       />
 
       <AfspraakFormulier

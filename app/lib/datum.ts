@@ -79,6 +79,10 @@ export function tijdNaarMinuten(tijd: string): number {
   return uur * 60 + min
 }
 
+export function minutenNaarTijd(m: number): string {
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+}
+
 // ISO 8601-weeknummer via de donderdag-truc: de donderdag van de week bepaalt
 // het ISO-jaar — correct rond jaarwisselingen (week 1 t/m 52/53).
 export function getWeekNummer(d: Date): number {

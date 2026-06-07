@@ -181,11 +181,9 @@ Onderzoek naar manieren om de app persoonlijker te maken, getoetst aan actuele k
 
 ---
 
-### Mini-maandkalender in sidebar (desktop)
-**Wat:** Kleine maandkalender naast het hoofdgrid op desktop (zoals macOS Agenda).
-**Waarom:** Snel navigeren naar een specifieke datum zonder van weergave te wisselen.
-**Complexiteit:** Middel
-**Bestanden:** Nieuwe component `MiniKalender.tsx`, layout aanpassen
+### ~~Mini-maandkalender in sidebar (desktop)~~ ✅ Geïmplementeerd (juni 2026)
+**Wat:** Kleine maandkalender in de Sidebar op desktop (zoals macOS Agenda).
+**Geïmplementeerd:** `MiniKalender.tsx` — vandaag rood, geselecteerde datum blauw, event-dots, ‹ › maandnavigatie (volgt externe navigatie automatisch); klik navigeert mét behoud van de huidige weergave.
 
 ---
 
@@ -193,12 +191,10 @@ Onderzoek naar manieren om de app persoonlijker te maken, getoetst aan actuele k
 
 ---
 
-### Sleep-en-laat-vallen (drag & drop) voor events
-**Wat:** Events verslepen naar een ander tijdstip of dag door te slepen.
-**Waarom:** Snelste manier om een event te verzetten, standaard in alle kalender-apps.
-**Complexiteit:** Hoog
-**Bestanden:** `WeekWeergave.tsx`, `DagWeergave.tsx`, `AgendaApp.tsx`
-**Opmerking:** Vergt een drag-library of custom pointer-event implementatie.
+### ~~Sleep-en-laat-vallen (drag & drop) voor events~~ ✅ Geïmplementeerd (juni 2026, desktop)
+**Wat:** Events verslepen naar een ander tijdstip of dag.
+**Geïmplementeerd:** custom hook `lib/useEventDrag.ts` (pointer events, **muis-only** zodat mobiel scrollen/swipen onaangeroerd blijft): week- en dagweergave, getimede events, 15-min-snap, duurbehoud, 5px-drempel (klik blijft klik), live tijdlabel tijdens slepen; herhalend event verslepen wijzigt alleen die occurrence.
+**Nog open (vervolgstappen):** drag in de maandweergave, hele-dag events verslepen, touch-drag op mobiel (bewust overgeslagen i.v.m. conflict met scroll/swipe).
 
 ---
 
@@ -224,11 +220,9 @@ Onderzoek naar manieren om de app persoonlijker te maken, getoetst aan actuele k
 
 ---
 
-### Einde herhalende reeks instellen via einddatum
+### ~~Einde herhalende reeks instellen via einddatum~~ ✅ Geïmplementeerd (juni 2026)
 **Wat:** Naast "eindigt na X weken" ook een einddatum kunnen opgeven.
-**Waarom:** "Elke maandag tot en met 31 december" is intuïtiever dan "elke maandag voor 26 weken".
-**Complexiteit:** Laag–Middel
-**Bestanden:** `types.ts`, `AfspraakFormulier.tsx`, `herhaling.ts`
+**Geïmplementeerd:** `HerhalingConfig.totDatum` (inclusief; geen DB-migratie — reeksen worden gematerialiseerd). Formulier kreeg een "T/m datum"-rij die "Eindigt na" vervangt zodra gevuld; veiligheidscaps (104 weken / 24 maanden / 730 dagen); einddatum vóór de startdatum levert alleen het startevent op.
 
 ---
 
@@ -380,12 +374,9 @@ Features die interessant zijn maar meer architectuurwerk vragen.
 
 ---
 
-### Zoekfunctie
+### ~~Zoekfunctie~~ ✅ Geïmplementeerd (juni 2026)
 **Wat:** Zoeken in eventtitels, locaties en notities.
-**Waarom:** Bij veel events is navigeren naar een specifiek event lastig.
-**Complexiteit:** Laag–Middel (Supabase full-text search of client-side filter)
-**Bestanden:** Nieuwe zoekcomponent, `AgendaApp.tsx`
-**Opmerking:** Zoekicoon is eerder verwijderd — herintroduceren als de functie er is.
+**Geïmplementeerd:** `ZoekModal.tsx`, client-side over de volledige eventdataset (alles staat al in state), case- en diakriet-ongevoelig, vanaf 2 tekens, aankomend eerst (max 50). Resultaat kiezen navigeert naar de datum en opent het event. Zoekicoon terug in de desktop-TopBar; mobiel via het menu. Verjaardagen/feestdagen vallen bewust buiten de resultaten.
 
 ---
 

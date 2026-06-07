@@ -10,6 +10,9 @@ Persoonlijke agenda-app gebouwd met Next.js, Supabase en Tailwind CSS. Geïnspir
 - **Opent op de huidige tijd** — de dag- en weekweergave scrollen bij het openen automatisch naar de rode huidige-tijd-indicator, verticaal gecentreerd in beeld (op andere dagen/weken opent de tijdlijn op 07:00); de Agenda-lijst start bij vandaag (of de eerstvolgende dag met items)
 - **Begroeting met dagsamenvatting** — "Goedemorgen Jelle · 3 afspraken vandaag, eerste om 09:00" in de zijbalk (desktop) en onder de dagtitel (mobiel); gebruikt de naam uit Voorkeuren
 - **Weeknummers** — ISO-weeknummer subtiel in de weekweergave (hoek linksboven) en achter de dagtitel
+- **Zoeken** — via het zoekicoon (desktop) of het menu (mobiel): doorzoekt titel, locatie en notities van al je afspraken (ook accent-ongevoelig); een resultaat aanklikken navigeert ernaartoe en opent het event
+- **Mini-maandkalender** — compacte maandkalender in de zijbalk (desktop) met vandaag-markering, event-dots en maandnavigatie; klik op een dag navigeert met behoud van je weergave
+- **Drag & drop** (desktop) — versleep een event met de muis naar een ander tijdstip (15-minutenstappen) of, in de weekweergave, naar een andere dag; de duur blijft behouden
 - **Werkuren** — optioneel (Voorkeuren): uren buiten je werkdag worden subtiel gedimd in de dag- en weekweergave; alles blijft gewoon klikbaar
 - **Filters** — toon/verberg per itemtype: **Events**, **Verjaardagen** en **Feestdagen**. Open via het filtericoon in de header (desktop) of het hamburger-menu linksboven (mobiel). De kalender update direct; filters verbergen alleen de weergave (data blijft bewaard) en worden persistent opgeslagen in `localStorage` (`agenda_filters`), dus ze blijven na refresh staan. Werkt in alle weergaven.
 - **Swipe-navigatie (mobiel)** — links/rechts swipen navigeert naar de vorige/volgende **dag, week én maand** (drempel 60px, werkt ook over events/verjaardagen/feestdagen heen; verticaal scrollen blijft werken)
@@ -19,7 +22,7 @@ Persoonlijke agenda-app gebouwd met Next.js, Supabase en Tailwind CSS. Geïnspir
 
 ### Events
 - **Aanmaken, bewerken en verwijderen** van afspraken
-- **Herhalende events** — dagelijks, wekelijks, tweewekelijks of maandelijks met dag-selectie en instelbare duur
+- **Herhalende events** — dagelijks, wekelijks, tweewekelijks of maandelijks met dag-selectie en instelbare duur, of met een **einddatum** ("elke maandag t/m 31 december", inclusief)
 - **Herhalende events verwijderen** — alleen dit event of alle herhalingen
 - **Velden** — titel, datum, begin-/eindtijd, hele dag, locatie, notitie, label, herinnering
 - **Slimme tijdsinvoer** — de eindtijd schuift automatisch mee als je de begintijd wijzigt (met behoud van de gekozen duur, standaard 1 uur); op mobiel kies je uur en minuten via simpele dropdowns i.p.v. de ronde klok-picker van Android

@@ -5,6 +5,7 @@ import WeekStrip from './WeekStrip'
 import { toISODatum, isVandaag, formatDagTitel, tijdNaarMinuten, getWeekNummer } from '@/lib/datum'
 import { labelAchtergrond, eventKleuren } from '@/lib/kleuren'
 import { stapelVolgorde } from '@/lib/overlap'
+import { useEventDrag } from '@/lib/useEventDrag'
 import type { Afspraak, Label } from '@/types'
 
 const UURHOOGTE = 60
@@ -20,6 +21,7 @@ interface Props {
   animatieSleutel?: number
   werkuren?: { start: string; eind: string } | null
   begroeting?: string
+  onVerplaats?: (a: Afspraak, nieuweDatum: string, nieuweBeginTijd: string) => void
 }
 
 function minutenNaarTijd(min: number): string {
@@ -27,9 +29,16 @@ function minutenNaarTijd(min: number): string {
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 }
 
-export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik, onAfspraakKlik, onNieuwAfspraak, animatieKlasse = '', animatieSleutel = 0, werkuren = null, begroeting }: Props) {
+export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik, onAfspraakKlik, onNieuwAfspraak, animatieKlasse = '', animatieSleutel = 0, werkuren = null, begroeting, onVerplaats }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [nu, setNu] = useState(() => new Date())
+
+  // Drag & drop (desktop/muis): verticaal slepen verplaatst het event in tijd,
+  // gesnapt op 15 min, met behoud van de duur.
+  const { drag, dragProps, consumeerKlik } = useEventDrag(UURHOOGTE, (a, _dagDelta, minutenDelta) => {
+    if (!onVerplaats) return
+    onVerplaats(a, a.datum, minutenNaarTijd(tijdNaarMinuten(a.beginTijd) + minutenDelta))
+  })
 
   useEffect(() => {
     const interval = setInterval(() => setNu(new Date()), 60_000)
@@ -174,21 +183,38 @@ export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik
               const top      = (beginMin / 60) * UURHOOGTE
               const height   = Math.max(((eindMin - beginMin) / 60) * UURHOOGTE, 24)
 
+              const sleep = drag?.id === afspraak.id ? drag : null
+
               return (
                 <button
                   key={afspraak.id}
-                  onClick={() => onAfspraakKlik(afspraak)}
+                  onClick={() => { if (consumeerKlik()) return; onAfspraakKlik(afspraak) }}
                   onDoubleClick={e => e.stopPropagation()}
-                  className="absolute left-1 right-2 rounded-md overflow-hidden text-left hover:brightness-95 transition-all flex flex-col justify-start items-stretch"
+                  {...dragProps(afspraak)}
+                  className="absolute left-1 right-2 rounded-md overflow-hidden text-left hover:brightness-95 transition-all flex flex-col justify-start items-stretch sm:cursor-grab"
                   style={{
                     top, height,
                     backgroundColor: achtergrond,
                     border: `1px solid ${labelAchtergrond(accent, 0.55)}`,
                     borderLeft: `3px solid ${accent}`,
-                    boxShadow: '0 0 0 1px rgba(255,255,255,0.92), 0 1px 3px rgba(0,0,0,0.10)',
+                    boxShadow: sleep
+                      ? '0 4px 16px rgba(0,0,0,0.25)'
+                      : '0 0 0 1px rgba(255,255,255,0.92), 0 1px 3px rgba(0,0,0,0.10)',
                     padding: height < 26 ? '2px 5px' : 7,
+                    ...(sleep ? {
+                      transform: `translateY(${(sleep.minutenDelta / 60) * UURHOOGTE}px)`,
+                      zIndex: 50,
+                      opacity: 0.9,
+                      cursor: 'grabbing',
+                      transition: 'none',
+                    } : {}),
                   }}
                 >
+                  {sleep && (
+                    <span className="absolute top-0.5 right-1 text-[10px] font-semibold tabular-nums" style={{ color: tekst }}>
+                      {minutenNaarTijd(beginMin + sleep.minutenDelta)}
+                    </span>
+                  )}
                   {height >= 20 && (
                     <div className="flex items-baseline gap-1.5 min-w-0">
                       <p

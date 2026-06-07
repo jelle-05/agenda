@@ -312,9 +312,9 @@ export default function AfspraakFormulier({ open, afspraak, labels, afspraken = 
                 </div>
               )}
 
-              {/* Duur */}
+              {/* Duur — gedimd zodra er een t/m-datum is (die heeft dan voorrang) */}
               {herhaling.type !== 'nooit' && (
-                <div className="flex items-center justify-between px-4 py-3">
+                <div className={['flex items-center justify-between px-4 py-3', herhaling.totDatum ? 'opacity-40' : ''].join(' ')}>
                   <span className="text-[15px] text-gray-800">Eindigt na</span>
                   <div className="flex items-center gap-2">
                     <input
@@ -322,11 +322,31 @@ export default function AfspraakFormulier({ open, afspraak, labels, afspraken = 
                       min={1}
                       max={herhaling.type === 'maandelijks' ? 24 : 52}
                       value={herhaling.duur}
+                      disabled={!!herhaling.totDatum}
                       onChange={e => setHerhaling(h => ({ ...h, duur: Math.max(1, parseInt(e.target.value) || 1) }))}
                       className="w-14 text-[15px] text-[#007AFF] outline-none bg-gray-100 rounded-lg px-2 py-1 text-center"
                     />
                     <span className="text-[15px] text-gray-500">{duuretiket}</span>
                   </div>
+                </div>
+              )}
+
+              {/* Optionele einddatum (inclusief) — vervangt "Eindigt na" zodra gevuld */}
+              {herhaling.type !== 'nooit' && (
+                <div className="px-4 py-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[15px] text-gray-800">T/m datum</span>
+                    <input
+                      type="date"
+                      value={herhaling.totDatum ?? ''}
+                      min={form.datum}
+                      onChange={e => setHerhaling(h => ({ ...h, totDatum: e.target.value || undefined }))}
+                      className="text-[15px] text-[#007AFF] outline-none bg-transparent"
+                    />
+                  </div>
+                  <p className="text-[12px] text-gray-400 mt-1">
+                    Optioneel; de reeks loopt dan t/m deze datum en &ldquo;Eindigt na&rdquo; vervalt.
+                  </p>
                 </div>
               )}
             </div>

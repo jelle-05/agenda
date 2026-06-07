@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronLeft, ChevronRight, Plus, Menu } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Menu, Search } from 'lucide-react'
 import type { WeergaveType } from '@/types'
 import Avatar from './Avatar'
 
@@ -19,6 +19,7 @@ interface Props {
   onVolgende: () => void
   onVandaag: () => void
   onNieuw: () => void
+  onZoek: () => void
   onMenu: () => void
   onProfielMenu: () => void
   gebruikerEmail?: string
@@ -27,7 +28,7 @@ interface Props {
 
 export default function TopBar({
   weergave, onWeergaveChange, titel, onVorige, onVolgende, onVandaag,
-  onNieuw, onMenu, onProfielMenu, gebruikerEmail, avatarUrl,
+  onNieuw, onZoek, onMenu, onProfielMenu, gebruikerEmail, avatarUrl,
 }: Props) {
   return (
     <header className="flex items-center justify-between px-3 h-12 border-b border-gray-200 bg-white shrink-0 gap-2">
@@ -76,6 +77,16 @@ export default function TopBar({
 
       {/* Acties — Verjaardagen/Labels/Filters zitten in de Sidebar (desktop) en het MobielMenu (mobiel) */}
       <div className="flex items-center gap-1 shrink-0">
+        {/* Zoeken — desktop; mobiel zit dit in het off-canvas menu */}
+        <button
+          onClick={onZoek}
+          title="Zoeken"
+          aria-label="Zoeken"
+          className="hidden sm:flex p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-500 shrink-0"
+        >
+          <Search size={18} />
+        </button>
+
         {/* Nieuw event — mobiel als gevulde blauwe cirkel (groter tap-target), desktop subtiel */}
         <button
           onClick={onNieuw}
