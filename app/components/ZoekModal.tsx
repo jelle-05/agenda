@@ -4,13 +4,16 @@ import { useEffect, useRef, useState } from 'react'
 import { Search, X } from 'lucide-react'
 import { toISODatum, NL_MAANDEN_KORT, NL_DAGEN_KORT, getDagIndex } from '@/lib/datum'
 import { eventKleuren } from '@/lib/kleuren'
-import type { Afspraak, Label } from '@/types'
+import { sorteerOpEerstvolgende, VERJAARDAG_LABEL } from '@/lib/verjaardagen'
+import type { Afspraak, Label, Verjaardag } from '@/types'
 
 interface Props {
   open: boolean
   afspraken: Afspraak[]
+  verjaardagen: Verjaardag[]
   labels: Label[]
   onKies: (a: Afspraak) => void
+  onKiesVerjaardag: (v: Verjaardag) => void
   onSluit: () => void
 }
 
@@ -26,10 +29,10 @@ function formatDatum(datum: string): string {
   return `${NL_DAGEN_KORT[getDagIndex(dag)]} ${d} ${NL_MAANDEN_KORT[m - 1]} ${y}`
 }
 
-// Zoekt client-side door alle eigen events (titel, locatie, notitie) — de
-// volledige dataset staat al in state, dus geen API nodig. Verjaardagen en
-// feestdagen vallen bewust buiten de zoekresultaten.
-export default function ZoekModal({ open, afspraken, labels, onKies, onSluit }: Props) {
+// Zoekt client-side door alle eigen events (titel, locatie, notitie) én
+// verjaardagen (naam, notitie) — de volledige dataset staat al in state, dus
+// geen API nodig. Feestdagen vallen bewust buiten de zoekresultaten.
+export default function ZoekModal({ open, afspraken, verjaardagen, labels, onKies, onKiesVerjaardag, onSluit }: Props) {
   const [term, setTerm] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -48,6 +51,7 @@ export default function ZoekModal({ open, afspraken, labels, onKies, onSluit }: 
   const vandaag = toISODatum(new Date())
 
   let resultaten: Afspraak[] = []
+  let vjResultaten: Verjaardag[] = []
   if (schoon.length >= 2) {
     const matches = afspraken.filter(a =>
       normaliseer(a.titel).includes(schoon)
@@ -58,13 +62,23 @@ export default function ZoekModal({ open, afspraken, labels, onKies, onSluit }: 
     const komend   = matches.filter(a => a.datum >= vandaag).sort((a, b) => a.datum.localeCompare(b.datum) || a.beginTijd.localeCompare(b.beginTijd))
     const verleden = matches.filter(a => a.datum < vandaag).sort((a, b) => b.datum.localeCompare(a.datum) || a.beginTijd.localeCompare(b.beginTijd))
     resultaten = [...komend, ...verleden].slice(0, 50)
+
+    // Verjaardagen: match op naam of notitie, gesorteerd op eerstvolgende datum.
+    vjResultaten = sorteerOpEerstvolgende(
+      verjaardagen.filter(v =>
+        normaliseer(v.naam).includes(schoon)
+        || (v.notitie && normaliseer(v.notitie).includes(schoon))
+      )
+    ).slice(0, 20)
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    // Op mobiel gecentreerd (geen bottom-sheet): het toetsenbord zou een sheet
+    // onderin verbergen; gecentreerd blijft het zoekveld altijd zichtbaar.
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/30" onClick={onSluit} />
 
-      <div className="relative w-full sm:w-[480px] bg-white rounded-t-2xl sm:rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[70vh]">
+      <div className="relative w-full sm:w-[480px] bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[55vh] sm:max-h-[70vh]">
         {/* Header met zoekveld */}
         <div className="flex items-center gap-2 px-4 h-12 border-b border-gray-100 shrink-0">
           <Search size={16} className="text-gray-400 shrink-0" />
@@ -90,9 +104,9 @@ export default function ZoekModal({ open, afspraken, labels, onKies, onSluit }: 
               Typ minimaal 2 tekens om te zoeken.
             </p>
           )}
-          {schoon.length >= 2 && resultaten.length === 0 && (
+          {schoon.length >= 2 && resultaten.length === 0 && vjResultaten.length === 0 && (
             <p className="text-[13px] text-gray-400 text-center px-4 py-8">
-              Geen afspraken gevonden voor &ldquo;{term.trim()}&rdquo;.
+              Niets gevonden voor &ldquo;{term.trim()}&rdquo;.
             </p>
           )}
           {resultaten.map(a => {
@@ -117,6 +131,30 @@ export default function ZoekModal({ open, afspraken, labels, onKies, onSluit }: 
               </button>
             )
           })}
+
+          {/* Verjaardagen */}
+          {vjResultaten.length > 0 && (
+            <>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 px-4 pt-3 pb-1">
+                Verjaardagen
+              </p>
+              {vjResultaten.map(v => (
+                <button
+                  key={v.id}
+                  onClick={() => onKiesVerjaardag(v)}
+                  className="flex items-start gap-3 w-full px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors text-left"
+                >
+                  <span className="w-1 self-stretch rounded-full shrink-0 mt-0.5" style={{ backgroundColor: VERJAARDAG_LABEL.kleur }} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{v.naam}</p>
+                    <p className="text-[12px] text-gray-400 truncate">
+                      Verjaardag · {v.dag} {NL_MAANDEN_KORT[v.maand - 1]}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </>
+          )}
         </div>
       </div>
     </div>

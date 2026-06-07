@@ -376,7 +376,7 @@ Features die interessant zijn maar meer architectuurwerk vragen.
 
 ### ~~Zoekfunctie~~ ✅ Geïmplementeerd (juni 2026)
 **Wat:** Zoeken in eventtitels, locaties en notities.
-**Geïmplementeerd:** `ZoekModal.tsx`, client-side over de volledige eventdataset (alles staat al in state), case- en diakriet-ongevoelig, vanaf 2 tekens, aankomend eerst (max 50). Resultaat kiezen navigeert naar de datum en opent het event. Zoekicoon terug in de desktop-TopBar; mobiel via het menu. Verjaardagen/feestdagen vallen bewust buiten de resultaten.
+**Geïmplementeerd:** `ZoekModal.tsx`, client-side over de volledige eventdataset én de verjaardagen (alles staat al in state), case- en diakriet-ongevoelig, vanaf 2 tekens, aankomend eerst (max 50). Resultaat kiezen navigeert naar de datum en opent het event of de verjaardag-editor. Zoekicoon terug in de desktop-TopBar; mobiel via het menu (modal gecentreerd i.v.m. het toetsenbord). Feestdagen vallen bewust buiten de resultaten.
 
 ---
 

@@ -46,7 +46,7 @@ import { slaVeelAfsprakenOpInSupabase } from '@/lib/supabaseOpslag'
 import { useSwipe } from '@/lib/useSwipe'
 import {
   VERJAARDAG_LABEL, genereerVerjaardagAfspraken, isVerjaardagEvent,
-  verjaardagIdUitEvent,
+  verjaardagIdUitEvent, eerstvolgendeVerjaardag,
 } from '@/lib/verjaardagen'
 import { FEESTDAG_LABEL, genereerFeestdagAfspraken, isFeestdagEvent } from '@/lib/feestdagen'
 
@@ -431,6 +431,13 @@ export default function AgendaApp() {
     openBewerkAfspraak(afspraak)
   }
 
+  // Zoekresultaat (verjaardag): navigeer naar de eerstvolgende editie en open de editor.
+  function kiesZoekVerjaardag(v: Verjaardag) {
+    setZoekOpen(false)
+    setHuidigeDatum(eerstvolgendeVerjaardag(v, new Date()))
+    openBewerkVerjaardag(v)
+  }
+
   // ── Afspraak CRUD ────────────────────────────────────────────────────────────
 
   function openNieuwAfspraak(datum?: Date, beginTijd?: string) {
@@ -737,8 +744,10 @@ export default function AgendaApp() {
       <ZoekModal
         open={zoekOpen}
         afspraken={afspraken}
+        verjaardagen={verjaardagen}
         labels={labels}
         onKies={kiesZoekresultaat}
+        onKiesVerjaardag={kiesZoekVerjaardag}
         onSluit={() => setZoekOpen(false)}
       />
 
