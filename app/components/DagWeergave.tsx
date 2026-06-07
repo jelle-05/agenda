@@ -100,9 +100,13 @@ export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik
             )
           })()}
         </div>
-        {begroeting && (
-          <div className="sm:hidden text-[12px] text-gray-400 truncate">{begroeting}</div>
-        )}
+        {begroeting && (() => {
+          // Op mobiel alleen de dagsamenvatting (zonder "Goedemorgen …"-aanhef);
+          // de volledige begroeting staat op desktop in de Sidebar.
+          const samenvatting = begroeting.split(' · ')[1] ?? begroeting
+          const netjes = samenvatting.charAt(0).toUpperCase() + samenvatting.slice(1)
+          return <div className="sm:hidden text-[12px] text-gray-400 truncate">{netjes}</div>
+        })()}
       </div>
 
       {/* Hele dag */}
