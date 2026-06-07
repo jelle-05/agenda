@@ -91,6 +91,96 @@ Kleine wijzigingen met direct zichtbaar resultaat. Weinig backend-werk.
 
 ---
 
+## Personalisatie (onderzoek juni 2026)
+
+Onderzoek naar manieren om de app persoonlijker te maken, getoetst aan actuele kalender-app-trends (smart defaults, dagoverzichten, calendar sets, natural language input) én aan wat haalbaar is binnen deze codebase. Uitgangspunten: privacyvriendelijk (geen externe diensten of tracking, alles afgeleid van eigen data), geen grote refactors, aansluiten op bestaande patronen (`user_metadata` à la profielfoto, localStorage à la filters, cron + Telegram/Resend).
+
+**Prioriteit (waarde vs. complexiteit):** ① Voorkeuren-tab → ② Telegram/e-mail-dagoverzicht → ③ Begroeting in-app → ④ Slimme invul-suggesties → ⑤ Persoonlijke werkuren. **Advies eerst bouwen:** de Voorkeuren-tab — laagste risico, fundament waar werkuren en accentkleur later in landen, en lost het bestaande idee "Weergave-voorkeur opslaan" mee op.
+
+---
+
+### Voorkeuren-tab in Instellingen (slimme standaarden)
+**Wat:** Nieuwe tab "Voorkeuren" in `InstellingenMenu` (tabs-array is al uitbreidbaar) met: startweergave (vaste keuze óf "laatst gebruikt"), standaard herinnering voor nieuwe events, standaard eventduur. Later uitbreidbaar met werkuren, accentkleur, eerste weekdag.
+**Waarom:** Nu zijn standaarden hardcoded (weergave per apparaattype, reminder "geen", duur 1 uur); wie andere gewoonten heeft stelt elke keer hetzelfde in.
+**Opslag:** `user_metadata` via `supabase.auth.updateUser()` (zelfde patroon als de profielfoto → synct automatisch tussen apparaten, géén DB-migratie); per-apparaat-uitzonderingen evt. in localStorage.
+**Privacy:** Uitstekend — alleen eigen voorkeuren in je eigen account.
+**Complexiteit:** Laag–Middel
+**Bestanden:** `InstellingenMenu.tsx`, `AgendaApp.tsx`, `AfspraakFormulier.tsx`, evt. `lib/opslag.ts`
+**Let op:** absorbeert het bestaande idee *Weergave-voorkeur opslaan* (zie Profiel & account).
+
+---
+
+### Persoonlijk dagoverzicht via Telegram en/of e-mail
+**Wat:** Elke ochtend (instelbaar tijdstip, bv. 07:00) een bericht: "Goedemorgen Jelle — vandaag 3 afspraken en 1 verjaardag", met de lijst eronder. Uit te zetten / kanaalkeuze volgens dezelfde logica als reminders (Telegram indien gekoppeld+actief, anders e-mail).
+**Waarom:** Je weet je dag zonder de app te openen; voelt als een persoonlijke assistent. Hergebruikt de volledige bestaande infra: cron-patroon, `verstuurTelegram()`, Resend, `escapeHtml`.
+**Opslag:** Geen nieuwe data (overzicht wordt berekend); aan/uit-voorkeur via de Voorkeuren-tab of `telegram_accounts`-vlag.
+**Privacy:** Goed — eigen bot/eigen mailadres, geen derden.
+**Complexiteit:** Laag (nieuw cron-endpoint `/api/cron/dagoverzicht` + cron-job.org-trigger)
+**Bestanden:** nieuw `api/cron/dagoverzicht/route.ts`, `lib/telegram.ts` (hergebruik), evt. `InstellingenMenu.tsx`
+**Let op:** vervangt/verbreedt het bestaande idee *Dagelijkse overzichtsmail* (zie Reminder & e-mail verbeteringen).
+
+---
+
+### Begroeting + dagsamenvatting in de app
+**Wat:** Tijdsafhankelijke begroeting met voornaam en mini-samenvatting ("Goedemorgen Jelle · 3 afspraken vandaag, eerste om 09:00") — desktop bovenin de Sidebar, mobiel als compacte regel boven de dagweergave.
+**Waarom:** De app opent nu "kaal"; een persoonlijke start maakt het verschil tussen een tool en jóúw agenda. Naam is al beschikbaar (user_metadata/e-mail), afspraken al in state.
+**Opslag:** Geen — volledig client-side berekend.
+**Privacy:** Uitstekend.
+**Complexiteit:** Laag
+**Bestanden:** `Sidebar.tsx`, evt. `DagWeergave.tsx`/`TopBar.tsx`, `AgendaApp.tsx` (props)
+
+---
+
+### Slimme invul-suggesties bij nieuw event
+**Wat:** Bij het typen van een titel in `AfspraakFormulier` suggesties tonen uit eerdere events (client-side, dedup op titel); een suggestie kiezen vult label, locatie en duur voor op basis van de vorige keer.
+**Waarom:** Terugkerende afspraken die nét niet in een herhaalreeks passen ("Tennis", "Kapper") zijn nu elke keer volledig handwerk. Dit is patroonherkenning zonder AI of externe diensten.
+**Opslag:** Geen — afgeleid van bestaande afspraken in state.
+**Privacy:** Uitstekend — er verlaat niets het apparaat.
+**Complexiteit:** Middel (suggestie-dropdown + matching; UX op mobiel goed testen)
+**Bestanden:** `AfspraakFormulier.tsx`, evt. nieuw `lib/suggesties.ts`
+
+---
+
+### Persoonlijke werkuren
+**Wat:** Instelbare dagstart/-einde (bv. 07:00–23:00); het week/daggrid dimt de uren erbuiten en de scroll-fallback voor andere dagen gebruikt jouw dagstart i.p.v. de vaste 07:00.
+**Waarom:** De 07:00-aanname past niet bij ieders ritme; dimmen geeft focus op je echte dag.
+**Opslag:** Via de Voorkeuren-tab (`user_metadata`).
+**Privacy:** Uitstekend.
+**Complexiteit:** Middel
+**Bestanden:** `WeekWeergave.tsx`, `DagWeergave.tsx`, `InstellingenMenu.tsx`
+
+---
+
+### Label-filtersets ("Werk" / "Privé")
+**Wat:** Filters uitbreiden naar labelniveau en combinaties opslaan als benoemde sets die je met één tik wisselt (Calendar Sets-lite, naar Fantastical-voorbeeld).
+**Waarom:** Contextwisselingen (werkweek vs. weekend) zonder telkens losse filters om te zetten.
+**Opslag:** localStorage (uitbreiding `agenda_filters`-patroon).
+**Privacy:** Uitstekend.
+**Complexiteit:** Middel–Hoog (filtermodel + UI in `FilterMenu`)
+**Bestanden:** `FilterMenu.tsx`, `types.ts`, `lib/opslag.ts`, `AgendaApp.tsx`
+**Risico:** voor één gebruiker mogelijk overkill — pas bouwen als labelgebruik groeit.
+
+---
+
+### Accentkleur van de app instelbaar
+**Wat:** De vaste iOS-blauw (`#007AFF`) vervangen door een instelbare accentkleur (Voorkeuren-tab).
+**Waarom:** Kleinste vorm van "eigen" thema naast het bestaande licht-thema; opstap richting dark mode.
+**Complexiteit:** Middel–Hoog — de kleur staat verspreid hardcoded in componenten; vergt eerst een nette CSS-variabele-refactor (`@theme` in `globals.css`).
+**Privacy:** Uitstekend.
+**Bestanden:** `globals.css`, vrijwel alle componenten (eenmalige sweep), `InstellingenMenu.tsx`
+**Risico:** refactor raakt veel bestanden — alleen doen als losse, doelgerichte wijziging.
+
+---
+
+### Natural language invoer
+**Wat:** Snel-invoerveld dat "tennis morgen 15:00" of "kapper vr 10u" parseert naar een vooringevuld formulier.
+**Waarom:** Snelste invoermethode (de geliefde Fantastical-feature), volledig offline te doen.
+**Complexiteit:** Middel–Hoog — Nederlandse datumtaal ("volgende week di", "overmorgen") is foutgevoelig; altijd het formulier als tussenstap tonen, nooit direct opslaan.
+**Privacy:** Uitstekend — parsing client-side.
+**Bestanden:** nieuw `lib/parseInvoer.ts`, `TopBar.tsx`/`AfspraakFormulier.tsx`
+
+---
+
 ## Calendar verbeteringen
 
 ---
@@ -197,6 +287,7 @@ Kleine wijzigingen met direct zichtbaar resultaat. Weinig backend-werk.
 **Waarom:** Handig als je de app niet elke dag opent maar wel wilt weten wat er op de planning staat.
 **Complexiteit:** Laag (extra cron-endpoint + aparte cron-job instelling)
 **Bestanden:** Nieuw API-route `/api/cron/dagoverzicht`
+**Zie ook:** verbreed tot *Persoonlijk dagoverzicht via Telegram en/of e-mail* (sectie Personalisatie) — met begroeting en kanaalkeuze volgens de reminder-logica.
 
 ---
 
@@ -245,6 +336,7 @@ Kleine wijzigingen met direct zichtbaar resultaat. Weinig backend-werk.
 **Waarom:** Nu start de app altijd in weekweergave. Als iemand liever dagweergave gebruikt, moet dat elke keer opnieuw worden ingesteld.
 **Complexiteit:** Laag (localStorage)
 **Bestanden:** `AgendaApp.tsx`
+**Zie ook:** gaat op in de *Voorkeuren-tab in Instellingen* (sectie Personalisatie) — bij voorkeur daar in één keer meenemen.
 
 ---
 
