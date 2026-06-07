@@ -35,7 +35,17 @@ export default function DagWeergave({ huidigeDatum, afspraken, labels, onDagKlik
   }, [])
 
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = 7 * UURHOOGTE
+    const el = scrollRef.current
+    if (!el) return
+    if (isVandaag(huidigeDatum)) {
+      // Centreer de huidige-tijd-indicator in beeld; de browser klemt
+      // scrollTop vanzelf op [0, max] (vroege ochtend / late avond).
+      // Tijd vers lezen (niet de nu-state) zodat de kloktick geen herscroll triggert.
+      const d = new Date()
+      el.scrollTop = ((d.getHours() * 60 + d.getMinutes()) / 60) * UURHOOGTE - el.clientHeight / 2
+    } else {
+      el.scrollTop = 7 * UURHOOGTE
+    }
   }, [huidigeDatum])
 
   const iso               = toISODatum(huidigeDatum)
